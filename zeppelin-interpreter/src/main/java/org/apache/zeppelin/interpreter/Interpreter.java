@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.zeppelin.annotation.Experimental;
 import org.apache.zeppelin.annotation.ZeppelinApi;
+import org.apache.zeppelin.interpreter.thrift.ClusterIntpProcParameters;
 import org.apache.zeppelin.interpreter.thrift.InterpreterCompletion;
 import org.apache.zeppelin.resource.Resource;
 import org.apache.zeppelin.resource.ResourcePool;
@@ -182,6 +183,11 @@ public abstract class Interpreter {
   protected Properties properties;
   protected String userName;
 
+  // cluster create Interpreter Param
+  private ClusterIntpProcParameters clusterIntpProcParameters = new ClusterIntpProcParameters();
+
+  public ClusterIntpProcParameters getClusterIntpProcParameters() { return clusterIntpProcParameters; }
+
   @ZeppelinApi
   public Interpreter(Properties properties) {
     this.properties = properties;
@@ -245,6 +251,18 @@ public abstract class Interpreter {
 
   public void setClassloaderUrls(URL[] classloaderUrls) {
     this.classloaderUrls = classloaderUrls;
+  }
+
+  // Flag for creating intp-process in a cluster
+  // 1. This flag is true in cluster mode, otherwise false
+  // 2. If this flag is false, then the intp-process will be created locally host.
+  // 3. If this flag is true then the intp-process will be created in the cluster
+  // 4. When zepplin-server A notifies zepplin-server B to create intp process,
+  //    this flag in zepplin-server B is false, and zepplin-server B creates intp process locally host.
+  protected boolean createInptProcessInCluster = false;
+
+  public void setCreateInptProcessInCluster(boolean createInptProcessInCluster) {
+    this.createInptProcessInCluster = createInptProcessInCluster;
   }
 
   /**

@@ -107,7 +107,15 @@ public class RemoteInterpreter extends Interpreter {
       return this.interpreterProcess;
     }
     ManagedInterpreterGroup intpGroup = getInterpreterGroup();
-    this.interpreterProcess = intpGroup.getOrCreateInterpreterProcess(getUserName(), properties);
+
+    if (this.createInptProcessInCluster) {
+      // Create an interpreter process in the cluster
+      this.interpreterProcess = intpGroup.getOrCreateClusterIntpProcess(getUserName(), properties,
+          getClusterIntpProcParameters());
+    } else {
+      // Create an interpreter process locally host
+      this.interpreterProcess = intpGroup.getOrCreateInterpreterProcess(getUserName(), properties);
+    }
     return interpreterProcess;
   }
 

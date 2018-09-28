@@ -268,8 +268,16 @@ public class Paragraph extends JobWithProgressPoller<InterpreterResult> implemen
   }
 
   public Interpreter getBindedInterpreter() throws InterpreterNotFoundException {
-    return this.note.getInterpreterFactory().getInterpreter(user, note.getId(), intpText,
+    Interpreter interpreter = note.getInterpreterFactory().getInterpreter(user, note.getId(), intpText,
         note.getDefaultInterpreterGroup());
+
+    // Save the cluster interpreter creation parameters
+    interpreter.getClusterIntpProcParameters().userName = user;
+    interpreter.getClusterIntpProcParameters().noteId = note.getId();
+    interpreter.getClusterIntpProcParameters().replName = intpText;
+    interpreter.getClusterIntpProcParameters().defaultInterpreterSetting = note.getDefaultInterpreterGroup();
+
+    return interpreter;
   }
 
   public void setInterpreter(Interpreter interpreter) {

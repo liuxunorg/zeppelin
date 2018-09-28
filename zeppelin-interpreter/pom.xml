@@ -46,7 +46,7 @@
     <jline.version>2.12.1</jline.version>
     <atomix.version>3.0.0-rc4</atomix.version>
     <commons-math3.version>3.1.1</commons-math3.version>
-    <guava.version>20.0</guava.version>
+    <!--guava.version>20.0</guava.version-->
     <commons-lang3.version>3.7</commons-lang3.version>
 
     <!--plugin versions-->
@@ -67,10 +67,10 @@
           <groupId>org.apache.commons</groupId>
           <artifactId>commons-lang3</artifactId>
         </exclusion>
-        <exclusion>
+        <!--exclusion>
           <groupId>com.google.guava</groupId>
           <artifactId>guava</artifactId>
-        </exclusion>
+        </exclusion-->
       </exclusions>
     </dependency>
 
@@ -98,11 +98,11 @@
       <version>${commons-lang3.version}</version>
     </dependency>
 
-    <dependency>
+    <!--dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>${guava.version}</version>
-    </dependency>
+    </dependency-->
 
     <dependency>
       <groupId>org.apache.thrift</groupId>

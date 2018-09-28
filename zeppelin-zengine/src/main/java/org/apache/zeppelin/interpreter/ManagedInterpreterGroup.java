@@ -18,8 +18,13 @@
 
 package org.apache.zeppelin.interpreter;
 
-import org.apache.commons.lang.exception.ExceptionUtils;
+import org.apache.thrift.TException;
+import org.apache.zeppelin.cluster.ClusterManagerServer;
+import org.apache.zeppelin.cluster.meta.ClusterMeta;
+import org.apache.zeppelin.cluster.meta.ClusterMetaType;
 import org.apache.zeppelin.interpreter.remote.RemoteInterpreterProcess;
+import org.apache.zeppelin.interpreter.remote.RemoteInterpreterUtils;
+import org.apache.zeppelin.interpreter.thrift.ClusterIntpProcParameters;
 import org.apache.zeppelin.scheduler.Job;
 import org.apache.zeppelin.scheduler.Scheduler;
 import org.apache.zeppelin.scheduler.SchedulerFactory;
@@ -28,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
@@ -41,6 +47,7 @@ public class ManagedInterpreterGroup extends InterpreterGroup {
   private InterpreterSetting interpreterSetting;
   private RemoteInterpreterProcess remoteInterpreterProcess; // attached remote interpreter process
 
+  private ClusterManagerServer clusterManagerServer;
   /**
    * Create InterpreterGroup with given id and interpreterSetting, used in ZeppelinServer
    * @param id
@@ -49,6 +56,7 @@ public class ManagedInterpreterGroup extends InterpreterGroup {
   ManagedInterpreterGroup(String id, InterpreterSetting interpreterSetting) {
     super(id);
     this.interpreterSetting = interpreterSetting;
+    clusterManagerServer = ClusterManagerServer.getInstance();
   }
 
   public InterpreterSetting getInterpreterSetting() {
@@ -66,6 +74,83 @@ public class ManagedInterpreterGroup extends InterpreterGroup {
       interpreterSetting.getLifecycleManager().onInterpreterProcessStarted(this);
       getInterpreterSetting().getRecoveryStorage()
           .onInterpreterClientStart(remoteInterpreterProcess);
+    }
+    return remoteInterpreterProcess;
+  }
+
+  // Create an interpreter process in the cluster
+  public synchronized RemoteInterpreterProcess getOrCreateClusterIntpProcess(
+      String userName, Properties properties, ClusterIntpProcParameters clusterInterpreterParam)
+      throws IOException {
+
+    if (null == remoteInterpreterProcess) {
+      LOGGER.info("Create cluster InterpreterProcess for InterpreterGroup: " + getId());
+      HashMap<String, Object> intpProcMeta
+          = clusterManagerServer.getClusterMeta(ClusterMetaType.IntpProcessMeta, id).get(id);
+      // exist Interpreter Process
+      if (null != intpProcMeta
+          && intpProcMeta.containsKey(ClusterMeta.INTP_TSERVER_HOST)
+          && intpProcMeta.containsKey(ClusterMeta.INTP_TSERVER_PORT)) {
+        // Borrow properties variable
+        String intpTSrvHost = (String) intpProcMeta.get(ClusterMeta.INTP_TSERVER_HOST);
+        String intpTSrvPort = intpProcMeta.get(ClusterMeta.INTP_TSERVER_PORT).toString();
+        properties.put(ClusterManagerServer.CONNET_EXISTING_PROCESS, "true");
+        properties.put(ClusterMeta.INTP_TSERVER_HOST, intpTSrvHost);
+        properties.put(ClusterMeta.INTP_TSERVER_PORT, intpTSrvPort);
+      } else {
+        // No process was found for the InterpreterGroup ID
+        HashMap<String, Object> meta = clusterManagerServer.getIdleNodeMeta();
+        if (null == meta) {
+          LOGGER.error("don't get idle node meta.");
+          return null;
+        }
+        try {
+          String srvHost = (String)meta.get(ClusterMeta.SERVER_TSERVER_HOST);
+          String localhost = RemoteInterpreterUtils.findAvailableHostAddress();
+          if (localhost.equalsIgnoreCase(srvHost)) {
+            getOrCreateInterpreterProcess(userName, properties);
+          } else {
+            int srvPort = (int)meta.get(ClusterMeta.SERVER_TSERVER_PORT);
+            clusterManagerServer.openRemoteInterpreterProcess(srvHost, srvPort, clusterInterpreterParam);
+            HashMap<String, Object> intpMeta = clusterManagerServer.getClusterMeta(ClusterMetaType.IntpProcessMeta, id).get(id);
+            int retryGetMeta = 0;
+            while ((++retryGetMeta < 20) &
+                (null == intpMeta || !intpMeta.containsKey(ClusterMeta.INTP_TSERVER_HOST)
+                    || !intpMeta.containsKey(ClusterMeta.INTP_TSERVER_PORT)) ) {
+              try {
+                Thread.sleep(500);
+                intpMeta = clusterManagerServer.getClusterMeta(ClusterMetaType.IntpProcessMeta, id).get(id);
+                LOGGER.warn("retry {} times to get {} meta!", retryGetMeta, id);
+              } catch (InterruptedException e) {
+                e.printStackTrace();
+              }
+            }
+
+            // Check if the remote creation process is successful
+            if (null == intpMeta || !intpMeta.containsKey(ClusterMeta.INTP_TSERVER_HOST)
+                || !intpMeta.containsKey(ClusterMeta.INTP_TSERVER_PORT)) {
+              LOGGER.error("Creating process {} failed on remote server {}:{}, {}.",
+                  id, srvHost, srvPort, clusterInterpreterParam);
+              return null;
+            }
+
+            // Borrow properties variable
+            String intpTSrvHost = (String) intpMeta.get(ClusterMeta.INTP_TSERVER_HOST);
+            String intpTSrvPort = intpMeta.get(ClusterMeta.INTP_TSERVER_PORT).toString();
+            properties.put(ClusterManagerServer.CONNET_EXISTING_PROCESS, "true");
+            properties.put(ClusterMeta.INTP_TSERVER_HOST, intpTSrvHost);
+            properties.put(ClusterMeta.INTP_TSERVER_PORT, intpTSrvPort);
+          }
+        } catch (TException e) {
+          LOGGER.error(e.getMessage());
+        }
+      }
+
+      getOrCreateInterpreterProcess(userName, properties);
+      // Clear borrowed properties variables
+      properties.remove(ClusterManagerServer.CONNET_EXISTING_PROCESS);
+      properties.remove(ClusterMeta.INTP_TSERVER_HOST);
+      properties.remove(ClusterMeta.INTP_TSERVER_PORT);
     }
     return remoteInterpreterProcess;
   }

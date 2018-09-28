@@ -18,6 +18,8 @@
 
 package org.apache.zeppelin.interpreter.launcher;
 
+import org.apache.zeppelin.cluster.ClusterManagerServer;
+import org.apache.zeppelin.cluster.meta.ClusterMeta;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.interpreter.InterpreterOption;
 import org.apache.zeppelin.interpreter.InterpreterRunner;
@@ -53,7 +55,17 @@ public class StandardInterpreterLauncher extends InterpreterLauncher {
     String name = context.getInterpreterSettingName();
     int connectTimeout = getConnectTimeout();
 
-    if (option.isExistingProcess()) {
+    if (properties.containsKey(ClusterManagerServer.CONNET_EXISTING_PROCESS)) {
+      LOGGER.info("connet cluster InterpreterRunningProcess.");
+      String intpTSrvHost = properties.getProperty(ClusterMeta.INTP_TSERVER_HOST);
+      String srvPort = properties.getProperty(ClusterMeta.INTP_TSERVER_PORT);
+      int intpTSrvPort = Integer.parseInt(srvPort);
+      return new RemoteInterpreterRunningProcess(
+          context.getInterpreterSettingName(),
+          connectTimeout,
+          intpTSrvHost,
+          intpTSrvPort);
+    } else if (option.isExistingProcess()) {
       return new RemoteInterpreterRunningProcess(
           context.getInterpreterSettingName(),
           connectTimeout,

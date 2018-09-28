@@ -27,6 +27,10 @@ import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
+import org.apache.zeppelin.cluster.ClusterManagerClient;
+import org.apache.zeppelin.cluster.meta.ClusterMeta;
+import org.apache.zeppelin.cluster.meta.ClusterMetaType;
+import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.dep.DependencyResolver;
 import org.apache.zeppelin.display.AngularObject;
 import org.apache.zeppelin.display.AngularObjectRegistry;
@@ -81,6 +85,7 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -128,6 +133,10 @@ public class RemoteInterpreterServer extends Thread
 
   private boolean isTest;
 
+  // cluster manager client
+  ClusterManagerClient clusterManagerClient = ClusterManagerClient.getInstance();
+  ZeppelinConfiguration zconf = ZeppelinConfiguration.create();
+
   public RemoteInterpreterServer(String intpEventServerHost,
                                  int intpEventServerPort,
                                  String interpreterGroupId,
@@ -173,6 +182,8 @@ public class RemoteInterpreterServer extends Thread
         new TThreadPoolServer.Args(serverTransport).processor(processor));
     logger.info("Starting remote interpreter server on port {}", port);
     remoteWorksResponsePool = Collections.synchronizedMap(new HashMap<String, Object>());
+
+    clusterManagerClient.start(interpreterGroupId);
   }
 
   @Override
@@ -195,6 +206,7 @@ public class RemoteInterpreterServer extends Thread
             RegisterInfo registerInfo = new RegisterInfo(host, port, interpreterGroupId);
             try {
               intpEventServiceClient.registerInterpreterProcess(registerInfo);
+              putClusterMeta();
             } catch (TException e) {
               logger.error("Error while registering interpreter: {}", registerInfo, e);
               try {
@@ -278,6 +290,26 @@ public class RemoteInterpreterServer extends Thread
     remoteInterpreterServer.start();
     remoteInterpreterServer.join();
     System.exit(0);
+  }
+
+  // Submit interpreter process metadata information to cluster metadata
+  private void putClusterMeta() {
+    if (!zconf.isClusterMode()){
+      return;
+    }
+    String nodeName = clusterManagerClient.getClusterNodeName();
+
+    // commit interpreter meta
+    HashMap<String, Object> meta = new HashMap<>();
+    meta.put(ClusterMeta.NODE_NAME, nodeName);
+    meta.put(ClusterMeta.INTP_PROCESS_ID, interpreterGroupId);
+    meta.put(ClusterMeta.INTP_TSERVER_HOST, host);
+    meta.put(ClusterMeta.INTP_TSERVER_PORT, port);
+    meta.put(ClusterMeta.INTP_START_TIME, new Date());
+    meta.put(ClusterMeta.HEARTBEAT, new Date());
+    meta.put(ClusterMeta.STATUS, ClusterMeta.ONLINE_STATUS);
+
+    clusterManagerClient.putClusterMeta(ClusterMetaType.IntpProcessMeta, interpreterGroupId, meta);
   }
 
   @Override
