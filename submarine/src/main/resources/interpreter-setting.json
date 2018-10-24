@@ -3,30 +3,124 @@
     "group": "submarine",
     "name": "submarine",
     "className": "org.apache.zeppelin.submarine.SubmarineInterpreter",
+    "defaultInterpreter": true,
     "properties": {
-      "hbase.home": {
-        "envName": "HBASE_HOME",
-        "propertyName": "hbase.home",
-        "defaultValue": "/usr/lib/hbase/",
-        "description": "Installation directory of HBase",
+      "hadoop.yarn.submarine.bin": {
+        "envName": "HADOOP_YARN_SUBMARINE_BIN",
+        "propertyName": "hadoop.yarn.submarine.bin",
+        "defaultValue": "",
+        "description": "Submarine executive full path, eg. hadoop/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0.jar",
         "type": "string"
       },
-      "hbase.ruby.sources": {
-        "propertyName": "hbase.ruby.sources",
-        "defaultValue": "lib/ruby",
-        "description": "Path to Ruby scripts relative to 'hbase.home'",
+      "submarine.yarn.queue": {
+        "envName": "SUBMARINE_YARN_QUEUE",
+        "propertyName": "submarine.yarn.queue",
+        "defaultValue": "root.default",
+        "description": "submarine queue name of yarn",
         "type": "string"
-      },
-      "zeppelin.hbase.test.mode": {
-        "propertyName": "zeppelin.hbase.test.mode",
-        "defaultValue": false,
-        "description": "Disable checks for unit and manual tests",
-        "type": "checkbox"
       }
     },
     "editor": {
       "editOnDblClick": false,
-      "completionSupport": false
+      "completionKey": "TAB",
+      "completionSupport": true
+    }
+  },
+  {
+    "group": "submarine",
+    "name": "tensorflow",
+    "className": "org.apache.zeppelin.submarine.SubmarineTFInterpreter",
+    "properties": {
+      "algorithm.upload.path": {
+        "envName": "ALGORITHM_UPLOAD_PATH",
+        "propertyName": "algorithm.upload.path",
+        "defaultValue": "",
+        "description": "Algorithm file upload HDFS path",
+        "type": "string"
+      },
+      "docker.container.network": {
+        "envName": "DOCKER_CONTAINER_NETWORK",
+        "propertyName": "docker.container.network",
+        "defaultValue": "",
+        "description": "Network name in the docker container",
+        "type": "string"
+      },
+      "parameter.services.num": {
+        "envName": "PARAMETER_SERVICES_NUM",
+        "propertyName": "parameter.services.num",
+        "defaultValue": 0,
+        "description": "Number of parameter services",
+        "type": "number"
+      },
+      "worker.services.num": {
+        "envName": "WORKER_SERVICES_NUM",
+        "propertyName": "worker.services.num",
+        "defaultValue": 0,
+        "description": "Number of worker services",
+        "type": "number"
+      },
+      "parameter.services.docker.image": {
+        "envName": "PARAMETER_SERVICES_DOCKER_IMAGE",
+        "propertyName": "parameter.services.docker.image",
+        "defaultValue": 0,
+        "description": "Docker image of parameter services",
+        "type": "string"
+      },
+      "parameter.services.gpu": {
+        "envName": "PARAMETER_SERVICES_GPU",
+        "propertyName": "parameter.services.gpu",
+        "defaultValue": 0,
+        "description": "GPU number of parameter services",
+        "type": "number"
+      },
+      "parameter.services.cpu": {
+        "envName": "PARAMETER_SERVICES_CPU",
+        "propertyName": "parameter.services.cpu",
+        "defaultValue": 2,
+        "description": "CPU number of parameter services",
+        "type": "number"
+      },
+      "parameter.services.memory": {
+        "envName": "PARAMETER_SERVICES_MEMORY",
+        "propertyName": "parameter.services.memory",
+        "defaultValue": "2G",
+        "description": "Memory number of parameter services",
+        "type": "string"
+      },
+      "worker.services.docker.image": {
+        "envName": "WORKER_SERVICES_DOCKER_IMAGE",
+        "propertyName": "worker.services.docker.image",
+        "defaultValue": 0,
+        "description": "Docker image of worker services",
+        "type": "string"
+      },
+      "worker.services.gpu": {
+        "envName": "WORKER_SERVICES_GPU",
+        "propertyName": "worker.services.gpu",
+        "defaultValue": 0,
+        "description": "GPU number of worker services",
+        "type": "number"
+      },
+      "worker.services.cpu": {
+        "envName": "WORKER_SERVICES_CPU",
+        "propertyName": "worker.services.cpu",
+        "defaultValue": 2,
+        "description": "CPU number of worker services",
+        "type": "number"
+      },
+      "worker.services.memory": {
+        "envName": "WORKER_SERVICES_MEMORY",
+        "propertyName": "worker.services.memory",
+        "defaultValue": "4G",
+        "description": "Memory number of worker services",
+        "type": "string"
+      }
+    },
+    "editor": {
+      "language": "python",
+      "editOnDblClick": false,
+      "completionKey": "TAB",
+      "completionSupport": true
     }
   }
 ]
