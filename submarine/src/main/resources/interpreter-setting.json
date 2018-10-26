@@ -5,11 +5,18 @@
     "className": "org.apache.zeppelin.submarine.SubmarineInterpreter",
     "defaultInterpreter": true,
     "properties": {
-      "hadoop.yarn.submarine.bin": {
-        "envName": "HADOOP_YARN_SUBMARINE_BIN",
-        "propertyName": "hadoop.yarn.submarine.bin",
+      "hadoop.conf.dir": {
+        "envName": "HADOOP_CONF_DIR",
+        "propertyName": "hadoop.conf.dir",
         "defaultValue": "",
-        "description": "Submarine executive full path, eg. hadoop/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0.jar",
+        "description": "User-defined hadoop configuration",
+        "type": "string"
+      },
+      "hadoop.yarn.submarine.jar": {
+        "envName": "HADOOP_YARN_SUBMARINE_JAR",
+        "propertyName": "hadoop.yarn.submarine.jar",
+        "defaultValue": "",
+        "description": "Submarine executive full path, ex) hadoop/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0.jar",
         "type": "string"
       },
       "submarine.yarn.queue": {
@@ -17,6 +24,34 @@
         "propertyName": "submarine.yarn.queue",
         "defaultValue": "root.default",
         "description": "submarine queue name of yarn",
+        "type": "string"
+      },
+      "submarine.hdfs.keytab": {
+        "envName": "SUBMARINE_HDFS_KEYTAB",
+        "propertyName": "submarine.hdfs.keytab",
+        "defaultValue": "",
+        "description": "submarine hdfs kerberos authentication",
+        "type": "string"
+      },
+      "submarine.hdfs.principal": {
+        "envName": "SUBMARINE_HDFS_PRINCIPAL",
+        "propertyName": "submarine.hdfs.principal",
+        "defaultValue": "",
+        "description": "submarine hdfs kerberos authentication",
+        "type": "string"
+      },
+      "docker.container.network": {
+        "envName": "DOCKER_CONTAINER_NETWORK",
+        "propertyName": "docker.container.network",
+        "defaultValue": "",
+        "description": "Network name in the docker container",
+        "type": "string"
+      },
+      "algorithm.upload.path": {
+        "envName": "ALGORITHM_UPLOAD_PATH",
+        "propertyName": "algorithm.upload.path",
+        "defaultValue": "",
+        "description": "Algorithm file upload HDFS path",
         "type": "string"
       }
     },
@@ -30,21 +65,8 @@
     "group": "submarine",
     "name": "tensorflow",
     "className": "org.apache.zeppelin.submarine.SubmarineTFInterpreter",
+    "defaultInterpreter": true,
     "properties": {
-      "algorithm.upload.path": {
-        "envName": "ALGORITHM_UPLOAD_PATH",
-        "propertyName": "algorithm.upload.path",
-        "defaultValue": "",
-        "description": "Algorithm file upload HDFS path",
-        "type": "string"
-      },
-      "docker.container.network": {
-        "envName": "DOCKER_CONTAINER_NETWORK",
-        "propertyName": "docker.container.network",
-        "defaultValue": "",
-        "description": "Network name in the docker container",
-        "type": "string"
-      },
       "parameter.services.num": {
         "envName": "PARAMETER_SERVICES_NUM",
         "propertyName": "parameter.services.num",
@@ -62,7 +84,7 @@
       "parameter.services.docker.image": {
         "envName": "PARAMETER_SERVICES_DOCKER_IMAGE",
         "propertyName": "parameter.services.docker.image",
-        "defaultValue": 0,
+        "defaultValue": "",
         "description": "Docker image of parameter services",
         "type": "string"
       },
@@ -90,7 +112,7 @@
       "worker.services.docker.image": {
         "envName": "WORKER_SERVICES_DOCKER_IMAGE",
         "propertyName": "worker.services.docker.image",
-        "defaultValue": 0,
+        "defaultValue": "",
         "description": "Docker image of worker services",
         "type": "string"
       },
@@ -114,6 +136,20 @@
         "defaultValue": "4G",
         "description": "Memory number of worker services",
         "type": "string"
+      },
+      "submarine.concurrent.max": {
+        "envName": "SUBMARINE_CONCURRENT_MAX",
+        "propertyName": "submarine.concurrent.max",
+        "defaultValue": 1,
+        "description": "Number of submarines executed in parallel for each interpreter instance",
+        "type": "number"
+      },
+      "tensorboard.enable": {
+        "envName": "TENSORBOARD_ENABLE",
+        "propertyName": "tensorboard.enable",
+        "defaultValue": true,
+        "description": "Whether to enable tensorboard",
+        "type": "checkbox"
       }
     },
     "editor": {
