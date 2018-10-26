@@ -24,7 +24,7 @@ user1 = password2, role1, role2
 user2 = password3, role3
 user3 = password4, role2
 
-# Sample LDAP configuration, for user Authentication, currently tested for single Realm
+# Sample LDAP configuration, for user Authentication, currentaly tested for single Realm
 [main]
 ### A sample for configuring Active Directory Realm
 #activeDirectoryRealm = org.apache.zeppelin.realm.ActiveDirectoryGroupRealm

@@ -20,6 +20,8 @@ import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.lang3.StringUtils;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.zeppelin.submarine.utils.HDFSUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,9 +29,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterException;
@@ -48,19 +52,20 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
   private Logger LOGGER = LoggerFactory.getLogger(SubmarineTFInterpreter.class);
 
   public static final String ALGORITHM_UPLOAD_PATH    = "algorithm.upload.path";
-  public static final String DOCKER_CONTAINER_NETWORK = "docker.container.network";
-  public static final String PARAMETER_SERVICES_DOCKER_IMAGE  = "parameter.services.docker.image";
-  public static final String WORKER_SERVICES_DOCKER_IMAGE     = "worker.services.docker.image";
 
+  public static final String PARAMETER_SERVICES_DOCKER_IMAGE = "parameter.services.docker.image";
   public static final String PARAMETER_SERVICES_NUM = "parameter.services.num";
   public static final String PARAMETER_SERVICES_GPU = "parameter.services.gpu";
   public static final String PARAMETER_SERVICES_CPU = "parameter.services.cpu";
   public static final String PARAMETER_SERVICES_MEMORY = "parameter.services.memory";
 
+  public static final String WORKER_SERVICES_DOCKER_IMAGE = "worker.services.docker.image";
   public static final String WORKER_SERVICES_NUM = "worker.services.num";
   public static final String WORKER_SERVICES_GPU = "worker.services.gpu";
   public static final String WORKER_SERVICES_CPU = "worker.services.gpu";
   public static final String WORKER_SERVICES_MEMORY = "worker.services.memory";
+
+  public static final String TENSORBOARD_ENABLE  = "tensorboard.enable";
 
   private static final String DIRECTORY_USER_HOME = "shell.working.directory.user.home";
   private final boolean isWindows = System.getProperty("os.name").startsWith("Windows");
@@ -70,8 +75,17 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
   private String defaultTimeoutProperty = "60000";
   ConcurrentHashMap<String, DefaultExecutor> executors;
 
+  LinkedBlockingQueue<SubmarineParagraph> executorQueue = null;
+  // SubmarineParagraph submarineParagraph = null;
+
+  String algorithmUploadPath = "";
+  HDFSUtils hdfsUtils = null;
+
   public SubmarineTFInterpreter(Properties property) {
     super(property);
+
+    algorithmUploadPath = this.getProperty(ALGORITHM_UPLOAD_PATH);
+    hdfsUtils = new HDFSUtils(algorithmUploadPath);
   }
 
   @Override
@@ -79,6 +93,7 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
     super.open();
     LOGGER.info("Command timeout property: {}", getProperty(TIMEOUT_PROPERTY));
     executors = new ConcurrentHashMap<>();
+    executorQueue = new LinkedBlockingQueue(2);
   }
 
   @Override
@@ -98,9 +113,25 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
 
   @Override
   public InterpreterResult interpret(String originalCmd, InterpreterContext contextInterpreter) {
+    SubmarineParagraph submarineParagraph = new SubmarineParagraph(
+        contextInterpreter.getNoteId(),
+        contextInterpreter.getNoteName(),
+        contextInterpreter.getParagraphId(),
+        contextInterpreter.getParagraphTitle(),
+        contextInterpreter.getParagraphText(),
+        contextInterpreter.getReplName());
+
+    // upload algorithm to HDFS
+    try {
+      uploadAlgorithmToHDFS(submarineParagraph);
+    } catch (Exception e) {
+      e.printStackTrace();
+      return new InterpreterResult(InterpreterResult.Code.ERROR, e.getMessage());
+    }
+
     String cmd = Boolean.parseBoolean(getProperty("zeppelin.shell.interpolation")) ?
         interpolate(originalCmd, contextInterpreter.getResourcePool()) : originalCmd;
-    LOGGER.debug("Run shell command '" + cmd + "'");
+    LOGGER.info("Run shell command '" + cmd + "'");
     OutputStream outStream = new ByteArrayOutputStream();
 
     CommandLine cmdLine = CommandLine.parse(shell);
@@ -116,6 +147,12 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
       DefaultExecutor executor = new DefaultExecutor();
       executor.setStreamHandler(new PumpStreamHandler(
           contextInterpreter.out, contextInterpreter.out));
+
+      try {
+        Thread.sleep(20000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
 
       executor.setWatchdog(new ExecuteWatchdog(
           Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty))));
@@ -151,6 +188,8 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
 
   @Override
   public void cancel(InterpreterContext context) {
+    removeParagraph(context.getNoteId(), context.getParagraphId());
+
     DefaultExecutor executor = executors.remove(context.getParagraphId());
     if (executor != null) {
       try {
@@ -173,13 +212,18 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
 
   @Override
   public Scheduler getScheduler() {
-    return SchedulerFactory.singleton().createOrGetParallelScheduler(
-        SubmarineTFInterpreter.class.getName() + this.hashCode(), 10);
+    String schedulerName = SubmarineTFInterpreter.class.getName() + this.hashCode();
+    if (concurrentExecutedMax > 1) {
+      return SchedulerFactory.singleton().createOrGetParallelScheduler(schedulerName,
+          concurrentExecutedMax);
+    } else {
+      return SchedulerFactory.singleton().createOrGetFIFOScheduler(schedulerName);
+    }
   }
 
   @Override
-  public List<InterpreterCompletion> completion(String buf, int cursor,
-                                                InterpreterContext interpreterContext) {
+  public List<InterpreterCompletion> completion(
+      String buf, int cursor, InterpreterContext interpreterContext) {
     return null;
   }
 
@@ -213,10 +257,35 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
 
   @Override
   protected boolean isKerboseEnabled() {
+    /*
     if (!StringUtils.isAnyEmpty(getProperty("zeppelin.shell.auth.type")) && getProperty(
         "zeppelin.shell.auth.type").equalsIgnoreCase("kerberos")) {
       return true;
-    }
+    }*/
     return false;
+  }
+
+  private void uploadAlgorithmToHDFS(SubmarineParagraph paragraph) throws Exception {
+    String paragraphDir = algorithmUploadPath + File.pathSeparator + paragraph.getNoteId()
+        + File.pathSeparator + paragraph.getParagraphId();
+    Path paragraphPath = new Path(paragraphDir);
+    if (hdfsUtils.exists(paragraphPath)) {
+      hdfsUtils.tryMkDir(paragraphPath);
+    }
+
+    LOGGER.info("Upload algorithm to HDFS: {}", paragraphDir);
+    Path algorithmPath = new Path(paragraphDir + File.pathSeparator + "algorithm.python");
+    hdfsUtils.writeFile(paragraph.getParagraphText(), algorithmPath);
+  }
+
+  //
+  private void removeParagraph(String noteId, String paragraphId) {
+    Iterator iter = executorQueue.iterator();
+    while (iter.hasNext()) {
+      SubmarineParagraph paragraph = (SubmarineParagraph) iter.next();
+      if (paragraph.getNoteId().equals(noteId) && paragraph.getParagraphId().equals(paragraphId)) {
+        executorQueue.remove(paragraph);
+      }
+    }
   }
 }
