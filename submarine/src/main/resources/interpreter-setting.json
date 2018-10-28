@@ -5,18 +5,11 @@
     "className": "org.apache.zeppelin.submarine.SubmarineInterpreter",
     "defaultInterpreter": true,
     "properties": {
-      "hadoop.conf.dir": {
-        "envName": "HADOOP_CONF_DIR",
-        "propertyName": "hadoop.conf.dir",
-        "defaultValue": "",
-        "description": "User-defined hadoop configuration",
-        "type": "string"
-      },
       "hadoop.yarn.submarine.jar": {
         "envName": "HADOOP_YARN_SUBMARINE_JAR",
         "propertyName": "hadoop.yarn.submarine.jar",
         "defaultValue": "",
-        "description": "Submarine executive full path, ex) hadoop/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0.jar",
+        "description": "Submarine executive full path, ex) ../hadoop/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0.jar",
         "type": "string"
       },
       "submarine.yarn.queue": {
@@ -65,19 +58,18 @@
     "group": "submarine",
     "name": "tensorflow",
     "className": "org.apache.zeppelin.submarine.SubmarineTFInterpreter",
-    "defaultInterpreter": true,
     "properties": {
       "parameter.services.num": {
         "envName": "PARAMETER_SERVICES_NUM",
         "propertyName": "parameter.services.num",
-        "defaultValue": 0,
+        "defaultValue": "0",
         "description": "Number of parameter services",
         "type": "number"
       },
       "worker.services.num": {
         "envName": "WORKER_SERVICES_NUM",
         "propertyName": "worker.services.num",
-        "defaultValue": 0,
+        "defaultValue": "0",
         "description": "Number of worker services",
         "type": "number"
       },
@@ -91,14 +83,14 @@
       "parameter.services.gpu": {
         "envName": "PARAMETER_SERVICES_GPU",
         "propertyName": "parameter.services.gpu",
-        "defaultValue": 0,
+        "defaultValue": "0",
         "description": "GPU number of parameter services",
         "type": "number"
       },
       "parameter.services.cpu": {
         "envName": "PARAMETER_SERVICES_CPU",
         "propertyName": "parameter.services.cpu",
-        "defaultValue": 2,
+        "defaultValue": "2",
         "description": "CPU number of parameter services",
         "type": "number"
       },
@@ -119,14 +111,14 @@
       "worker.services.gpu": {
         "envName": "WORKER_SERVICES_GPU",
         "propertyName": "worker.services.gpu",
-        "defaultValue": 0,
+        "defaultValue": "0",
         "description": "GPU number of worker services",
         "type": "number"
       },
       "worker.services.cpu": {
         "envName": "WORKER_SERVICES_CPU",
         "propertyName": "worker.services.cpu",
-        "defaultValue": 2,
+        "defaultValue": "2",
         "description": "CPU number of worker services",
         "type": "number"
       },
@@ -140,7 +132,7 @@
       "submarine.concurrent.max": {
         "envName": "SUBMARINE_CONCURRENT_MAX",
         "propertyName": "submarine.concurrent.max",
-        "defaultValue": 1,
+        "defaultValue": "1",
         "description": "Number of submarines executed in parallel for each interpreter instance",
         "type": "number"
       },

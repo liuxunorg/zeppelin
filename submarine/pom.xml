@@ -37,6 +37,7 @@
     <!--library versions-->
     <interpreter.name>submarine</interpreter.name>
     <hadoop.version>3.3.0-SNAPSHOT</hadoop.version>
+    <jinjava.version>2.4.0</jinjava.version>
 
     <!--test library versions-->
     <hamcrest.all.version>1.3</hamcrest.all.version>
@@ -58,6 +59,16 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <version>${hadoop.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.hubspot.jinjava</groupId>
+      <artifactId>jinjava</artifactId>
+      <version>${jinjava.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.hubspot.jinjava</groupId>
+      <artifactId>jinjava</artifactId>
+      <version>2.4.0</version>
     </dependency>
   </dependencies>
 

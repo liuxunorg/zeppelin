@@ -1,14 +1,6 @@
 package org.apache.zeppelin.submarine.utils;
 
-import org.apache.commons.exec.*;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.zeppelin.interpreter.InterpreterOutput;
-import org.apache.zeppelin.interpreter.InterpreterResult;
 import org.apache.zeppelin.submarine.SubmarineInterpreter;
-import org.apache.zeppelin.submarine.SubmarineParagraph;
-
-import java.io.File;
-import java.io.IOException;
 import java.util.Properties;
 
 public class SubmarineUtils {
@@ -38,7 +30,7 @@ public class SubmarineUtils {
   // parse submarine command
   // `job run --name distributed-tf-gpu ...`
   // `job show --name distributed-tf-gpu`
-  static public String parseCommand(String command) {
+  public static String parseCommand(String command) {
     command = command.trim();
     String args[] = command.split(" ");
 

@@ -14,13 +14,25 @@
 
 package org.apache.zeppelin.submarine;
 
-import org.apache.commons.exec.*;
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
+import com.hubspot.jinjava.Jinjava;
+import org.apache.commons.exec.DefaultExecutor;
+import org.apache.commons.exec.CommandLine;
+import org.apache.commons.exec.ExecuteException;
+import org.apache.commons.exec.ExecuteWatchdog;
+import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.submarine.client.cli.CliConstants;
-import org.apache.zeppelin.interpreter.*;
+import org.apache.zeppelin.interpreter.KerberosInterpreter;
+import org.apache.zeppelin.interpreter.InterpreterContext;
+import org.apache.zeppelin.interpreter.InterpreterResult;
+import org.apache.zeppelin.interpreter.InterpreterException;
+import org.apache.zeppelin.interpreter.InterpreterOutput;
 import org.apache.zeppelin.interpreter.thrift.InterpreterCompletion;
 import org.apache.zeppelin.scheduler.Scheduler;
 import org.apache.zeppelin.scheduler.SchedulerFactory;
+import org.apache.zeppelin.submarine.utils.SubmarineParagraph;
 import org.apache.zeppelin.submarine.utils.SubmarineUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +41,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URL;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,7 +57,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
   private Logger LOGGER = LoggerFactory.getLogger(SubmarineInterpreter.class);
 
   public static final String HADOOP_HOME = "HADOOP_HOME";
-  public static final String HADOOP_CONF_DIR = "hadoop.conf.dir";
+  public static final String HADOOP_CONF_DIR = "HADOOP_CONF_DIR";
   public static final String HADOOP_YARN_SUBMARINE_JAR = "hadoop.yarn.submarine.jar";
   public static final String SUBMARINE_YARN_QUEUE      = "submarine.yarn.queue";
   public static final String DOCKER_CONTAINER_NETWORK  = "docker.container.network";
@@ -103,6 +117,15 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     String cmd = Boolean.parseBoolean(getProperty("zeppelin.shell.interpolation")) ?
         interpolate(originalCmd, contextInterpreter.getResourcePool()) : originalCmd;
     LOGGER.debug("Run shell command '" + cmd + "'");
+
+    SubmarineParagraph submarineParagraph = new SubmarineParagraph(
+        contextInterpreter.getNoteId(),
+        contextInterpreter.getNoteName(),
+        contextInterpreter.getParagraphId(),
+        contextInterpreter.getParagraphTitle(),
+        contextInterpreter.getParagraphText(),
+        contextInterpreter.getReplName(), cmd);
+
     OutputStream outStream = new ByteArrayOutputStream();
 
     CommandLine cmdLine = CommandLine.parse(shell);
@@ -115,26 +138,21 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     cmdLine.addArgument(cmd, false);
 
     try {
+      DefaultExecutor executor = null;
       String cmdType = SubmarineUtils.parseCommand(cmd);
-      if (cmdType.equals(CliConstants.RUN)) {
-
+      if (cmdType.equalsIgnoreCase("help")) {
+        String message = getSubmarineHelp();
+        return new InterpreterResult(InterpreterResult.Code.SUCCESS, message);
       } else if (cmdType.equals(CliConstants.SHOW)) {
+        executor = showJob(submarineParagraph, contextInterpreter.out);
+      } else if (cmdType.equals(CliConstants.RUN)) {
 
       } else {
-        String message = "";
+        String message = "Unsupported command!\n";
+        message += getSubmarineHelp();
         return new InterpreterResult(InterpreterResult.Code.ERROR, message);
       }
-
-      DefaultExecutor executor = new DefaultExecutor();
-      executor.setStreamHandler(new PumpStreamHandler(
-          contextInterpreter.out, contextInterpreter.out));
-
-      executor.setWatchdog(new ExecuteWatchdog(
-          Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty))));
       executors.put(contextInterpreter.getParagraphId(), executor);
-      if (Boolean.valueOf(getProperty(DIRECTORY_USER_HOME))) {
-        executor.setWorkingDirectory(new File(System.getProperty("user.home")));
-      }
 
       int exitVal = executor.execute(cmdLine);
       LOGGER.info("Paragraph " + contextInterpreter.getParagraphId()
@@ -225,24 +243,35 @@ public class SubmarineInterpreter extends KerberosInterpreter {
 
   @Override
   protected boolean isKerboseEnabled() {
+    /*
     if (!StringUtils.isAnyEmpty(getProperty("zeppelin.shell.auth.type")) && getProperty(
         "zeppelin.shell.auth.type").equalsIgnoreCase("kerberos")) {
       return true;
-    }
+    }*/
     return false;
   }
 
-  public DefaultExecutor showJob(SubmarineParagraph paragraph, InterpreterOutput interpreterOutput) {
-    String yarnPath = hadoopHome + "/bin/yarn";
+  public DefaultExecutor runJob(SubmarineParagraph paragraph, InterpreterOutput output) {
+    HashMap mapParams = new HashMap();
 
-    StringBuffer command = new StringBuffer();
-    command.append(yarnPath).append(" ");
-    command.append(submarineJar).append(" ");
-    command.append("job").append(" ");
-    command.append("show").append(" ");
-    command.append("--name").append(" ");
-    command.append(paragraph.getNoteId() + "-" + paragraph.getParagraphId());
-    String cmd = command.toString();
+    URL urlTemplate = Resources.getResource("submarine-job-run-tf.jinja");
+    String template = null;
+    try {
+      template = Resources.toString(urlTemplate, Charsets.UTF_8);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    Jinjava jinjava = new Jinjava();
+    String renderedTemplate = jinjava.render(template, mapParams);
+
+    try {
+      output.write(renderedTemplate);
+    } catch (IOException e) {
+      e.printStackTrace();
+      return null;
+    }
+    String cmd = "ls "; // command.toString();
 
     CommandLine cmdLine = CommandLine.parse(shell);
     // the Windows CMD shell doesn't handle multiline statements,
@@ -254,16 +283,67 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     cmdLine.addArgument(cmd, false);
 
     DefaultExecutor executor = new DefaultExecutor();
-    executor.setStreamHandler(new PumpStreamHandler(interpreterOutput, interpreterOutput));
+    executor.setStreamHandler(new PumpStreamHandler(output, output));
 
     long timeout = Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty));
 
     executor.setWatchdog(new ExecuteWatchdog(timeout));
-//      executors.put(contextInterpreter.getParagraphId(), executor);
     if (Boolean.valueOf(getProperty(DIRECTORY_USER_HOME))) {
       executor.setWorkingDirectory(new File(System.getProperty("user.home")));
     }
 
     return executor;
+  }
+
+  public DefaultExecutor showJob(SubmarineParagraph paragraph, InterpreterOutput output) {
+    String yarnPath = hadoopHome + "/bin/yarn";
+
+    StringBuffer command = new StringBuffer();
+    command.append(yarnPath).append(" ");
+    command.append(submarineJar).append(" ");
+    command.append("job").append(" ");
+    command.append("show").append(" ");
+    command.append("--name").append(" ");
+    command.append(paragraph.getNoteId() + "-" + paragraph.getParagraphId());
+
+    try {
+      output.write(command.toString());
+    } catch (IOException e) {
+      e.printStackTrace();
+      return null;
+    }
+    String cmd = "ls "; // command.toString();
+
+    CommandLine cmdLine = CommandLine.parse(shell);
+    // the Windows CMD shell doesn't handle multiline statements,
+    // they need to be delimited by '&&' instead
+    if (isWindows) {
+      String[] lines = StringUtils.split(cmd, "\n");
+      cmd = StringUtils.join(lines, " && ");
+    }
+    cmdLine.addArgument(cmd, false);
+
+    DefaultExecutor executor = new DefaultExecutor();
+    executor.setStreamHandler(new PumpStreamHandler(output, output));
+
+    long timeout = Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty));
+
+    executor.setWatchdog(new ExecuteWatchdog(timeout));
+    if (Boolean.valueOf(getProperty(DIRECTORY_USER_HOME))) {
+      executor.setWorkingDirectory(new File(System.getProperty("user.home")));
+    }
+
+    return executor;
+  }
+
+  private String getSubmarineHelp() {
+    StringBuilder helpMsg = new StringBuilder();
+    helpMsg.append("\n\nUsage: <object> [<action>] [<args>]\n");
+    helpMsg.append("  Below are all objects / actions:\n");
+    helpMsg.append("    job \n");
+    helpMsg.append("       run : run a job, please see 'job run --help' for usage \n");
+    helpMsg.append("       show : get status of job, please see 'job show --help' for usage \n");
+
+    return helpMsg.toString();
   }
 }
