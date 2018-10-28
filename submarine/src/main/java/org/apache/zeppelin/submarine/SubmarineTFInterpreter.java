@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.zeppelin.submarine.utils.HDFSUtils;
+import org.apache.zeppelin.submarine.utils.SubmarineParagraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +63,7 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
   public static final String WORKER_SERVICES_DOCKER_IMAGE = "worker.services.docker.image";
   public static final String WORKER_SERVICES_NUM = "worker.services.num";
   public static final String WORKER_SERVICES_GPU = "worker.services.gpu";
-  public static final String WORKER_SERVICES_CPU = "worker.services.gpu";
+  public static final String WORKER_SERVICES_CPU = "worker.services.cpu";
   public static final String WORKER_SERVICES_MEMORY = "worker.services.memory";
 
   public static final String TENSORBOARD_ENABLE  = "tensorboard.enable";
@@ -119,7 +120,7 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
         contextInterpreter.getParagraphId(),
         contextInterpreter.getParagraphTitle(),
         contextInterpreter.getParagraphText(),
-        contextInterpreter.getReplName());
+        contextInterpreter.getReplName(), originalCmd);
 
     // upload algorithm to HDFS
     try {
@@ -266,15 +267,15 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
   }
 
   private void uploadAlgorithmToHDFS(SubmarineParagraph paragraph) throws Exception {
-    String paragraphDir = algorithmUploadPath + File.pathSeparator + paragraph.getNoteId()
-        + File.pathSeparator + paragraph.getParagraphId();
+    String paragraphDir = algorithmUploadPath + File.separator + paragraph.getNoteId()
+        + File.separator + paragraph.getParagraphId();
     Path paragraphPath = new Path(paragraphDir);
     if (hdfsUtils.exists(paragraphPath)) {
       hdfsUtils.tryMkDir(paragraphPath);
     }
 
     LOGGER.info("Upload algorithm to HDFS: {}", paragraphDir);
-    Path algorithmPath = new Path(paragraphDir + File.pathSeparator + "algorithm.python");
+    Path algorithmPath = new Path(paragraphDir + File.separator + "algorithm.python");
     hdfsUtils.writeFile(paragraph.getParagraphText(), algorithmPath);
   }
 

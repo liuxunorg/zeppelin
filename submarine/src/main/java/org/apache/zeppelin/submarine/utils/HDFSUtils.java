@@ -124,7 +124,7 @@ public class HDFSUtils {
     });
   }
 
-  // recursive search path, (TODO zjffdu, list folder in sub folder on demand, instead of load all
+  // recursive search path, (list folder in sub folder on demand, instead of load all
   // data when zeppelin server start)
   public List<Path> listAll(final Path path) throws IOException {
     return callHdfsOperation(new HdfsOperation<List<Path>>() {

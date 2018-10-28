@@ -1,0 +1,17 @@
+{{ HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
+  job run \
+  --name {{ JOB_NAME }} \
+  --env DOCKER_JAVA_HOME={{ DOCKER_JAVA_HOME }} \
+  --env DOCKER_HADOOP_HDFS_HOME={{ DOCKER_HADOOP_HDFS_HOME }} \
+  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK={{ YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK }} \
+  --input_path {{ INPUT_PATH }} \
+  --checkpoint_path {{ CHECKPOINT_PATH }} \
+  --num_ps {{ parameter.services.num }} \
+  --ps_resources memory={{ parameter.services.memory }},vcores={{ parameter.services.cpu }},gpu={{ parameter.services.gpu }} \
+  --ps_launch_cmd "{{ PS_LAUNCH_CMD }}" \
+  --ps_docker_image {{ parameter.services.docker.image }} \
+  --worker_docker_image {{ worker.services.docker.image }} \
+  --worker_resources memory={{ worker.services.memory }},vcores={{ worker.services.cpu }},gpu={{ worker.services.gpu }} \
+  --verbose \
+  --num_workers {{ worker.services.num }} \
+  --worker_launch_cmd "{{ WORKER_LAUNCH_CMD }}"
