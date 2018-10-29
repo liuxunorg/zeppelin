@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.zeppelin.submarine.utils.HDFSUtils;
+import org.apache.zeppelin.submarine.utils.SubmarineConstants;
 import org.apache.zeppelin.submarine.utils.SubmarineParagraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,22 +53,6 @@ import org.apache.zeppelin.scheduler.SchedulerFactory;
 public class SubmarineTFInterpreter extends SubmarineInterpreter {
   private Logger LOGGER = LoggerFactory.getLogger(SubmarineTFInterpreter.class);
 
-  public static final String ALGORITHM_UPLOAD_PATH    = "algorithm.upload.path";
-
-  public static final String PARAMETER_SERVICES_DOCKER_IMAGE = "parameter.services.docker.image";
-  public static final String PARAMETER_SERVICES_NUM = "parameter.services.num";
-  public static final String PARAMETER_SERVICES_GPU = "parameter.services.gpu";
-  public static final String PARAMETER_SERVICES_CPU = "parameter.services.cpu";
-  public static final String PARAMETER_SERVICES_MEMORY = "parameter.services.memory";
-
-  public static final String WORKER_SERVICES_DOCKER_IMAGE = "worker.services.docker.image";
-  public static final String WORKER_SERVICES_NUM = "worker.services.num";
-  public static final String WORKER_SERVICES_GPU = "worker.services.gpu";
-  public static final String WORKER_SERVICES_CPU = "worker.services.cpu";
-  public static final String WORKER_SERVICES_MEMORY = "worker.services.memory";
-
-  public static final String TENSORBOARD_ENABLE  = "tensorboard.enable";
-
   private static final String DIRECTORY_USER_HOME = "shell.working.directory.user.home";
   private final boolean isWindows = System.getProperty("os.name").startsWith("Windows");
   private final String shell = isWindows ? "cmd /c" : "bash -c";
@@ -85,7 +70,7 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
   public SubmarineTFInterpreter(Properties property) {
     super(property);
 
-    algorithmUploadPath = this.getProperty(ALGORITHM_UPLOAD_PATH);
+    algorithmUploadPath = this.getProperty(SubmarineConstants.ALGORITHM_UPLOAD_PATH);
     hdfsUtils = new HDFSUtils(algorithmUploadPath);
   }
 
@@ -113,25 +98,27 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
   }
 
   @Override
-  public InterpreterResult interpret(String originalCmd, InterpreterContext contextInterpreter) {
+  public InterpreterResult interpret(String script, InterpreterContext contextIntp) {
     SubmarineParagraph submarineParagraph = new SubmarineParagraph(
-        contextInterpreter.getNoteId(),
-        contextInterpreter.getNoteName(),
-        contextInterpreter.getParagraphId(),
-        contextInterpreter.getParagraphTitle(),
-        contextInterpreter.getParagraphText(),
-        contextInterpreter.getReplName(), originalCmd);
+        contextIntp.getNoteId(),
+        contextIntp.getNoteName(),
+        contextIntp.getParagraphId(),
+        contextIntp.getParagraphTitle(),
+        contextIntp.getParagraphText(),
+        contextIntp.getReplName(), script);
+
 
     // upload algorithm to HDFS
+    /*
     try {
       uploadAlgorithmToHDFS(submarineParagraph);
     } catch (Exception e) {
       e.printStackTrace();
       return new InterpreterResult(InterpreterResult.Code.ERROR, e.getMessage());
-    }
+    }*/
 
     String cmd = Boolean.parseBoolean(getProperty("zeppelin.shell.interpolation")) ?
-        interpolate(originalCmd, contextInterpreter.getResourcePool()) : originalCmd;
+        interpolate(script, contextIntp.getResourcePool()) : script;
     LOGGER.info("Run shell command '" + cmd + "'");
     OutputStream outStream = new ByteArrayOutputStream();
 
@@ -144,26 +131,28 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
     }
     cmdLine.addArgument(cmd, false);
 
+    Properties properties = SubmarineContext.getProperties(contextIntp.getNoteId());
+    properties.put(cmd, cmd);
     try {
       DefaultExecutor executor = new DefaultExecutor();
       executor.setStreamHandler(new PumpStreamHandler(
-          contextInterpreter.out, contextInterpreter.out));
+          contextIntp.out, contextIntp.out));
 
       try {
-        Thread.sleep(20000);
+        Thread.sleep(5000);
       } catch (InterruptedException e) {
         e.printStackTrace();
       }
 
       executor.setWatchdog(new ExecuteWatchdog(
           Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty))));
-      executors.put(contextInterpreter.getParagraphId(), executor);
+      executors.put(contextIntp.getParagraphId(), executor);
       if (Boolean.valueOf(getProperty(DIRECTORY_USER_HOME))) {
         executor.setWorkingDirectory(new File(System.getProperty("user.home")));
       }
 
       int exitVal = executor.execute(cmdLine);
-      LOGGER.info("Paragraph " + contextInterpreter.getParagraphId()
+      LOGGER.info("Paragraph " + contextIntp.getParagraphId()
           + " return with exit value: " + exitVal);
       return new InterpreterResult(InterpreterResult.Code.SUCCESS, outStream.toString());
     } catch (ExecuteException e) {
@@ -174,7 +163,7 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
       if (exitValue == 143) {
         code = InterpreterResult.Code.INCOMPLETE;
         message += "Paragraph received a SIGTERM\n";
-        LOGGER.info("The paragraph " + contextInterpreter.getParagraphId()
+        LOGGER.info("The paragraph " + contextIntp.getParagraphId()
             + " stopped executing: " + message);
       }
       message += "ExitValue: " + exitValue;
@@ -183,7 +172,7 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
       LOGGER.error("Can not run " + cmd, e);
       return new InterpreterResult(InterpreterResult.Code.ERROR, e.getMessage());
     } finally {
-      executors.remove(contextInterpreter.getParagraphId());
+      executors.remove(contextIntp.getParagraphId());
     }
   }
 
