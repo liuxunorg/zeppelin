@@ -66,7 +66,7 @@ public class SubmarineInterpreterLauncher extends StandardInterpreterLauncher {
       LOGGER.info("Run Submarine under non-secure mode as no keytab and principal is specified");
     }
 
-    LOGGER.debug("buildEnvFromProperties: " + env);
+    LOGGER.info("buildEnvFromProperties: " + env);
     return env;
   }
 

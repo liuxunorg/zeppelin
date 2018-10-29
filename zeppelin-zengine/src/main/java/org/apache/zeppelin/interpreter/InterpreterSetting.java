@@ -651,12 +651,12 @@ public class InterpreterSetting {
   public String getLauncherPlugin() {
     if (isRunningOnKubernetes()) {
       return "K8sStandardInterpreterLauncher";
+    } else if (group.equals("spark")) {
+      return "SparkInterpreterLauncher";
+    } else if (group.equals("submarine")) {
+      return "SubmarineInterpreterLauncher";
     } else {
-      if (group.equals("spark")) {
-        return "SparkInterpreterLauncher";
-      } else {
-        return "StandardInterpreterLauncher";
-      }
+      return "StandardInterpreterLauncher";
     }
   }
 

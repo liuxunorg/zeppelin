@@ -1,9 +1,13 @@
-{{ HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
+{{ HADOOP_HOME }}/bin/yarn jar {{ hadoop.yarn.submarine.jar }} \
   job run \
   --name {{ JOB_NAME }} \
+{% if DOCKER_JAVA_HOME %}
   --env DOCKER_JAVA_HOME={{ DOCKER_JAVA_HOME }} \
+{% endif %}
+{% if DOCKER_HADOOP_HDFS_HOME %}
   --env DOCKER_HADOOP_HDFS_HOME={{ DOCKER_HADOOP_HDFS_HOME }} \
-  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK={{ YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK }} \
+{% endif %}
+  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK={{ docker.container.network }} \
   --input_path {{ INPUT_PATH }} \
   --checkpoint_path {{ CHECKPOINT_PATH }} \
   --num_ps {{ parameter.services.num }} \
