@@ -1,3 +1,17 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.zeppelin.submarine.utils;
 
 import javafx.util.Pair;
@@ -41,7 +55,7 @@ public class CommandParser {
 
   public void populate(String sc) {
     String[] lines = sc.split("\n");
-    for (int n = 0; n < lines.length; n ++) {
+    for (int n = 0; n < lines.length; n++) {
       String line = lines[n];
       parseAndAdd(line);
     }
@@ -88,7 +102,7 @@ public class CommandParser {
   private void parseAndAdd(String line) throws IllegalArgumentException {
     Pair<String, String> p = getEntryFromString(line);
 
-    if(p == null)
+    if (p == null)
       return;
 
     addEntry(p);
@@ -199,7 +213,7 @@ public class CommandParser {
   public int getIntConfig(String key) {
     String s = getConfig(key);
 
-    if(s == null)
+    if (s == null)
       throw new IllegalArgumentException("Key `" + key + "` not found!");
 
     return Integer.parseInt(s);
@@ -216,10 +230,9 @@ public class CommandParser {
   public int getIntConfig(String key, int def) {
     String s = getConfig(key);
 
-    if(s == null)
+    if (s == null)
       return def;
 
     return Integer.parseInt(s);
   }
-
 }

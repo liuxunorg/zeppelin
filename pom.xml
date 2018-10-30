@@ -965,6 +965,7 @@
               <exclude>scripts/**</exclude>
               <exclude>**/**/*.log</exclude>
               <exclude>**/**/logs/**</exclude>
+              <exclude>**/*.jinja</exclude>
 
               <!-- bundled from zeppelin-web -->
               <exclude>**/test/karma.conf.js</exclude>
