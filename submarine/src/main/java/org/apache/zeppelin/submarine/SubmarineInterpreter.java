@@ -23,6 +23,7 @@ import org.apache.commons.exec.ExecuteException;
 import org.apache.commons.exec.ExecuteWatchdog;
 import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.fs.Path;
 import org.apache.zeppelin.interpreter.KerberosInterpreter;
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterResult;
@@ -44,7 +45,6 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * SubmarineInterpreter of Hadoop Submarine implementation.
@@ -67,15 +67,15 @@ public class SubmarineInterpreter extends KerberosInterpreter {
   private static final String TIMEOUT_PROPERTY = "submarine.command.timeout.millisecond";
   private String defaultTimeoutProperty = "60000";
 
-  ConcurrentHashMap<String, DefaultExecutor> executors;
-
-  CommandParser commandParser = new CommandParser();
-
   private String hadoopHome;
   private String submarineJar;
 
+  private SubmarineContext submarineContext = null;
+
   public SubmarineInterpreter(Properties property) {
     super(property);
+
+    submarineContext = SubmarineContext.getInstance(properties);
 
     concurrentExecutedMax = Integer.parseInt(
         getProperty(SubmarineConstants.SUBMARINE_CONCURRENT_MAX, "1"));
@@ -105,22 +105,11 @@ public class SubmarineInterpreter extends KerberosInterpreter {
   public void open() {
     super.open();
     LOGGER.info("Command timeout property: {}", getProperty(TIMEOUT_PROPERTY));
-    executors = new ConcurrentHashMap<>();
   }
 
   @Override
   public void close() {
     super.close();
-    for (String executorKey : executors.keySet()) {
-      DefaultExecutor executor = executors.remove(executorKey);
-      if (executor != null) {
-        try {
-          executor.getWatchdog().destroyProcess();
-        } catch (Exception e){
-          LOGGER.error("error destroying executor for paragraphId: " + executorKey, e);
-        }
-      }
-    }
   }
 
   @Override
@@ -130,9 +119,10 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     String jobName = getJobName(contextIntp);
 
     try {
+      CommandParser commandParser = new CommandParser();
       commandParser.populate(script);
 
-      Properties properties = SubmarineContext.getProperties(jobName);
+      Properties properties = submarineContext.getProperties(jobName);
       properties.put(SubmarineConstants.JOB_NAME, jobName);
       properties.put(SubmarineConstants.NOTE_ID, contextIntp.getNoteId());
       properties.put(SubmarineConstants.NOTE_NAME, contextIntp.getNoteName());
@@ -187,21 +177,13 @@ public class SubmarineInterpreter extends KerberosInterpreter {
       LOGGER.error("Can not run " + script, e);
       return new InterpreterResult(InterpreterResult.Code.ERROR, e.getMessage());
     } finally {
-      executors.remove(jobName);
+
     }
   }
 
   @Override
   public void cancel(InterpreterContext context) {
     String jobName = getJobName(context);
-    DefaultExecutor executor = executors.remove(jobName);
-    if (executor != null) {
-      try {
-        executor.getWatchdog().destroyProcess();
-      } catch (Exception e){
-        LOGGER.error("error destroying executor for jobName: " + jobName, e);
-      }
-    }
   }
 
   @Override
@@ -296,8 +278,6 @@ public class SubmarineInterpreter extends KerberosInterpreter {
       executor.setWorkingDirectory(new File(System.getProperty("user.home")));
     }
 
-    executors.put(jobName, executor);
-
     int exitVal = executor.execute(cmdLine);
     LOGGER.info("jobName {} return with exit value: {}", jobName, exitVal);
 
@@ -313,27 +293,27 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     return sbMessage;
   }
 
-  private void formatInptProperties(StringBuffer sbMessage, String key) {
+  private void setInptPropertiesWarn(StringBuffer sbMessage, String key) {
     sbMessage.append("Please set the submarine interpreter properties : ");
     sbMessage.append(key).append("\n");
   }
 
   // Convert properties to Map and check that the variable cannot be empty
-  private HashMap propertiesToMap(String jobName)
+  private HashMap propertiesToMap(String noteId)
       throws IOException {
     StringBuffer sbMessage = new StringBuffer();
 
-    String inputPath = SubmarineContext.getPropertie(jobName,
+    String inputPath = submarineContext.getPropertie(noteId,
         SubmarineConstants.INPUT_PATH);
     if (StringUtils.isEmpty(inputPath)) {
       formatUserProperties(sbMessage, SubmarineConstants.INPUT_PATH, "=path...\n");
     }
-    String checkPointPath = SubmarineContext.getPropertie(jobName,
+    String checkPointPath = submarineContext.getPropertie(noteId,
         SubmarineConstants.CHECKPOINT_PATH);
     if (StringUtils.isEmpty(checkPointPath)) {
       formatUserProperties(sbMessage, SubmarineConstants.CHECKPOINT_PATH, "=path...\n");
     }
-    String psLaunchCmd = SubmarineContext.getPropertie(jobName,
+    String psLaunchCmd = submarineContext.getPropertie(noteId,
         SubmarineConstants.PS_LAUNCH_CMD);
     if (StringUtils.isEmpty(psLaunchCmd)) {
       formatUserProperties(sbMessage, SubmarineConstants.PS_LAUNCH_CMD,
@@ -341,7 +321,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
           "--data-dir=hdfs://mldev/tmp/cifar-10-data " +
           "--job-dir=hdfs://mldev/tmp/cifar-10-jobdir --num-gpus=0\"\n");
     }
-    String workerLaunchCmd = SubmarineContext.getPropertie(jobName,
+    String workerLaunchCmd = submarineContext.getPropertie(noteId,
         SubmarineConstants.WORKER_LAUNCH_CMD);
     if (StringUtils.isEmpty(workerLaunchCmd)) {
       formatUserProperties(sbMessage, SubmarineConstants.WORKER_LAUNCH_CMD,
@@ -354,67 +334,79 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     String containerNetwork = properties.getProperty(
         SubmarineConstants.DOCKER_CONTAINER_NETWORK, "");
     if (StringUtils.isEmpty(containerNetwork)) {
-      formatInptProperties(sbMessage, SubmarineConstants.DOCKER_CONTAINER_NETWORK);
+      setInptPropertiesWarn(sbMessage, SubmarineConstants.DOCKER_CONTAINER_NETWORK);
     }
     String parameterServicesImage = properties.getProperty(
         SubmarineConstants.PARAMETER_SERVICES_DOCKER_IMAGE, "");
     if (StringUtils.isEmpty(parameterServicesImage)) {
-      formatInptProperties(sbMessage, SubmarineConstants.PARAMETER_SERVICES_DOCKER_IMAGE);
+      setInptPropertiesWarn(sbMessage, SubmarineConstants.PARAMETER_SERVICES_DOCKER_IMAGE);
     }
     String parameterServicesNum = properties.getProperty(
         SubmarineConstants.PARAMETER_SERVICES_NUM, "");
     if (StringUtils.isEmpty(parameterServicesNum)) {
-      formatInptProperties(sbMessage, SubmarineConstants.PARAMETER_SERVICES_NUM);
+      setInptPropertiesWarn(sbMessage, SubmarineConstants.PARAMETER_SERVICES_NUM);
     }
     String parameterServicesGpu = properties.getProperty(
         SubmarineConstants.PARAMETER_SERVICES_GPU, "");
     if (StringUtils.isEmpty(parameterServicesGpu)) {
-      formatInptProperties(sbMessage, SubmarineConstants.PARAMETER_SERVICES_GPU);
+      setInptPropertiesWarn(sbMessage, SubmarineConstants.PARAMETER_SERVICES_GPU);
     }
     String parameterServicesCpu = properties.getProperty(
         SubmarineConstants.PARAMETER_SERVICES_CPU, "");
     if (StringUtils.isEmpty(parameterServicesCpu)) {
-      formatInptProperties(sbMessage, SubmarineConstants.PARAMETER_SERVICES_CPU);
+      setInptPropertiesWarn(sbMessage, SubmarineConstants.PARAMETER_SERVICES_CPU);
     }
     String parameterServicesMemory = properties.getProperty(
         SubmarineConstants.PARAMETER_SERVICES_MEMORY, "");
     if (StringUtils.isEmpty(parameterServicesMemory)) {
-      formatInptProperties(sbMessage, SubmarineConstants.PARAMETER_SERVICES_MEMORY);
+      setInptPropertiesWarn(sbMessage, SubmarineConstants.PARAMETER_SERVICES_MEMORY);
     }
     String workerServicesImage = properties.getProperty(
         SubmarineConstants.WORKER_SERVICES_DOCKER_IMAGE, "");
     if (StringUtils.isEmpty(workerServicesImage)) {
-      formatInptProperties(sbMessage, SubmarineConstants.WORKER_SERVICES_DOCKER_IMAGE);
+      setInptPropertiesWarn(sbMessage, SubmarineConstants.WORKER_SERVICES_DOCKER_IMAGE);
     }
     String workerServicesNum = properties.getProperty(
         SubmarineConstants.WORKER_SERVICES_NUM, "");
     if (StringUtils.isEmpty(workerServicesNum)) {
-      formatInptProperties(sbMessage, SubmarineConstants.WORKER_SERVICES_NUM);
+      setInptPropertiesWarn(sbMessage, SubmarineConstants.WORKER_SERVICES_NUM);
     }
     String workerServicesGpu = properties.getProperty(
         SubmarineConstants.WORKER_SERVICES_GPU, "");
     if (StringUtils.isEmpty(workerServicesGpu)) {
-      formatInptProperties(sbMessage, SubmarineConstants.WORKER_SERVICES_GPU);
+      setInptPropertiesWarn(sbMessage, SubmarineConstants.WORKER_SERVICES_GPU);
     }
     String workerServicesCpu = properties.getProperty(
         SubmarineConstants.WORKER_SERVICES_CPU, "");
     if (StringUtils.isEmpty(workerServicesCpu)) {
-      formatInptProperties(sbMessage, SubmarineConstants.WORKER_SERVICES_CPU);
+      setInptPropertiesWarn(sbMessage, SubmarineConstants.WORKER_SERVICES_CPU);
     }
     String workerServicesMemory = properties.getProperty(
         SubmarineConstants.WORKER_SERVICES_MEMORY, "");
     if (StringUtils.isEmpty(workerServicesMemory)) {
-      formatInptProperties(sbMessage, SubmarineConstants.WORKER_SERVICES_MEMORY);
+      setInptPropertiesWarn(sbMessage, SubmarineConstants.WORKER_SERVICES_MEMORY);
     }
 
     if (StringUtils.isEmpty(hadoopHome)) {
-      formatInptProperties(sbMessage, SubmarineConstants.HADOOP_HOME);
+      setInptPropertiesWarn(sbMessage, SubmarineConstants.HADOOP_HOME);
     }
 
     if (StringUtils.isEmpty(submarineJar)) {
-      formatInptProperties(sbMessage, SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR);
+      setInptPropertiesWarn(sbMessage, SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR);
     }
 
+    String algorithmFileFullPath = submarineContext.getPropertie(noteId,
+        SubmarineConstants.ALGORITHM_FILE_FULL_PATH);
+    if (StringUtils.isEmpty(algorithmFileFullPath)) {
+      sbMessage.append("Please first click the [RUN] button in the %submarine paragraph. " +
+          "Upload the code to HDFS.\n");
+    } else if (!submarineContext.getHDFSUtils().exists(new Path(algorithmFileFullPath))) {
+      sbMessage.append("The " + algorithmFileFullPath + " file was not found in hdfs!\n");
+      sbMessage.append("Please first click the [RUN] button in the %submarine paragraph. " +
+          "Upload the code to HDFS.\n");
+    }
+
+    // Found null variable, throw exception
     if (!StringUtils.isEmpty(sbMessage.toString())) {
       throw new RuntimeException(sbMessage.toString());
     }
@@ -423,7 +415,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     HashMap mapParams = new HashMap();
     mapParams.put(upperCaseKey(SubmarineConstants.HADOOP_HOME), hadoopHome);
     mapParams.put(upperCaseKey(SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR), submarineJar);
-    mapParams.put(upperCaseKey(SubmarineConstants.JOB_NAME), jobName);
+    mapParams.put(upperCaseKey(SubmarineConstants.JOB_NAME), noteId);
     mapParams.put(upperCaseKey(SubmarineConstants.DOCKER_CONTAINER_NETWORK), containerNetwork);
     mapParams.put(upperCaseKey(SubmarineConstants.INPUT_PATH), inputPath);
     mapParams.put(upperCaseKey(SubmarineConstants.CHECKPOINT_PATH), checkPointPath);
@@ -442,6 +434,8 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     mapParams.put(upperCaseKey(SubmarineConstants.WORKER_SERVICES_GPU), workerServicesGpu);
     mapParams.put(upperCaseKey(SubmarineConstants.WORKER_SERVICES_CPU), workerServicesCpu);
     mapParams.put(upperCaseKey(SubmarineConstants.WORKER_SERVICES_MEMORY), workerServicesMemory);
+    mapParams.put(
+        upperCaseKey(SubmarineConstants.ALGORITHM_FILE_FULL_PATH), algorithmFileFullPath);
 
     return mapParams;
   }
@@ -485,8 +479,6 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     if (Boolean.valueOf(getProperty(DIRECTORY_USER_HOME))) {
       executor.setWorkingDirectory(new File(System.getProperty("user.home")));
     }
-
-    executors.put(jobName, executor);
 
     int exitVal = executor.execute(cmdLine);
     LOGGER.info("jobName {} return with exit value: {}", jobName, exitVal);

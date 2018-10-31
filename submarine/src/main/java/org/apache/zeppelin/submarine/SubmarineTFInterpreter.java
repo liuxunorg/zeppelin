@@ -13,29 +13,20 @@
  */
 
 package org.apache.zeppelin.submarine;
-import org.apache.commons.exec.ExecuteException;
-import org.apache.commons.exec.ExecuteWatchdog;
 import org.apache.commons.exec.DefaultExecutor;
-import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.exec.CommandLine;
 import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.zeppelin.submarine.utils.HDFSUtils;
 import org.apache.zeppelin.submarine.utils.SubmarineConstants;
-import org.apache.zeppelin.submarine.utils.SubmarineParagraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
 
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterException;
@@ -59,135 +50,50 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
 
   private static final String TIMEOUT_PROPERTY = "submarine.command.timeout.millisecond";
   private String defaultTimeoutProperty = "60000";
-  ConcurrentHashMap<String, DefaultExecutor> executors;
 
-  LinkedBlockingQueue<SubmarineParagraph> executorQueue = null;
-  // SubmarineParagraph submarineParagraph = null;
+  private static final String ALGORITHM_FILE_NAME = "algorithm.python";
 
-  String algorithmUploadPath = "";
-  HDFSUtils hdfsUtils = null;
+  private SubmarineContext submarineContext = null;
 
   public SubmarineTFInterpreter(Properties property) {
     super(property);
 
-    algorithmUploadPath = this.getProperty(SubmarineConstants.ALGORITHM_UPLOAD_PATH);
-    hdfsUtils = new HDFSUtils(algorithmUploadPath);
+    submarineContext = SubmarineContext.getInstance(properties);
   }
 
   @Override
   public void open() {
     super.open();
     LOGGER.info("Command timeout property: {}", getProperty(TIMEOUT_PROPERTY));
-    executors = new ConcurrentHashMap<>();
-    executorQueue = new LinkedBlockingQueue(2);
   }
 
   @Override
   public void close() {
     super.close();
-    for (String executorKey : executors.keySet()) {
-      DefaultExecutor executor = executors.remove(executorKey);
-      if (executor != null) {
-        try {
-          executor.getWatchdog().destroyProcess();
-        } catch (Exception e){
-          LOGGER.error("error destroying executor for paragraphId: " + executorKey, e);
-        }
-      }
-    }
   }
 
   @Override
   public InterpreterResult interpret(String script, InterpreterContext contextIntp) {
-    SubmarineParagraph submarineParagraph = new SubmarineParagraph(
-        contextIntp.getNoteId(),
-        contextIntp.getNoteName(),
-        contextIntp.getParagraphId(),
-        contextIntp.getParagraphTitle(),
-        contextIntp.getParagraphText(),
-        contextIntp.getReplName(), script);
-
-
-    // upload algorithm to HDFS
-    /*
-    try {
-      uploadAlgorithmToHDFS(submarineParagraph);
-    } catch (Exception e) {
-      e.printStackTrace();
-      return new InterpreterResult(InterpreterResult.Code.ERROR, e.getMessage());
-    }*/
-
-    String cmd = Boolean.parseBoolean(getProperty("zeppelin.shell.interpolation")) ?
-        interpolate(script, contextIntp.getResourcePool()) : script;
-    LOGGER.info("Run shell command '" + cmd + "'");
     OutputStream outStream = new ByteArrayOutputStream();
 
-    CommandLine cmdLine = CommandLine.parse(shell);
-    // the Windows CMD shell doesn't handle multiline statements,
-    // they need to be delimited by '&&' instead
-    if (isWindows) {
-      String[] lines = StringUtils.split(cmd, "\n");
-      cmd = StringUtils.join(lines, " && ");
-    }
-    cmdLine.addArgument(cmd, false);
-
-    Properties properties = SubmarineContext.getProperties(contextIntp.getNoteId());
-    properties.put(cmd, cmd);
+    String hdfsFile = "";
     try {
-      DefaultExecutor executor = new DefaultExecutor();
-      executor.setStreamHandler(new PumpStreamHandler(
-          contextIntp.out, contextIntp.out));
+      // upload algorithm to HDFS
+      hdfsFile = uploadAlgorithmToHDFS(contextIntp.getNoteId(), script);
 
-      try {
-        Thread.sleep(5000);
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
-
-      executor.setWatchdog(new ExecuteWatchdog(
-          Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty))));
-      executors.put(contextIntp.getParagraphId(), executor);
-      if (Boolean.valueOf(getProperty(DIRECTORY_USER_HOME))) {
-        executor.setWorkingDirectory(new File(System.getProperty("user.home")));
-      }
-
-      int exitVal = executor.execute(cmdLine);
-      LOGGER.info("Paragraph " + contextIntp.getParagraphId()
-          + " return with exit value: " + exitVal);
-      return new InterpreterResult(InterpreterResult.Code.SUCCESS, outStream.toString());
-    } catch (ExecuteException e) {
-      int exitValue = e.getExitValue();
-      LOGGER.error("Can not run " + cmd, e);
-      InterpreterResult.Code code = InterpreterResult.Code.ERROR;
-      String message = outStream.toString();
-      if (exitValue == 143) {
-        code = InterpreterResult.Code.INCOMPLETE;
-        message += "Paragraph received a SIGTERM\n";
-        LOGGER.info("The paragraph " + contextIntp.getParagraphId()
-            + " stopped executing: " + message);
-      }
-      message += "ExitValue: " + exitValue;
-      return new InterpreterResult(code, message);
-    } catch (IOException e) {
-      LOGGER.error("Can not run " + cmd, e);
+      String message = "upload algorithm to HDFS " + hdfsFile + " success!";
+      LOGGER.info(message);
+      return new InterpreterResult(InterpreterResult.Code.SUCCESS, message);
+    } catch (Exception e) {
+      LOGGER.error("uploadAlgorithmToHDFS ERROR : ", e);
       return new InterpreterResult(InterpreterResult.Code.ERROR, e.getMessage());
     } finally {
-      executors.remove(contextIntp.getParagraphId());
     }
   }
 
   @Override
   public void cancel(InterpreterContext context) {
-    removeParagraph(context.getNoteId(), context.getParagraphId());
 
-    DefaultExecutor executor = executors.remove(context.getParagraphId());
-    if (executor != null) {
-      try {
-        executor.getWatchdog().destroyProcess();
-      } catch (Exception e){
-        LOGGER.error("error destroying executor for paragraphId: " + context.getParagraphId(), e);
-      }
-    }
   }
 
   @Override
@@ -255,27 +161,33 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
     return false;
   }
 
-  private void uploadAlgorithmToHDFS(SubmarineParagraph paragraph) throws Exception {
-    String paragraphDir = algorithmUploadPath + File.separator + paragraph.getNoteId()
-        + File.separator + paragraph.getParagraphId();
-    Path paragraphPath = new Path(paragraphDir);
-    if (hdfsUtils.exists(paragraphPath)) {
-      hdfsUtils.tryMkDir(paragraphPath);
+  private String uploadAlgorithmToHDFS(String noteId, String script) throws Exception {
+    String algorithmUploadPath = this.getProperty(SubmarineConstants.ALGORITHM_UPLOAD_PATH, "");
+    if (StringUtils.isEmpty(algorithmUploadPath)) {
+      String msg = "Please set the submarine interpreter properties : "
+          + SubmarineConstants.ALGORITHM_UPLOAD_PATH + "\n";
+      throw new RuntimeException(msg);
     }
 
-    LOGGER.info("Upload algorithm to HDFS: {}", paragraphDir);
-    Path algorithmPath = new Path(paragraphDir + File.separator + "algorithm.python");
-    hdfsUtils.writeFile(paragraph.getParagraphText(), algorithmPath);
-  }
+    String uploadDir = algorithmUploadPath + File.separator + noteId;
+    String fileDir = uploadDir + File.separator + ALGORITHM_FILE_NAME;
 
-  //
-  private void removeParagraph(String noteId, String paragraphId) {
-    Iterator iter = executorQueue.iterator();
-    while (iter.hasNext()) {
-      SubmarineParagraph paragraph = (SubmarineParagraph) iter.next();
-      if (paragraph.getNoteId().equals(noteId) && paragraph.getParagraphId().equals(paragraphId)) {
-        executorQueue.remove(paragraph);
+    try {
+      // create file dir
+      Path uploadPath = new Path(uploadDir);
+      if (!submarineContext.getHDFSUtils().exists(uploadPath)) {
+        submarineContext.getHDFSUtils().tryMkDir(uploadPath);
       }
+
+      // upload algorithm file
+      LOGGER.info("Upload algorithm to HDFS: {}", fileDir);
+      Path filePath = new Path(fileDir);
+      submarineContext.getHDFSUtils().writeFile(script, filePath);
+      submarineContext.setProperties(noteId, SubmarineConstants.ALGORITHM_FILE_FULL_PATH, fileDir);
+    } catch (Exception e) {
+      throw new RuntimeException("upload algorithm to HDFS failure!", e);
     }
+
+    return fileDir;
   }
 }

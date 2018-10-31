@@ -14,14 +14,36 @@
 
 package org.apache.zeppelin.submarine;
 
+import org.apache.zeppelin.submarine.utils.HDFSUtils;
+
 import java.util.HashMap;
 import java.util.Properties;
 
 public class SubmarineContext {
-  // noteId:replName -> Properties
-  private static HashMap<String, Properties> noteProperties = new HashMap<>();
+  private static SubmarineContext instance = null;
 
-  public static Properties getProperties(String noteId) {
+  // noteId:replName -> Properties
+  private HashMap<String, Properties> noteProperties = new HashMap<>();
+  private HDFSUtils hdfsUtils;
+
+  public static SubmarineContext getInstance(Properties properties) {
+    synchronized (SubmarineContext.class) {
+      if (instance == null) {
+        instance = new SubmarineContext("/", properties);
+      }
+      return instance;
+    }
+  }
+
+  public SubmarineContext(String path, Properties properties) {
+    hdfsUtils = new HDFSUtils(path, properties);
+  }
+
+  public HDFSUtils getHDFSUtils() {
+    return hdfsUtils;
+  }
+
+  public Properties getProperties(String noteId) {
     Properties properties = null;
 
     if (!noteProperties.containsKey(noteId)) {
@@ -33,11 +55,21 @@ public class SubmarineContext {
     return properties;
   }
 
-  public static void setProperties(String noteId, Properties properties) {
-    SubmarineContext.noteProperties.put(noteId, properties);
+  public void setProperties(String noteId, Properties properties) {
+    noteProperties.put(noteId, properties);
   }
 
-  public static String getPropertie(String noteId, String key) {
+  public boolean setProperties(String noteId, String key, String value) {
+    if (noteProperties.containsKey(noteId)) {
+      getProperties(noteId).setProperty(key, value);
+    } else {
+      return false;
+    }
+
+    return true;
+  }
+
+  public String getPropertie(String noteId, String key) {
     if (noteProperties.containsKey(noteId)) {
       return getProperties(noteId).getProperty(key, "");
     } else {

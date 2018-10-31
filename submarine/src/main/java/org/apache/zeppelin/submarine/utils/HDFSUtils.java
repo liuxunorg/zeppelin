@@ -26,33 +26,54 @@ import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
-
+import java.util.Properties;
 
 /**
  * Hadoop FileSystem wrapper. Support both secure and no-secure mode
  */
 public class HDFSUtils {
-
   private static Logger LOGGER = LoggerFactory.getLogger(HDFSUtils.class);
 
-  // only do UserGroupInformation.loginUserFromKeytab one time, otherwise you will still get
-  // your ticket expired.
-  static {
-    if (UserGroupInformation.isSecurityEnabled()) {
+  private ZeppelinConfiguration zConf = ZeppelinConfiguration.create();
+  private Configuration hadoopConf;
+  private boolean isSecurityEnabled;
+  private FileSystem fs;
+
+  public HDFSUtils(String path, Properties properties) {
+
+    this.hadoopConf = new Configuration();
+    // disable checksum for local file system. because interpreter.json may be updated by
+    // non-hadoop filesystem api
+    // disable caching for file:// scheme to avoid getting LocalFS which does CRC checks
+    this.hadoopConf.setBoolean("fs.file.impl.disable.cache", true);
+    this.hadoopConf.set("fs.file.impl", RawLocalFileSystem.class.getName());
+    // UserGroupInformation.setConfiguration(hadoopConf);
+    this.isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
+
+    if (isSecurityEnabled) {
+      String keytab = properties.getProperty(
+          SubmarineConstants.SUBMARINE_HDFS_KEYTAB, "");
+      String principal = properties.getProperty(
+          SubmarineConstants.SUBMARINE_HDFS_PRINCIPAL, "");
+
       ZeppelinConfiguration zConf = ZeppelinConfiguration.create();
-      String keytab = zConf.getString(
-          ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_KEYTAB);
-      String principal = zConf.getString(
-          ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_PRINCIPAL);
+      if (StringUtils.isEmpty(keytab)) {
+        keytab = zConf.getString(
+            ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_KEYTAB);
+      }
+      if (StringUtils.isEmpty(principal)) {
+        principal = zConf.getString(
+            ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_PRINCIPAL);
+      }
       if (StringUtils.isBlank(keytab) || StringUtils.isBlank(principal)) {
         throw new RuntimeException("keytab and principal can not be empty, keytab: " + keytab
             + ", principal: " + principal);
@@ -64,21 +85,6 @@ public class HDFSUtils {
             ", principal:" + principal, e);
       }
     }
-  }
-
-  private ZeppelinConfiguration zConf = ZeppelinConfiguration.create();
-  private Configuration hadoopConf;
-  private boolean isSecurityEnabled;
-  private FileSystem fs;
-
-  public HDFSUtils(String path) {
-    this.hadoopConf = new Configuration();
-    // disable checksum for local file system. because interpreter.json may be updated by
-    // non-hadoop filesystem api
-    // disable caching for file:// scheme to avoid getting LocalFS which does CRC checks
-    this.hadoopConf.setBoolean("fs.file.impl.disable.cache", true);
-    this.hadoopConf.set("fs.file.impl", RawLocalFileSystem.class.getName());
-    this.isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
 
     try {
       this.fs = FileSystem.get(new URI(path), this.hadoopConf);
