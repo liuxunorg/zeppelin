@@ -252,13 +252,13 @@ public class SubmarineInterpreter extends KerberosInterpreter {
 
   private InterpreterResult jobRun(String jobName, InterpreterOutput output, OutputStream outStream)
       throws IOException {
-    HashMap mapParams = propertiesToMap(jobName);
+    HashMap jinjaParams = propertiesToJinjaParams(jobName);
 
     URL urlTemplate = Resources.getResource(submarineJobRunTFJinja);
     String template = Resources.toString(urlTemplate, Charsets.UTF_8);
 
     Jinjava jinjava = new Jinjava();
-    String submarineCmd = jinjava.render(template, mapParams);
+    String submarineCmd = jinjava.render(template, jinjaParams);
 
     LOGGER.info("Execute : " + submarineCmd);
     output.write("Execute : " + submarineCmd);
@@ -299,7 +299,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
   }
 
   // Convert properties to Map and check that the variable cannot be empty
-  private HashMap propertiesToMap(String noteId)
+  private HashMap propertiesToJinjaParams(String noteId)
       throws IOException {
     StringBuffer sbMessage = new StringBuffer();
 
