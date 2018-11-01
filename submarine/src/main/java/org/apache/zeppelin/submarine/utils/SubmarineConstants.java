@@ -37,8 +37,9 @@ public class SubmarineConstants {
   public static final String DOCKER_CONTAINER_NETWORK  = "docker.container.network";
   public static final String SUBMARINE_CONCURRENT_MAX = "submarine.concurrent.max";
 
-  public static final String SUBMARINE_HDFS_KEYTAB    = "submarine.hdfs.keytab";
-  public static final String SUBMARINE_HDFS_PRINCIPAL = "submarine.hdfs.principal";
+  public static final String SUBMARINE_HADOOP_KRB5_CONF = "submarine.hadoop.krb5.conf";
+  public static final String SUBMARINE_HADOOP_KEYTAB = "submarine.hadoop.keytab";
+  public static final String SUBMARINE_HADOOP_PRINCIPAL = "submarine.hadoop.principal";
 
   public static final String ALGORITHM_UPLOAD_PATH    = "algorithm.upload.path";
 

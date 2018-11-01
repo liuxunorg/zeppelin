@@ -81,7 +81,7 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
       // upload algorithm to HDFS
       hdfsFile = uploadAlgorithmToHDFS(contextIntp.getNoteId(), script);
 
-      String message = "upload algorithm to HDFS " + hdfsFile + " success!";
+      String message = "upload algorithm to HDFS `" + hdfsFile + "` success!";
       LOGGER.info(message);
       return new InterpreterResult(InterpreterResult.Code.SUCCESS, message);
     } catch (Exception e) {

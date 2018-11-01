@@ -19,18 +19,25 @@
         "description": "submarine queue name of yarn",
         "type": "string"
       },
-      "submarine.hdfs.keytab": {
-        "envName": "SUBMARINE_HDFS_KEYTAB",
-        "propertyName": "submarine.hdfs.keytab",
-        "defaultValue": "",
-        "description": "submarine hdfs kerberos authentication",
+      "submarine.hadoop.krb5.conf": {
+        "envName": "SUBMARINE_HADOOP_KRB5_CONF",
+        "propertyName": "submarine.hadoop.krb5.conf",
+        "defaultValue": "/etc/krb5.conf",
+        "description": "submarine hdfs/yarn kerberos authentication krb5.conf",
         "type": "string"
       },
-      "submarine.hdfs.principal": {
-        "envName": "SUBMARINE_HDFS_PRINCIPAL",
-        "propertyName": "submarine.hdfs.principal",
+      "submarine.hadoop.keytab": {
+        "envName": "SUBMARINE_HADOOP_KEYTAB",
+        "propertyName": "submarine.hadoop.keytab",
         "defaultValue": "",
-        "description": "submarine hdfs kerberos authentication",
+        "description": "submarine hdfs/yarn kerberos authentication",
+        "type": "string"
+      },
+      "submarine.hadoop.principal": {
+        "envName": "SUBMARINE_HADOOP_PRINCIPAL",
+        "propertyName": "submarine.hadoop.principal",
+        "defaultValue": "",
+        "description": "submarine hdfs/yarn kerberos authentication",
         "type": "string"
       },
       "docker.container.network": {

@@ -20,6 +20,7 @@ package org.apache.zeppelin.interpreter.launcher;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.interpreter.recovery.RecoveryStorage;
+import org.apache.zeppelin.interpreter.remote.RemoteInterpreterUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,32 +40,13 @@ public class SubmarineInterpreterLauncher extends StandardInterpreterLauncher {
 
   @Override
   protected Map<String, String> buildEnvFromProperties(InterpreterLaunchContext context) {
-    Map<String, String> env = new HashMap<String, String>();
-
-    // set these env in the order of
-    // 1. interpreter-setting
-    // 2. zeppelin-env.sh
-    // It is encouraged to set env in interpreter setting, but just for backward compatability,
-    // we also fallback to zeppelin-env.sh if it is not specified in interpreter setting.
-    for (String envName : new String[]{"HADOOP_HOME", "HADOOP_CONF_DIR"})  {
-      String envValue = getEnv(envName);
-      if (envValue != null) {
-        env.put(envName, envValue);
+    Map<String, String> env = new HashMap<>();
+    for (Object key : context.getProperties().keySet()) {
+      if (RemoteInterpreterUtils.isEnvString((String) key)) {
+        env.put((String) key, context.getProperties().getProperty((String) key));
       }
     }
-
-    String keytab = zConf.getString(ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_KEYTAB);
-    String principal =
-        zConf.getString(ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_PRINCIPAL);
-
-    if (!StringUtils.isBlank(keytab) && !StringUtils.isBlank(principal)) {
-      env.put("ZEPPELIN_SERVER_KERBEROS_KEYTAB", keytab);
-      env.put("ZEPPELIN_SERVER_KERBEROS_PRINCIPAL", principal);
-      LOGGER.info("Run Submarine under secure mode with keytab: " + keytab +
-          ", principal: " + principal);
-    } else {
-      LOGGER.info("Run Submarine under non-secure mode as no keytab and principal is specified");
-    }
+    env.put("INTERPRETER_GROUP_ID", context.getInterpreterGroupId());
 
     LOGGER.info("buildEnvFromProperties: " + env);
     return env;

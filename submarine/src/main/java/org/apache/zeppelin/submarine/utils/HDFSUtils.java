@@ -49,6 +49,10 @@ public class HDFSUtils {
   private FileSystem fs;
 
   public HDFSUtils(String path, Properties properties) {
+    String krb5conf = properties.getProperty(SubmarineConstants.SUBMARINE_HADOOP_KRB5_CONF, "");
+    if (!StringUtils.isEmpty(krb5conf)) {
+      System.setProperty("java.security.krb5.conf", krb5conf);
+    }
 
     this.hadoopConf = new Configuration();
     // disable checksum for local file system. because interpreter.json may be updated by
@@ -61,9 +65,9 @@ public class HDFSUtils {
 
     if (isSecurityEnabled) {
       String keytab = properties.getProperty(
-          SubmarineConstants.SUBMARINE_HDFS_KEYTAB, "");
+          SubmarineConstants.SUBMARINE_HADOOP_KEYTAB, "");
       String principal = properties.getProperty(
-          SubmarineConstants.SUBMARINE_HDFS_PRINCIPAL, "");
+          SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL, "");
 
       ZeppelinConfiguration zConf = ZeppelinConfiguration.create();
       if (StringUtils.isEmpty(keytab)) {
