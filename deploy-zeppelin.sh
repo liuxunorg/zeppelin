@@ -51,7 +51,7 @@ function buildZengine() {
 }
 
 function buildSubmarine() {
-    mvn package -pl submarine -am -Pbuild-distr -DskipTests -Dcheckstyle.skip=true -Denforcer.skip=true -DskipRat=true -X
+  mvn package -pl submarine -am -Pbuild-distr -DskipTests -Dcheckstyle.skip=true -Denforcer.skip=true -DskipRat=true -X
 }
 #mvn package -pl zeppelin-server -am -Pbuild-distr -DskipTests -Pspark-2.1 -Phadoop-2.7 -Pyarn -Ppyspark -Psparkr -Pscala-2.10 -X
 

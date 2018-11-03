@@ -18,45 +18,42 @@ package org.apache.zeppelin.submarine.utils;
  * NOTE: use lowercase + "_" for the option name
  */
 public class SubmarineConstants {
-  public static final String HADOOP_HOME = "HADOOP_HOME";
-  public static final String DOCKER_JAVA_HOME = "DOCKER_JAVA_HOME";
+  public static final String SUBMARINE_HADOOP_HOME  = "submarine.hadoop.home";
+  public static final String DOCKER_JAVA_HOME       = "DOCKER_JAVA_HOME";
   public static final String DOCKER_HADOOP_HDFS_HOME = "DOCKER_HADOOP_HDFS_HOME";
 
   public static final String JOB_NAME = "JOB_NAME";
-  public static final String ALGORITHM_FILE_FULL_PATH = "ALGORITHM_FILE_FULL_PATH";
-  public static final String INPUT_PATH = "INPUT_PATH";
-  public static final String CHECKPOINT_PATH = "CHECKPOINT_PATH";
-  public static final String PS_LAUNCH_CMD = "PS_LAUNCH_CMD";
-  public static final String WORKER_LAUNCH_CMD = "WORKER_LAUNCH_CMD";
+  public static final String TF_INPUT_PATH = "TF_INPUT_PATH";
+  public static final String TF_CHECKPOINT_PATH = "TF_CHECKPOINT_PATH";
+  public static final String TF_PS_LAUNCH_CMD = "TF_PS_LAUNCH_CMD";
+  public static final String TF_WORKER_LAUNCH_CMD = "TF_WORKER_LAUNCH_CMD";
 
   public static final String HELP_COMMAND = "help";
 
-  public static final String HADOOP_CONF_DIR = "HADOOP_CONF_DIR";
   public static final String HADOOP_YARN_SUBMARINE_JAR = "hadoop.yarn.submarine.jar";
-  public static final String SUBMARINE_YARN_QUEUE      = "submarine.yarn.queue";
-  public static final String DOCKER_CONTAINER_NETWORK  = "docker.container.network";
-  public static final String SUBMARINE_CONCURRENT_MAX = "submarine.concurrent.max";
-
-  public static final String SUBMARINE_HADOOP_KRB5_CONF = "submarine.hadoop.krb5.conf";
-  public static final String SUBMARINE_HADOOP_KEYTAB = "submarine.hadoop.keytab";
+  public static final String DOCKER_CONTAINER_NETWORK   = "docker.container.network";
+  public static final String SUBMARINE_YARN_QUEUE       = "submarine.yarn.queue";
+  public static final String SUBMARINE_CONCURRENT_MAX   = "submarine.concurrent.max";
+  public static final String SUBMARINE_KRB5_CONF        = "submarine.krb5.conf";
+  public static final String SUBMARINE_HADOOP_KEYTAB    = "submarine.hadoop.keytab";
   public static final String SUBMARINE_HADOOP_PRINCIPAL = "submarine.hadoop.principal";
 
-  public static final String ALGORITHM_UPLOAD_PATH    = "algorithm.upload.path";
+  public static final String SUBMARINE_ALGORITHM_HDFS_PATH = "submarine.algorithm.hdfs.path";
 
+  public static final String TF_PARAMETER_SERVICES_DOCKER_IMAGE
+      = "tf.parameter.services.docker.image";
+  public static final String TF_PARAMETER_SERVICES_NUM = "tf.parameter.services.num";
+  public static final String TF_PARAMETER_SERVICES_GPU = "tf.parameter.services.gpu";
+  public static final String TF_PARAMETER_SERVICES_CPU = "tf.parameter.services.cpu";
+  public static final String TF_PARAMETER_SERVICES_MEMORY = "tf.parameter.services.memory";
 
-  public static final String PARAMETER_SERVICES_DOCKER_IMAGE = "parameter.services.docker.image";
-  public static final String PARAMETER_SERVICES_NUM = "parameter.services.num";
-  public static final String PARAMETER_SERVICES_GPU = "parameter.services.gpu";
-  public static final String PARAMETER_SERVICES_CPU = "parameter.services.cpu";
-  public static final String PARAMETER_SERVICES_MEMORY = "parameter.services.memory";
+  public static final String TF_WORKER_SERVICES_DOCKER_IMAGE = "tf.worker.services.docker.image";
+  public static final String TF_WORKER_SERVICES_NUM = "tf.worker.services.num";
+  public static final String TF_WORKER_SERVICES_GPU = "tf.worker.services.gpu";
+  public static final String TF_WORKER_SERVICES_CPU = "tf.worker.services.cpu";
+  public static final String TF_WORKER_SERVICES_MEMORY = "tf.worker.services.memory";
 
-  public static final String WORKER_SERVICES_DOCKER_IMAGE = "worker.services.docker.image";
-  public static final String WORKER_SERVICES_NUM = "worker.services.num";
-  public static final String WORKER_SERVICES_GPU = "worker.services.gpu";
-  public static final String WORKER_SERVICES_CPU = "worker.services.cpu";
-  public static final String WORKER_SERVICES_MEMORY = "worker.services.memory";
-
-  public static final String TENSORBOARD_ENABLE  = "tensorboard.enable";
+  public static final String TF_TENSORBOARD_ENABLE  = "tf.tensorboard.enable";
 
   public static final String COMMAND_JOB_LIST = "job list";
   public static final String COMMAND_JOB_SHOW = "job show";

@@ -49,7 +49,7 @@ public class HDFSUtils {
   private FileSystem fs;
 
   public HDFSUtils(String path, Properties properties) {
-    String krb5conf = properties.getProperty(SubmarineConstants.SUBMARINE_HADOOP_KRB5_CONF, "");
+    String krb5conf = properties.getProperty(SubmarineConstants.SUBMARINE_KRB5_CONF, "");
     if (!StringUtils.isEmpty(krb5conf)) {
       System.setProperty("java.security.krb5.conf", krb5conf);
     }

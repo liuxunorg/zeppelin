@@ -19,11 +19,25 @@
         "description": "submarine queue name of yarn",
         "type": "string"
       },
+      "submarine.hadoop.home": {
+        "envName": "SUBMARINE_HADOOP_HOME",
+        "propertyName": "submarine.hadoop.home",
+        "defaultValue": "",
+        "description": "submarine user-defined HADOOP_HOME",
+        "type": "string"
+      },
+      "SUBMARINE_HADOOP_CONF_DIR": {
+        "envName": "SUBMARINE_HADOOP_CONF_DIR",
+        "propertyName": "submarine.hadoop.conf.dir",
+        "defaultValue": "",
+        "description": "submarine user-defined HADOOP_CONF_DIR",
+        "type": "string"
+      },
       "submarine.hadoop.krb5.conf": {
-        "envName": "SUBMARINE_HADOOP_KRB5_CONF",
-        "propertyName": "submarine.hadoop.krb5.conf",
+        "envName": "SUBMARINE_KRB5_CONF",
+        "propertyName": "submarine.krb5.conf",
         "defaultValue": "/etc/krb5.conf",
-        "description": "submarine hdfs/yarn kerberos authentication krb5.conf",
+        "description": "submarine user-defined hdfs/yarn kerberos authentication krb5.conf",
         "type": "string"
       },
       "submarine.hadoop.keytab": {
@@ -47,9 +61,9 @@
         "description": "Network name in the docker container",
         "type": "string"
       },
-      "algorithm.upload.path": {
-        "envName": "ALGORITHM_UPLOAD_PATH",
-        "propertyName": "algorithm.upload.path",
+      "submarine.algorithm.hdfs.path": {
+        "envName": "SUBMARINE_ALGORITHM_HDFS_PATH",
+        "propertyName": "submarine.algorithm.hdfs.path",
         "defaultValue": "",
         "description": "Algorithm file upload HDFS path",
         "type": "string"
@@ -66,72 +80,72 @@
     "name": "tensorflow",
     "className": "org.apache.zeppelin.submarine.SubmarineTFInterpreter",
     "properties": {
-      "parameter.services.num": {
-        "envName": "PARAMETER_SERVICES_NUM",
-        "propertyName": "parameter.services.num",
+      "tf.parameter.services.num": {
+        "envName": "TF_PARAMETER_SERVICES_NUM",
+        "propertyName": "tf.parameter.services.num",
         "defaultValue": "0",
         "description": "Number of parameter services",
         "type": "number"
       },
-      "worker.services.num": {
-        "envName": "WORKER_SERVICES_NUM",
-        "propertyName": "worker.services.num",
+      "tf.worker.services.num": {
+        "envName": "TF_WORKER_SERVICES_NUM",
+        "propertyName": "tf.worker.services.num",
         "defaultValue": "0",
         "description": "Number of worker services",
         "type": "number"
       },
-      "parameter.services.docker.image": {
-        "envName": "PARAMETER_SERVICES_DOCKER_IMAGE",
-        "propertyName": "parameter.services.docker.image",
+      "tf.parameter.services.docker.image": {
+        "envName": "TF_PARAMETER_SERVICES_DOCKER_IMAGE",
+        "propertyName": "tf.parameter.services.docker.image",
         "defaultValue": "",
         "description": "Docker image of parameter services",
         "type": "string"
       },
-      "parameter.services.gpu": {
-        "envName": "PARAMETER_SERVICES_GPU",
-        "propertyName": "parameter.services.gpu",
+      "tf.parameter.services.gpu": {
+        "envName": "TF_PARAMETER_SERVICES_GPU",
+        "propertyName": "tf.parameter.services.gpu",
         "defaultValue": "0",
         "description": "GPU number of parameter services",
         "type": "number"
       },
-      "parameter.services.cpu": {
-        "envName": "PARAMETER_SERVICES_CPU",
-        "propertyName": "parameter.services.cpu",
+      "tf.parameter.services.cpu": {
+        "envName": "TF_PARAMETER_SERVICES_CPU",
+        "propertyName": "tf.parameter.services.cpu",
         "defaultValue": "2",
         "description": "CPU number of parameter services",
         "type": "number"
       },
-      "parameter.services.memory": {
-        "envName": "PARAMETER_SERVICES_MEMORY",
-        "propertyName": "parameter.services.memory",
+      "tf.parameter.services.memory": {
+        "envName": "TF_PARAMETER_SERVICES_MEMORY",
+        "propertyName": "tf.parameter.services.memory",
         "defaultValue": "2G",
         "description": "Memory number of parameter services",
         "type": "string"
       },
-      "worker.services.docker.image": {
-        "envName": "WORKER_SERVICES_DOCKER_IMAGE",
-        "propertyName": "worker.services.docker.image",
+      "tf.worker.services.docker.image": {
+        "envName": "TF_WORKER_SERVICES_DOCKER_IMAGE",
+        "propertyName": "tf.worker.services.docker.image",
         "defaultValue": "",
         "description": "Docker image of worker services",
         "type": "string"
       },
-      "worker.services.gpu": {
-        "envName": "WORKER_SERVICES_GPU",
-        "propertyName": "worker.services.gpu",
+      "tf.worker.services.gpu": {
+        "envName": "TF_WORKER_SERVICES_GPU",
+        "propertyName": "tf.worker.services.gpu",
         "defaultValue": "0",
         "description": "GPU number of worker services",
         "type": "number"
       },
-      "worker.services.cpu": {
-        "envName": "WORKER_SERVICES_CPU",
-        "propertyName": "worker.services.cpu",
+      "tf.worker.services.cpu": {
+        "envName": "TF_WORKER_SERVICES_CPU",
+        "propertyName": "tf.worker.services.cpu",
         "defaultValue": "2",
         "description": "CPU number of worker services",
         "type": "number"
       },
-      "worker.services.memory": {
-        "envName": "WORKER_SERVICES_MEMORY",
-        "propertyName": "worker.services.memory",
+      "tf.worker.services.memory": {
+        "envName": "TF_WORKER_SERVICES_MEMORY",
+        "propertyName": "tf.worker.services.memory",
         "defaultValue": "4G",
         "description": "Memory number of worker services",
         "type": "string"
@@ -143,9 +157,9 @@
         "description": "Number of submarines executed in parallel for each interpreter instance",
         "type": "number"
       },
-      "tensorboard.enable": {
-        "envName": "TENSORBOARD_ENABLE",
-        "propertyName": "tensorboard.enable",
+      "tf.tensorboard.enable": {
+        "envName": "TF_TENSORBOARD_ENABLE",
+        "propertyName": "tf.tensorboard.enable",
         "defaultValue": true,
         "description": "Whether to enable tensorboard",
         "type": "checkbox"
