@@ -18,13 +18,12 @@ import org.apache.commons.exec.CommandLine;
 import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.zeppelin.interpreter.KerberosInterpreter;
 import org.apache.zeppelin.submarine.utils.SubmarineConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.OutputStream;
 import java.util.List;
 import java.util.Properties;
 
@@ -41,19 +40,20 @@ import org.apache.zeppelin.scheduler.SchedulerFactory;
  * https://github.com/apache/hadoop/blob/trunk/hadoop-yarn-project/hadoop-yarn/
  * hadoop-yarn-applications/hadoop-yarn-submarine/src/site/markdown/QuickStart.md is supported.
  */
-public class SubmarineTFInterpreter extends SubmarineInterpreter {
+public class SubmarineTFInterpreter extends KerberosInterpreter {
   private Logger LOGGER = LoggerFactory.getLogger(SubmarineTFInterpreter.class);
 
-  private static final String DIRECTORY_USER_HOME = "shell.working.directory.user.home";
   private final boolean isWindows = System.getProperty("os.name").startsWith("Windows");
   private final String shell = isWindows ? "cmd /c" : "bash -c";
 
   private static final String TIMEOUT_PROPERTY = "submarine.command.timeout.millisecond";
   private String defaultTimeoutProperty = "60000";
 
-  private static final String ALGORITHM_FILE_NAME = "algorithm.python";
 
   private SubmarineContext submarineContext = null;
+
+  // Number of submarines executed in parallel for each interpreter instance
+  protected int concurrentExecutedMax = 1;
 
   public SubmarineTFInterpreter(Properties property) {
     super(property);
@@ -74,14 +74,16 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
 
   @Override
   public InterpreterResult interpret(String script, InterpreterContext contextIntp) {
-    OutputStream outStream = new ByteArrayOutputStream();
-
-    String hdfsFile = "";
+    String fileName = contextIntp.getParagraphTitle();
+    if (null == fileName || StringUtils.isEmpty(fileName)) {
+      return new InterpreterResult(InterpreterResult.Code.ERROR,
+          "ERROR: Please set this paragraph title!");
+    }
     try {
       // upload algorithm to HDFS
-      hdfsFile = uploadAlgorithmToHDFS(contextIntp.getNoteId(), script);
+      String hdfsFile = uploadAlgorithmToHDFS(contextIntp.getNoteId(), fileName, script);
 
-      String message = "upload algorithm to HDFS `" + hdfsFile + "` success!";
+      String message = "commit algorithm to HDFS `" + hdfsFile + "` success!";
       LOGGER.info(message);
       return new InterpreterResult(InterpreterResult.Code.SUCCESS, message);
     } catch (Exception e) {
@@ -161,16 +163,18 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
     return false;
   }
 
-  private String uploadAlgorithmToHDFS(String noteId, String script) throws Exception {
-    String algorithmUploadPath = this.getProperty(SubmarineConstants.ALGORITHM_UPLOAD_PATH, "");
+  private String uploadAlgorithmToHDFS(String noteId, String fileName, String script)
+      throws Exception {
+    String algorithmUploadPath = getProperty(
+        SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH, "");
     if (StringUtils.isEmpty(algorithmUploadPath)) {
       String msg = "Please set the submarine interpreter properties : "
-          + SubmarineConstants.ALGORITHM_UPLOAD_PATH + "\n";
+          + SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH + "\n";
       throw new RuntimeException(msg);
     }
 
     String uploadDir = algorithmUploadPath + File.separator + noteId;
-    String fileDir = uploadDir + File.separator + ALGORITHM_FILE_NAME;
+    String fileDir = uploadDir + File.separator + fileName;
 
     try {
       // create file dir
@@ -180,12 +184,11 @@ public class SubmarineTFInterpreter extends SubmarineInterpreter {
       }
 
       // upload algorithm file
-      LOGGER.info("Upload algorithm to HDFS: {}", fileDir);
+      LOGGER.info("Commit algorithm to HDFS: {}", fileDir);
       Path filePath = new Path(fileDir);
       submarineContext.getHDFSUtils().writeFile(script, filePath);
-      submarineContext.setProperties(noteId, SubmarineConstants.ALGORITHM_FILE_FULL_PATH, fileDir);
     } catch (Exception e) {
-      throw new RuntimeException("upload algorithm to HDFS failure!", e);
+      throw new RuntimeException("Commit algorithm to HDFS failure!", e);
     }
 
     return fileDir;
