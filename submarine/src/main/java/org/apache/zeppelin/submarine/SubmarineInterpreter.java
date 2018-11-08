@@ -117,14 +117,15 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     LOGGER.debug("Run shell command '" + script + "'");
     OutputStream outStream = new ByteArrayOutputStream();
     String jobName = getJobName(contextIntp);
+    String noteId = contextIntp.getNoteId();
 
     try {
       CommandParser commandParser = new CommandParser();
       commandParser.populate(script);
 
-      Properties properties = submarineContext.getProperties(jobName);
+      Properties properties = submarineContext.getProperties(noteId);
       properties.put(SubmarineConstants.JOB_NAME, jobName);
-      properties.put(SubmarineConstants.NOTE_ID, contextIntp.getNoteId());
+      properties.put(SubmarineConstants.NOTE_ID, noteId);
       properties.put(SubmarineConstants.NOTE_NAME, contextIntp.getNoteName());
       properties.put(SubmarineConstants.PARAGRAPH_ID, contextIntp.getParagraphId());
       properties.put(SubmarineConstants.PARAGRAPH_TEXT, contextIntp.getParagraphText());
@@ -151,9 +152,9 @@ public class SubmarineInterpreter extends KerberosInterpreter {
         String message = getSubmarineHelp();
         return new InterpreterResult(InterpreterResult.Code.SUCCESS, message);
       } else if (command.equalsIgnoreCase(SubmarineConstants.COMMAND_JOB_SHOW)) {
-        return jobShow(jobName, contextIntp.out, outStream);
+        return jobShow(jobName, noteId, contextIntp.out, outStream);
       } else if (command.equals(SubmarineConstants.COMMAND_JOB_RUN)) {
-        return jobRun(jobName, contextIntp.out, outStream);
+        return jobRun(jobName, noteId, contextIntp.out, outStream);
       } else {
         String message = "ERROR: Unsupported command [" + command + "] !";
         message += getSubmarineHelp();
@@ -252,13 +253,15 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     return false;
   }
 
+  // yarn application match the pattern [a-z][a-z0-9-]*
   private String getJobName(InterpreterContext contextIntp) {
-    return contextIntp.getNoteId();
+    return "submarine-" + contextIntp.getNoteId().toLowerCase();
   }
 
-  private InterpreterResult jobRun(String jobName, InterpreterOutput output, OutputStream outStream)
+  private InterpreterResult jobRun(String jobName, String noteId,
+                                   InterpreterOutput output, OutputStream outStream)
       throws IOException {
-    HashMap jinjaParams = propertiesToJinjaParams(jobName, output);
+    HashMap jinjaParams = propertiesToJinjaParams(jobName, noteId, output);
 
     URL urlTemplate = Resources.getResource(submarineJobRunTFJinja);
     String template = Resources.toString(urlTemplate, Charsets.UTF_8);
@@ -267,12 +270,10 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     String submarineCmd = jinjava.render(template, jinjaParams);
 
     LOGGER.info("Execute : " + submarineCmd);
-    output.write("Execute : " + submarineCmd);
-
-    String cmd = "echo > " + submarineCmd;
+    output.write("Submarine submit job : " + jobName);
 
     CommandLine cmdLine = CommandLine.parse(shell);
-    cmdLine.addArgument(cmd, false);
+    cmdLine.addArgument(submarineCmd, false);
 
     DefaultExecutor executor = new DefaultExecutor();
     executor.setStreamHandler(new PumpStreamHandler(output, output));
@@ -305,7 +306,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
   }
 
   // Convert properties to Map and check that the variable cannot be empty
-  private HashMap propertiesToJinjaParams(String noteId, InterpreterOutput output)
+  private HashMap propertiesToJinjaParams(String jobName, String noteId, InterpreterOutput output)
       throws IOException {
     StringBuffer sbMessage = new StringBuffer();
 
@@ -420,11 +421,11 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     if (files.size() == 0) {
       sbMessage.append("ERROR: The " + notePath + " file directory was is empty in HDFS!\n");
       sbMessage.append("       Please first click the [RUN] button in the %submarine paragraph. " +
-          "Upload the algorithm code to HDFS.\n");
+          "Commit the algorithm code to HDFS.\n");
     } else {
-      output.write("You uploaded a total of " + files.size() + " algorithm files.");
+      output.write("You commit total of " + files.size() + " algorithm files.\n");
       for (int i = 0; i < files.size(); i++) {
-        output.write("[" + String.valueOf(i + 1) + "] " + files.get(i).toUri().getPath() + "\n");
+        output.write("[" + files.get(i).getName() + "] : " + files.get(i).toUri().getPath() + "\n");
       }
     }
 
@@ -437,7 +438,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     HashMap mapParams = new HashMap();
     mapParams.put(upperCaseKey(SubmarineConstants.SUBMARINE_HADOOP_HOME), submarineHadoopHome);
     mapParams.put(upperCaseKey(SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR), submarineJar);
-    mapParams.put(upperCaseKey(SubmarineConstants.JOB_NAME), noteId);
+    mapParams.put(upperCaseKey(SubmarineConstants.JOB_NAME), jobName);
     mapParams.put(upperCaseKey(SubmarineConstants.DOCKER_CONTAINER_NETWORK), containerNetwork);
     mapParams.put(upperCaseKey(SubmarineConstants.TF_INPUT_PATH), inputPath);
     mapParams.put(upperCaseKey(SubmarineConstants.TF_CHECKPOINT_PATH), checkPointPath);
@@ -465,8 +466,8 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     return key;
   }
 
-  private InterpreterResult jobShow(String jobName, InterpreterOutput output,
-                                    OutputStream outStream)
+  private InterpreterResult jobShow(String jobName, String noteId,
+                                    InterpreterOutput output, OutputStream outStream)
       throws IOException {
     String yarnPath = submarineHadoopHome + "/bin/yarn";
     File file = new File(yarnPath);
