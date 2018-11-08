@@ -83,7 +83,7 @@ public class SubmarineTFInterpreter extends KerberosInterpreter {
       // upload algorithm to HDFS
       String hdfsFile = uploadAlgorithmToHDFS(contextIntp.getNoteId(), fileName, script);
 
-      String message = "commit algorithm to HDFS `" + hdfsFile + "` success!";
+      String message = "Commit " + fileName + " to HDFS " + hdfsFile + " success!";
       LOGGER.info(message);
       return new InterpreterResult(InterpreterResult.Code.SUCCESS, message);
     } catch (Exception e) {
