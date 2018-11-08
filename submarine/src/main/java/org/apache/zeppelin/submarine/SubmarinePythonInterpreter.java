@@ -19,7 +19,8 @@ public class SubmarinePythonInterpreter extends PythonInterpreter {
 
   @Override
   public void open() throws InterpreterException {
-    this.submarineInterpreter = getInterpreterInTheSameSessionByClassName(SubmarineInterpreter.class);
+    this.submarineInterpreter = getInterpreterInTheSameSessionByClassName(
+        SubmarineInterpreter.class);
 
     super.open();
   }
