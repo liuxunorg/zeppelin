@@ -30,7 +30,7 @@ public class SubmarineConstants {
 
   public static final String HELP_COMMAND = "help";
 
-  public static final String HADOOP_YARN_SUBMARINE_JAR = "hadoop.yarn.submarine.jar";
+  public static final String HADOOP_YARN_SUBMARINE_JAR  = "hadoop.yarn.submarine.jar";
   public static final String DOCKER_CONTAINER_NETWORK   = "docker.container.network";
   public static final String SUBMARINE_YARN_QUEUE       = "submarine.yarn.queue";
   public static final String SUBMARINE_CONCURRENT_MAX   = "submarine.concurrent.max";

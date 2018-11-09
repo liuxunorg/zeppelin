@@ -15,22 +15,25 @@
 package org.apache.zeppelin.submarine.utils;
 
 public class SubmarineParagraph {
-  private String noteId;
-  private String noteName;
-  private String paragraphId;
-  private String paragraphTitle;
-  private String paragraphText;
-  private String replName;
-  private String cmd;
+  private String noteId = "";
+  private String noteName = "";
+  private String paragraphId = "";
+  private String paragraphTitle = "";
+  private String paragraphScript = "";
+  private String replName = "";
+  private String cmd = "";
+
+  public SubmarineParagraph() {
+  }
 
   public SubmarineParagraph(String noteId, String paragraphId, String noteName,
-                            String paragraphTitle, String paragraphText,
+                            String paragraphTitle, String paragraphScript,
                             String replName, String cmd) {
     this.noteId = noteId;
     this.noteName = noteName;
     this.paragraphId = paragraphId;
     this.paragraphTitle = paragraphTitle;
-    this.paragraphText = paragraphText;
+    this.paragraphScript = paragraphScript;
     this.replName = replName;
     this.cmd = cmd;
   }
@@ -43,11 +46,39 @@ public class SubmarineParagraph {
     return paragraphId;
   }
 
-  public String getParagraphText() {
-    return paragraphText;
+  public String getParagraphScript() {
+    return paragraphScript;
   }
 
   public String getCmd() {
     return cmd;
+  }
+
+  public void setParagraphTitle(String paragraphTitle) {
+    this.paragraphTitle = paragraphTitle;
+  }
+
+  public void setParagraphScript(String paragraphScript) {
+    this.paragraphScript = paragraphScript;
+  }
+
+  public String getReplName() {
+    return replName;
+  }
+
+  public void setReplName(String replName) {
+    this.replName = replName;
+  }
+
+  public String getParagraphTitle() {
+    return paragraphTitle;
+  }
+
+  public String getNoteName() {
+    return noteName;
+  }
+
+  public void setNoteName(String noteName) {
+    this.noteName = noteName;
   }
 }
