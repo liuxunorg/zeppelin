@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.tree.ConfigurationNode;
@@ -370,6 +371,11 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     return getString(ConfVars.ZEPPELIN_NOTEBOOK_DIR);
   }
 
+  @VisibleForTesting
+  public void setNotebookDir(String notebookDir) {
+    properties.put(ConfVars.ZEPPELIN_NOTEBOOK_DIR.getVarName(), notebookDir);
+  }
+
   public String getPluginsDir() {
     return getRelativeDir(getString(ConfVars.ZEPPELIN_PLUGINS_DIR));
   }
@@ -666,6 +672,7 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     return getString(ConfVars.ZEPPELIN_CLUSTER_ADDR);
   }
 
+  @VisibleForTesting
   public void setClusterAddress(String clusterAddr) {
     properties.put(ConfVars.ZEPPELIN_CLUSTER_ADDR.getVarName(), clusterAddr);
   }

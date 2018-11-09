@@ -24,6 +24,7 @@ import org.apache.commons.exec.ExecuteWatchdog;
 import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.interpreter.KerberosInterpreter;
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterResult;
@@ -37,10 +38,10 @@ import org.apache.zeppelin.submarine.utils.SubmarineConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.OutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
@@ -54,6 +55,9 @@ import java.util.Properties;
  */
 public class SubmarineInterpreter extends KerberosInterpreter {
   private Logger LOGGER = LoggerFactory.getLogger(SubmarineInterpreter.class);
+
+  private ZeppelinConfiguration zconf;
+  private File pythonWorkDir = null;
 
   private String submarineJobRunTFJinja = "submarine-job-run-tf.jinja";
 
@@ -74,6 +78,8 @@ public class SubmarineInterpreter extends KerberosInterpreter {
 
   public SubmarineInterpreter(Properties property) {
     super(property);
+
+    zconf = ZeppelinConfiguration.create();
 
     submarineContext = SubmarineContext.getInstance(properties);
 
@@ -113,23 +119,26 @@ public class SubmarineInterpreter extends KerberosInterpreter {
   }
 
   @Override
-  public InterpreterResult interpret(String script, InterpreterContext contextIntp) {
+  public InterpreterResult interpret(String script, InterpreterContext intpContext) {
     LOGGER.debug("Run shell command '" + script + "'");
     OutputStream outStream = new ByteArrayOutputStream();
-    String jobName = getJobName(contextIntp);
-    String noteId = contextIntp.getNoteId();
+    String jobName = getJobName(intpContext);
+    String noteId = intpContext.getNoteId();
 
     try {
+      submarineContext.saveParagraphToFiles(intpContext.getNoteId(),
+          intpContext.getNoteName(), pythonWorkDir == null ? "" : pythonWorkDir.getAbsolutePath());
+
       CommandParser commandParser = new CommandParser();
       commandParser.populate(script);
 
       Properties properties = submarineContext.getProperties(noteId);
       properties.put(SubmarineConstants.JOB_NAME, jobName);
       properties.put(SubmarineConstants.NOTE_ID, noteId);
-      properties.put(SubmarineConstants.NOTE_NAME, contextIntp.getNoteName());
-      properties.put(SubmarineConstants.PARAGRAPH_ID, contextIntp.getParagraphId());
-      properties.put(SubmarineConstants.PARAGRAPH_TEXT, contextIntp.getParagraphText());
-      properties.put(SubmarineConstants.REPL_NAME, contextIntp.getReplName());
+      properties.put(SubmarineConstants.NOTE_NAME, intpContext.getNoteName());
+      properties.put(SubmarineConstants.PARAGRAPH_ID, intpContext.getParagraphId());
+      properties.put(SubmarineConstants.PARAGRAPH_TEXT, intpContext.getParagraphText());
+      properties.put(SubmarineConstants.REPL_NAME, intpContext.getReplName());
       properties.put(SubmarineConstants.SCRIPT, script);
 
       // Get the set variables from the user's execution script
@@ -152,9 +161,9 @@ public class SubmarineInterpreter extends KerberosInterpreter {
         String message = getSubmarineHelp();
         return new InterpreterResult(InterpreterResult.Code.SUCCESS, message);
       } else if (command.equalsIgnoreCase(SubmarineConstants.COMMAND_JOB_SHOW)) {
-        return jobShow(jobName, noteId, contextIntp.out, outStream);
+        return jobShow(jobName, noteId, intpContext.out, outStream);
       } else if (command.equals(SubmarineConstants.COMMAND_JOB_RUN)) {
-        return jobRun(jobName, noteId, contextIntp.out, outStream);
+        return jobRun(jobName, noteId, intpContext.out, outStream);
       } else {
         String message = "ERROR: Unsupported command [" + command + "] !";
         message += getSubmarineHelp();
@@ -168,7 +177,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
       if (exitValue == 143) {
         code = InterpreterResult.Code.INCOMPLETE;
         message += "Paragraph received a SIGTERM\n";
-        LOGGER.info("The paragraph " + contextIntp.getParagraphId()
+        LOGGER.info("The paragraph " + intpContext.getParagraphId()
             + " stopped executing: " + message);
       }
       message += "ExitValue: " + exitValue;
@@ -226,6 +235,10 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     return false;
   }
 
+  public void setPythonWorkDir(File pythonWorkDir) {
+    this.pythonWorkDir = pythonWorkDir;
+  }
+
   public void createSecureConfiguration() throws InterpreterException {
     Properties properties = getProperties();
     CommandLine cmdLine = CommandLine.parse(shell);
@@ -253,6 +266,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     return false;
   }
 
+
   // yarn application match the pattern [a-z][a-z0-9-]*
   private String getJobName(InterpreterContext contextIntp) {
     return "submarine-" + contextIntp.getNoteId().toLowerCase();
@@ -265,19 +279,16 @@ public class SubmarineInterpreter extends KerberosInterpreter {
 
     URL urlTemplate = Resources.getResource(submarineJobRunTFJinja);
     String template = Resources.toString(urlTemplate, Charsets.UTF_8);
-
     Jinjava jinjava = new Jinjava();
     String submarineCmd = jinjava.render(template, jinjaParams);
 
     LOGGER.info("Execute : " + submarineCmd);
     output.write("Submarine submit job : " + jobName);
-
     CommandLine cmdLine = CommandLine.parse(shell);
     cmdLine.addArgument(submarineCmd, false);
 
     DefaultExecutor executor = new DefaultExecutor();
     executor.setStreamHandler(new PumpStreamHandler(output, output));
-
     long timeout = Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty));
 
     executor.setWatchdog(new ExecuteWatchdog(timeout));

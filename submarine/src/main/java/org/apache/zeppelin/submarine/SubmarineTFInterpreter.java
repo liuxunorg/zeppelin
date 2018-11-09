@@ -49,7 +49,6 @@ public class SubmarineTFInterpreter extends KerberosInterpreter {
   private static final String TIMEOUT_PROPERTY = "submarine.command.timeout.millisecond";
   private String defaultTimeoutProperty = "60000";
 
-
   private SubmarineContext submarineContext = null;
 
   // Number of submarines executed in parallel for each interpreter instance
