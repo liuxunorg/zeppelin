@@ -79,7 +79,8 @@ public class SubmarineContext {
     return hdfsUtils;
   }
 
-  public void saveParagraphToFiles(String noteId, String noteName, String pythonWorkDir) {
+  public String saveParagraphToFiles(String noteId, String noteName, String dirName) {
+    StringBuffer outputMsg = new StringBuffer();
     Properties properties = getProperties(noteId);
 
     // zeppelin 0.9 version note name format
@@ -87,18 +88,17 @@ public class SubmarineContext {
 
     String hdfsUploadPath = properties.getProperty(
         SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH, "");
-    splitParagraphToFiles(noteFileName, pythonWorkDir, hdfsUploadPath);
-  }
 
-  private void splitParagraphToFiles(String noteFileName, String dirName, String hdfsUploadPath) {
     ArrayList<SubmarineParagraph> paragraphs = getNoteParagraphs(noteFileName);
-
     HashMap<String, StringBuffer> mapParagraph = new HashMap<>();
-    for (SubmarineParagraph paragraph : paragraphs) {
+    for (int i = 0; i < paragraphs.size(); i++) {
+      SubmarineParagraph paragraph = paragraphs.get(i);
       String paragraphTitle = paragraph.getParagraphTitle();
       if (org.apache.commons.lang.StringUtils.isEmpty(paragraphTitle)) {
-        // TODO(liuxun): output warn
-        LOGGER.warn("paragraph title is null");
+        String message = "WARN: The title of the [" + i
+            + "] paragraph is empty and was not submitted to HDFS.\n";
+        LOGGER.warn(message);
+        outputMsg.append(message);
         continue;
       }
       if (!mapParagraph.containsKey(paragraphTitle)) {
@@ -109,18 +109,39 @@ public class SubmarineContext {
       mergeScript.append(paragraph.getParagraphScript() + "\n\n");
     }
 
+    // Clear all files in the local noteid directory
+    if (!StringUtils.isEmpty(dirName)) {
+      String noteDir = dirName + "/" + noteId;
+      File fileNoteDir = new File(noteDir);
+      if (fileNoteDir.exists()) {
+        fileNoteDir.delete();
+      }
+      fileNoteDir.mkdirs();
+    }
+
+    // Clear all files in the noteid directory in HDFS
+    if (!StringUtils.isEmpty(hdfsUploadPath)) {
+      Path hdfsPath = new Path(hdfsUploadPath + "/" + noteId);
+      try {
+        if (hdfsUtils.exists(hdfsPath)) {
+          hdfsUtils.delete(hdfsPath);
+          hdfsUtils.tryMkDir(hdfsPath);
+        }
+      } catch (IOException e) {
+        e.printStackTrace();
+      }
+    }
+
     for (Map.Entry<String, StringBuffer> entry : mapParagraph.entrySet()) {
       try {
         String fileName = entry.getKey();
         String fileContext = entry.getValue().toString();
-        String paragraphFile = dirName + "/" + fileName;
+        String paragraphFile = dirName + "/" + noteId + "/" + fileName;
 
         // save to local file
         if (!StringUtils.isEmpty(dirName)) {
           File fileParagraph = new File(paragraphFile);
           if (!fileParagraph.exists()) {
-            File dir = new File(fileParagraph.getParent());
-            dir.mkdirs();
             fileParagraph.createNewFile();
           }
           FileWriter writer = new FileWriter(paragraphFile);
@@ -130,11 +151,7 @@ public class SubmarineContext {
 
         // save to hdfs
         if (!StringUtils.isEmpty(hdfsUploadPath)) {
-          Path hdfsPath = new Path(hdfsUploadPath);
-          if (!hdfsUtils.exists(hdfsPath)) {
-            hdfsUtils.tryMkDir(hdfsPath);
-          }
-          String fileDir = hdfsUploadPath + File.separator + fileName;
+          String fileDir = hdfsUploadPath + "/" + noteId + "/" + fileName;
           // upload algorithm file
           LOGGER.info("Commit algorithm to HDFS: {}", fileDir);
           Path filePath = new Path(fileDir);
@@ -144,6 +161,8 @@ public class SubmarineContext {
         e.printStackTrace();
       }
     }
+
+    return outputMsg.toString();
   }
 
   public ArrayList<SubmarineParagraph> getNoteParagraphs(String noteFileName) {
@@ -260,10 +279,7 @@ public class SubmarineContext {
   public Properties getProperties(String noteId) {
     Properties properties = null;
 
-    if (!noteProperties.containsKey(noteId)) {
-      properties = new Properties();
-      noteProperties.put(noteId, properties);
-    } else {
+    if (noteProperties.containsKey(noteId)) {
       properties = noteProperties.get(noteId);
     }
     return properties;
