@@ -59,11 +59,4 @@ public class SubmarineConstants {
   public static final String COMMAND_JOB_SHOW = "job show";
   public static final String COMMAND_JOB_RUN  = "job run";
 
-  public static final String NOTE_ID = "NOTE_ID";
-  public static final String NOTE_NAME = "NOTE_NAME";
-  public static final String PARAGRAPH_ID = "PARAGRAPH_ID";
-  public static final String PARAGRAPH_TEXT = "PARAGRAPH_TEXT";
-  public static final String REPL_NAME = "REPL_NAME";
-  public static final String SCRIPT = "SCRIPT";
-
 }

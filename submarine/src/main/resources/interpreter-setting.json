@@ -67,19 +67,7 @@
         "defaultValue": "",
         "description": "Algorithm file upload HDFS path",
         "type": "string"
-      }
-    },
-    "editor": {
-      "language": "sh",
-      "editOnDblClick": false,
-      "completionSupport": false
-    }
-  },
-  {
-    "group": "submarine",
-    "name": "tensorflow",
-    "className": "org.apache.zeppelin.submarine.SubmarineTFInterpreter",
-    "properties": {
+      },
       "tf.parameter.services.num": {
         "envName": "TF_PARAMETER_SERVICES_NUM",
         "propertyName": "tf.parameter.services.num",
@@ -166,10 +154,9 @@
       }
     },
     "editor": {
-      "language": "python",
+      "language": "sh",
       "editOnDblClick": false,
-      "completionKey": "TAB",
-      "completionSupport": true
+      "completionSupport": false
     }
   },
   {

@@ -75,8 +75,9 @@ public class SubmarineContextTest {
     for (int i = 0; i < noteFiles.size(); i++) {
       String noteFileName = noteFiles.get(i).getAbsolutePath().replace(notebookDir, "");
 
-      submarineContext.saveParagraphToFiles(noteFileName,
+      String outMsg = submarineContext.saveParagraphToFiles(noteFileName,
           "/Users/liuxun/Downloads/saveNoteParagraphTest", "");
+      LOGGER.info(outMsg);
     }
   }
 }
