@@ -55,7 +55,6 @@ public class SubmarineContextTest {
     }
   }
 
-
   @Test
   public void getNoteParagraphTest() {
     String notebookDir = zConf.getNotebookDir();

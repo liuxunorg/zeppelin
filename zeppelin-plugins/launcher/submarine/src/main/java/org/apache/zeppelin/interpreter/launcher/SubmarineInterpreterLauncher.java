@@ -17,13 +17,17 @@
 
 package org.apache.zeppelin.interpreter.launcher;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
+import org.apache.zeppelin.interpreter.InterpreterOption;
+import org.apache.zeppelin.interpreter.InterpreterRunner;
 import org.apache.zeppelin.interpreter.recovery.RecoveryStorage;
+import org.apache.zeppelin.interpreter.remote.RemoteInterpreterManagedProcess;
+import org.apache.zeppelin.interpreter.remote.RemoteInterpreterRunningProcess;
 import org.apache.zeppelin.interpreter.remote.RemoteInterpreterUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -34,6 +38,11 @@ public class SubmarineInterpreterLauncher extends StandardInterpreterLauncher {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SubmarineInterpreterLauncher.class);
 
+  public static final String HADOOP_YARN_SUBMARINE_JAR = "hadoop.yarn.submarine.jar";
+  public static final String SUBMARINE_INTERPRETER_DOCKER_IMAGE
+      = "submarine.interpreter.docker.image";
+  public static final String ZEPPELIN_INTERPRETER_RPC_PORTRANGE
+      = "zeppelin.interpreter.rpc.portRange";
   public SubmarineInterpreterLauncher(ZeppelinConfiguration zConf, RecoveryStorage recoveryStorage) {
     super(zConf, recoveryStorage);
   }
@@ -46,24 +55,60 @@ public class SubmarineInterpreterLauncher extends StandardInterpreterLauncher {
         env.put((String) key, context.getProperties().getProperty((String) key));
       }
     }
+    String hadoopYarnSubmarineJar = properties.getProperty(HADOOP_YARN_SUBMARINE_JAR);
+    String submarineIntpDockerImage = properties.getProperty(SUBMARINE_INTERPRETER_DOCKER_IMAGE);
     env.put("INTERPRETER_GROUP_ID", context.getInterpreterGroupId());
+    env.put("SUBMARINE_INTERPRETER_DOCKER_IMAGE", submarineIntpDockerImage);
+    env.put("HADOOP_YARN_SUBMARINE_JAR", hadoopYarnSubmarineJar);
 
     LOGGER.info("buildEnvFromProperties: " + env);
     return env;
   }
 
-  /**
-   * get environmental variable in the following order
-   *
-   * 1. interpreter setting
-   * 2. zeppelin-env.sh
-   *
-   */
-  private String getEnv(String envName) {
-    String env = properties.getProperty(envName);
-    if (env == null) {
-      env = System.getenv(envName);
+  @Override
+  public InterpreterClient launch(InterpreterLaunchContext context) throws IOException {
+    LOGGER.info("Launching SubmarineInterpreter: " + context.getInterpreterSettingGroup());
+    this.properties = context.getProperties();
+    InterpreterOption option = context.getOption();
+    InterpreterRunner runner = context.getRunner();
+    String groupName = context.getInterpreterSettingGroup();
+    String name = context.getInterpreterSettingName();
+    int connectTimeout = getConnectTimeout();
+
+    if (option.isExistingProcess()) {
+      return new RemoteInterpreterRunningProcess(
+          context.getInterpreterSettingName(),
+          connectTimeout,
+          option.getHost(),
+          option.getPort());
+    } else {
+      // try to recover it first
+      if (zConf.isRecoveryEnabled()) {
+        InterpreterClient recoveredClient =
+            recoveryStorage.getInterpreterClient(context.getInterpreterGroupId());
+        if (recoveredClient != null) {
+          if (recoveredClient.isRunning()) {
+            LOGGER.info("Recover interpreter process: " + recoveredClient.getHost() + ":" +
+                recoveredClient.getPort());
+            return recoveredClient;
+          } else {
+            LOGGER.warn("Cannot recover interpreter process: " + recoveredClient.getHost() + ":"
+                + recoveredClient.getPort() + ", as it is already terminated.");
+          }
+        }
+      }
+
+      // create new remote process
+      String port = properties.getProperty(ZEPPELIN_INTERPRETER_RPC_PORTRANGE, "29914");
+      String portRange = port + ":" + port;
+      String localRepoPath = zConf.getInterpreterLocalRepoPath() + "/"
+          + context.getInterpreterSettingId();
+      return new RemoteInterpreterManagedProcess(
+          runner != null ? runner.getPath() : zConf.getInterpreterRemoteRunnerPath(),
+          context.getZeppelinServerRPCPort(), context.getZeppelinServerHost(), portRange,
+          zConf.getInterpreterDir() + "/" + groupName, localRepoPath,
+          buildEnvFromProperties(context), connectTimeout, name,
+          context.getInterpreterGroupId(), option.isUserImpersonate());
     }
-    return env;
   }
 }

@@ -12,6 +12,20 @@
         "description": "Submarine executive full path, ex) ../hadoop/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0.jar",
         "type": "string"
       },
+      "submarine.interpreter.docker.image": {
+        "envName": "SUBMARINE_INTERPRETER_DOCKER_IMAGE",
+        "propertyName": "submarine.interpreter.docker.image",
+        "defaultValue": "",
+        "description": "Docker image of submarine interpreter",
+        "type": "string"
+      },
+      "zeppelin.interpreter.rpc.portRange": {
+        "envName": "ZEPPELIN_INTERPRETER_RPC_PORTRANGE",
+        "propertyName": "zeppelin.interpreter.rpc.portRange",
+        "defaultValue": "29914",
+        "description": "The process port of the submarine interpreter container mapping defined in the `scripts/docker/interpreter/submarine/tensorflow_gpu/Dockerfile` file",
+        "type": "string"
+      },
       "submarine.yarn.queue": {
         "envName": "SUBMARINE_YARN_QUEUE",
         "propertyName": "submarine.yarn.queue",

@@ -28,9 +28,11 @@ public class SubmarineConstants {
   public static final String TF_PS_LAUNCH_CMD = "TF_PS_LAUNCH_CMD";
   public static final String TF_WORKER_LAUNCH_CMD = "TF_WORKER_LAUNCH_CMD";
 
-  public static final String HELP_COMMAND = "help";
+  public static final String ZEPPELIN_INTERPRETER_RPC_PORTRANGE
+      = "zeppelin.interpreter.rpc.portRange";
 
   public static final String HADOOP_YARN_SUBMARINE_JAR  = "hadoop.yarn.submarine.jar";
+
   public static final String DOCKER_CONTAINER_NETWORK   = "docker.container.network";
   public static final String SUBMARINE_YARN_QUEUE       = "submarine.yarn.queue";
   public static final String SUBMARINE_CONCURRENT_MAX   = "submarine.concurrent.max";
@@ -38,6 +40,8 @@ public class SubmarineConstants {
   public static final String SUBMARINE_HADOOP_KEYTAB    = "submarine.hadoop.keytab";
   public static final String SUBMARINE_HADOOP_PRINCIPAL = "submarine.hadoop.principal";
 
+  public static final String SUBMARINE_INTERPRETER_DOCKER_IMAGE
+      = "submarine.interpreter.docker.image";
   public static final String SUBMARINE_ALGORITHM_HDFS_PATH = "submarine.algorithm.hdfs.path";
 
   public static final String TF_PARAMETER_SERVICES_DOCKER_IMAGE
@@ -55,6 +59,7 @@ public class SubmarineConstants {
 
   public static final String TF_TENSORBOARD_ENABLE  = "tf.tensorboard.enable";
 
+  public static final String HELP_COMMAND = "help";
   public static final String COMMAND_JOB_LIST = "job list";
   public static final String COMMAND_JOB_SHOW = "job show";
   public static final String COMMAND_JOB_RUN  = "job run";
