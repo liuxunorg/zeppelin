@@ -812,7 +812,6 @@ public class NotebookRestApi extends AbstractRestApi {
           RunParagraphWithParametersRequest.fromJson(message);
       params = request.getParams();
     }
-
     if (notebookService.runParagraph(noteId, paragraphId, paragraph.getTitle(),
         paragraph.getText(), params,
         new HashMap<>(), false, true, getServiceContext(), new RestServiceCallback<>())) {

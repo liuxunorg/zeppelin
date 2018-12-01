@@ -36,7 +36,7 @@
   <properties>
     <!--library versions-->
     <interpreter.name>submarine</interpreter.name>
-    <hadoop.version>3.3.0-SNAPSHOT</hadoop.version>
+    <hadoop.version>2.7.3</hadoop.version>
     <jinjava.version>2.4.0</jinjava.version>
 
     <!--test library versions-->
