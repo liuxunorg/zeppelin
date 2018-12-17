@@ -1,17 +1,46 @@
+{#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+-#}
 {{ SUBMARINE_HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
   job run \
   --name {{ JOB_NAME }} \
   --env DOCKER_JAVA_HOME=/opt/java \
   --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 \
+  --env PYTHONPATH="./submarine_algorithm:$PYTHONPATH" \
   --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK={{ DOCKER_CONTAINER_NETWORK }} \
-  --input_path {{ TF_INPUT_PATH }} \
-  --checkpoint_path {{ TF_CHECKPOINT_PATH }} \
+  --input_path {{ INPUT_PATH }} \
+  --checkpoint_path {{ CHECKPOINT_PATH }} \
+{%- if MACHINELEARING_DISTRIBUTED_ENABLE -%}
   --num_ps {{ TF_PARAMETER_SERVICES_NUM }} \
   --ps_docker_image {{ TF_PARAMETER_SERVICES_DOCKER_IMAGE }} \
   --ps_resources memory={{ TF_PARAMETER_SERVICES_MEMORY }},vcores={{ TF_PARAMETER_SERVICES_CPU }},gpu={{ TF_PARAMETER_SERVICES_GPU }} \
-  --ps_launch_cmd "{{ TF_PS_LAUNCH_CMD }}" \
+  --ps_launch_cmd "{{ PS_LAUNCH_CMD }}" \
   --worker_docker_image {{ TF_WORKER_SERVICES_DOCKER_IMAGE }} \
-  --worker_resources memory={{ TF_WORKER_SERVICES_MEMORY }},vcores={{ TF_WORKER_SERVICES_CPU }},gpu={{ TF_WORKER_SERVICES_GPU }} \
   --num_workers {{ TF_WORKER_SERVICES_NUM }} \
-  --worker_launch_cmd "{{ TF_WORKER_LAUNCH_CMD }}" \
+{%- else -%}
+  --docker_image {{ TF_WORKER_SERVICES_DOCKER_IMAGE }} \
+{%- endif -%}
+  --worker_resources memory={{ TF_WORKER_SERVICES_MEMORY }},vcores={{ TF_WORKER_SERVICES_CPU }},gpu={{ TF_WORKER_SERVICES_GPU }} \
+  --worker_launch_cmd "{{ WORKER_LAUNCH_CMD }}" \
+{% for file in SUBMARINE_ALGORITHM_HDFS_FILES -%}
+  --localization "{{ file }}:." \
+{% endfor -%}
+  --localization "{{ SUBMARINE_ALGORITHM_HDFS_PATH }}:./submarine_algorithm" \
+  --keytab {{ SUBMARINE_HADOOP_KEYTAB }} \
+  --principal {{ SUBMARINE_HADOOP_PRINCIPAL }} \
+  --distribute_keytab \
+  --wait_job_finish \
   --verbose

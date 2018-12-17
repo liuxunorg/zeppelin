@@ -25,6 +25,7 @@ import com.google.common.base.Strings;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +40,8 @@ import org.apache.zeppelin.interpreter.Interpreter;
 import org.apache.zeppelin.interpreter.InterpreterNotFoundException;
 import org.apache.zeppelin.interpreter.InterpreterResult;
 import org.apache.zeppelin.interpreter.InterpreterSetting;
+import org.apache.zeppelin.interpreter.InterpreterSettingManager;
+import org.apache.zeppelin.interpreter.ManagedInterpreterGroup;
 import org.apache.zeppelin.interpreter.thrift.InterpreterCompletion;
 import org.apache.zeppelin.notebook.Note;
 import org.apache.zeppelin.notebook.NoteInfo;
@@ -144,7 +147,9 @@ public class NotebookService {
       Note note = notebook.createNote(normalizeNotePath(notePath), defaultInterpreterGroup,
           context.getAutheInfo());
       // it's an empty note. so add one paragraph
-      note.addNewParagraph(context.getAutheInfo());
+      Paragraph paragraph = note.addNewParagraph(context.getAutheInfo());
+      Map<String, Object> config = getIntpGroupConfigSetting(note.getId());
+      paragraph.setConfig(config);
       notebook.saveNote(note, context.getAutheInfo());
       callback.onSuccess(note, context);
       return note;
@@ -152,6 +157,23 @@ public class NotebookService {
       callback.onFailure(new IOException("Fail to create note", e), context);
       return null;
     }
+  }
+
+  public Map<String, Object> getIntpGroupConfigSetting(String noteId) {
+    Map<String, Object> config = new HashMap<>();
+
+    Note note = notebook.getNote(noteId);
+    if (null == note) {
+      return config;
+    }
+    String defaultInterpreterGroup = note.getDefaultInterpreterGroup();
+    InterpreterSettingManager interpreterSettingManager
+        = notebook.getInterpreterSettingManager();
+    if (null == interpreterSettingManager) {
+      return config;
+    }
+    config = interpreterSettingManager.getConfigSetting(defaultInterpreterGroup);
+    return config;
   }
 
   String normalizeNotePath(String notePath) throws IOException {

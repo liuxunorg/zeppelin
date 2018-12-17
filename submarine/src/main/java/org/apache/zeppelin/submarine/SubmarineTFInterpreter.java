@@ -72,15 +72,15 @@ public class SubmarineTFInterpreter extends KerberosInterpreter {
   }
 
   @Override
-  public InterpreterResult interpret(String script, InterpreterContext contextIntp) {
-    String fileName = contextIntp.getParagraphTitle();
+  public InterpreterResult interpret(String script, InterpreterContext context) {
+    String fileName = context.getParagraphTitle();
     if (null == fileName || StringUtils.isEmpty(fileName)) {
       return new InterpreterResult(InterpreterResult.Code.ERROR,
           "ERROR: Please set this paragraph title!");
     }
     try {
       // upload algorithm to HDFS
-      String hdfsFile = uploadAlgorithmToHDFS(contextIntp.getNoteId(), fileName, script);
+      String hdfsFile = uploadAlgorithmToHDFS(context.getNoteId(), fileName, script);
 
       String message = "Commit " + fileName + " to HDFS " + hdfsFile + " success!";
       LOGGER.info(message);

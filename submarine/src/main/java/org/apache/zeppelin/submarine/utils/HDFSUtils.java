@@ -19,7 +19,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RawLocalFileSystem;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
@@ -58,8 +57,8 @@ public class HDFSUtils {
     // disable checksum for local file system. because interpreter.json may be updated by
     // non-hadoop filesystem api
     // disable caching for file:// scheme to avoid getting LocalFS which does CRC checks
-    this.hadoopConf.setBoolean("fs.file.impl.disable.cache", true);
-    this.hadoopConf.set("fs.file.impl", RawLocalFileSystem.class.getName());
+    // this.hadoopConf.setBoolean("fs.file.impl.disable.cache", true);
+    this.hadoopConf.set("fs.file.impl", "org.apache.hadoop.hdfs.DistributedFileSystem");
     // UserGroupInformation.setConfiguration(hadoopConf);
     this.isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
 

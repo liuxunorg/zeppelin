@@ -25,6 +25,7 @@ import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
+import org.apache.zeppelin.display.ui.OptionInput.ParamOption;
 import org.apache.zeppelin.interpreter.KerberosInterpreter;
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterResult;
@@ -33,18 +34,19 @@ import org.apache.zeppelin.interpreter.InterpreterOutput;
 import org.apache.zeppelin.interpreter.thrift.InterpreterCompletion;
 import org.apache.zeppelin.scheduler.Scheduler;
 import org.apache.zeppelin.scheduler.SchedulerFactory;
-import org.apache.zeppelin.submarine.utils.CommandParser;
 import org.apache.zeppelin.submarine.utils.SubmarineConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.OutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -59,7 +61,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
   private ZeppelinConfiguration zconf;
   private File pythonWorkDir = null;
 
-  private String submarineJobRunTFJinja = "submarine-job-run-tf.jinja";
+  private static final String SUBMARINE_JOBRUN_TF_JINJA = "submarine-job-run-tf.jinja";
 
   // Number of submarines executed in parallel for each interpreter instance
   protected int concurrentExecutedMax = 1;
@@ -118,14 +120,86 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     super.close();
   }
 
+  private String createGUI(InterpreterContext context) {
+    // submarine command - Format
+    ParamOption[] commandOptions = new ParamOption[4];
+    commandOptions[0] = new ParamOption(SubmarineConstants.COMMAND_JOB_RUN,
+        SubmarineConstants.COMMAND_JOB_RUN);
+    commandOptions[1] = new ParamOption(SubmarineConstants.COMMAND_JOB_SHOW,
+        SubmarineConstants.COMMAND_JOB_SHOW);
+    commandOptions[2] = new ParamOption(SubmarineConstants.COMMAND_HELP,
+        SubmarineConstants.COMMAND_HELP);
+    String command = (String) context.getGui().
+        select("Submarine Command", "", commandOptions);
+
+    String distributed = this.properties.getProperty(
+        SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE, "false");
+
+    if (command.equals(SubmarineConstants.COMMAND_JOB_RUN)) {
+      String inputPath = (String) context.getGui().textbox("Input Path(input_path)");
+      String checkpoinkPath = (String) context.getGui().textbox("Checkpoint Path(checkpoint_path)");
+      if (distributed.equals("true")) {
+        String psLaunchCmd = (String) context.getGui().textbox("PS Launch Command");
+      }
+      String workerLaunchCmd = (String) context.getGui().textbox("Worker Launch Command");
+    }
+
+    /* Active
+    ParamOption[] auditOptions = new ParamOption[1];
+    auditOptions[0] = new ParamOption("Active", "Active command");
+    List<Object> flags = intpContext.getGui().checkbox("Active", Arrays.asList(""), auditOptions);
+    boolean activeChecked = flags.contains("Active");
+    intpContext.getResourcePool().put(intpContext.getNoteId(),
+        intpContext.getParagraphId(), "Active", activeChecked);*/
+
+    return command;
+  }
+
   @Override
-  public InterpreterResult interpret(String script, InterpreterContext intpContext) {
+  public InterpreterResult interpret(String script, InterpreterContext context) {
+    //createGUI(context);
+    //if (true) {
+    //  return new InterpreterResult(InterpreterResult.Code.SUCCESS);
+    //}
+
+    ParamOption[] commandOptions = new ParamOption[4];
+    commandOptions[0] = new ParamOption("", "");
+    commandOptions[1] = new ParamOption(SubmarineConstants.COMMAND_JOB_RUN,
+        SubmarineConstants.COMMAND_JOB_RUN);
+    commandOptions[2] = new ParamOption(SubmarineConstants.COMMAND_JOB_SHOW,
+        SubmarineConstants.COMMAND_JOB_SHOW);
+    commandOptions[3] = new ParamOption(SubmarineConstants.COMMAND_HELP,
+        SubmarineConstants.COMMAND_HELP);
+    String command = (String) context.getGui().
+        select("submarine command", "None", commandOptions);
+
+    String distributed = this.properties.getProperty(
+        SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE, "false");
+
+    String inputPath = "", chkPntPath = "", psLaunchCmd = "", workerLaunchCmd = "";
+    if (command.equals(SubmarineConstants.COMMAND_JOB_RUN)) {
+      inputPath = (String) context.getGui().textbox("Input Path");
+      chkPntPath = (String) context.getGui().textbox("Checkpoink Path");
+      if (distributed.equals("true")) {
+        psLaunchCmd = (String) context.getGui().textbox("PS Launch Command");
+      }
+      workerLaunchCmd = (String) context.getGui().textbox("Worker Launch Command");
+    }
+
     LOGGER.debug("Run shell command '" + script + "'");
     OutputStream outStream = new ByteArrayOutputStream();
-    String jobName = getJobName(intpContext);
-    String noteId = intpContext.getNoteId();
+    String jobName = getJobName(context);
+    String noteId = context.getNoteId();
 
     try {
+      String algorithmPath = this.properties.getProperty(
+          SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH);
+      if (!algorithmPath.startsWith("hdfs://")) {
+        String message = "Algorithm file upload HDFS path, " +
+            "Must be `hdfs://` prefix. now setting " +  algorithmPath;
+        return new InterpreterResult(InterpreterResult.Code.ERROR, message);
+      }
+
       Properties properties = submarineContext.getProperties(noteId);
       if (null == properties) {
         properties = this.properties;
@@ -133,35 +207,46 @@ public class SubmarineInterpreter extends KerberosInterpreter {
         properties.put(SubmarineConstants.JOB_NAME, jobName);
       }
 
-      String outputMsg = submarineContext.saveParagraphToFiles(noteId, intpContext.getNoteName(),
+      String outputMsg = submarineContext.saveParagraphToFiles(noteId, context.getNoteName(),
           pythonWorkDir == null ? "" : pythonWorkDir.getAbsolutePath());
-      intpContext.out.write(outputMsg);
+      context.out.write(outputMsg);
 
+      /*
       CommandParser commandParser = new CommandParser();
       commandParser.populate(script);
 
       // Get the set variables from the user's execution script
-      String inputPath = commandParser.getConfig(SubmarineConstants.TF_INPUT_PATH, "");
-      String chkPntPath = commandParser.getConfig(SubmarineConstants.TF_CHECKPOINT_PATH, "");
-      String psLaunchCmd = commandParser.getConfig(SubmarineConstants.TF_PS_LAUNCH_CMD, "");
-      String workerLaunchCmd = commandParser.getConfig(SubmarineConstants.TF_WORKER_LAUNCH_CMD, "");
-      properties.put(SubmarineConstants.TF_INPUT_PATH, inputPath != null ? inputPath : "");
-      properties.put(SubmarineConstants.TF_CHECKPOINT_PATH, chkPntPath != null ? chkPntPath : "");
-      properties.put(SubmarineConstants.TF_PS_LAUNCH_CMD, psLaunchCmd != null ? psLaunchCmd : "");
-      properties.put(SubmarineConstants.TF_WORKER_LAUNCH_CMD,
+      String inputPath = commandParser.getConfig(SubmarineConstants.INPUT_PATH, "");
+      String chkPntPath = commandParser.getConfig(SubmarineConstants.CHECKPOINT_PATH, "");
+      String psLaunchCmd = commandParser.getConfig(SubmarineConstants.PS_LAUNCH_CMD, "");
+      String workerLaunchCmd = commandParser.getConfig(SubmarineConstants.WORKER_LAUNCH_CMD, "");*/
+
+      properties.put(SubmarineConstants.INPUT_PATH, inputPath != null ? inputPath : "");
+      properties.put(SubmarineConstants.CHECKPOINT_PATH, chkPntPath != null ? chkPntPath : "");
+      properties.put(SubmarineConstants.PS_LAUNCH_CMD, psLaunchCmd != null ? psLaunchCmd : "");
+      properties.put(SubmarineConstants.WORKER_LAUNCH_CMD,
           workerLaunchCmd != null ? workerLaunchCmd : "");
 
-      String command = commandParser.getCommand();
+      // String command = commandParser.getCommand();
       CommandLine cmdLine = CommandLine.parse(shell);
       cmdLine.addArgument(script, false);
 
-      if (command.equalsIgnoreCase(SubmarineConstants.HELP_COMMAND)) {
+      if (command.equalsIgnoreCase(SubmarineConstants.COMMAND_HELP)) {
         String message = getSubmarineHelp();
         return new InterpreterResult(InterpreterResult.Code.SUCCESS, message);
       } else if (command.equalsIgnoreCase(SubmarineConstants.COMMAND_JOB_SHOW)) {
-        return jobShow(jobName, noteId, intpContext.out, outStream);
+        return jobShow(jobName, noteId, context.out, outStream);
       } else if (command.equals(SubmarineConstants.COMMAND_JOB_RUN)) {
-        return jobRun(jobName, noteId, intpContext.out, outStream);
+        Map<String, String> infos = new java.util.HashMap<>();
+        infos.put("jobUrl", "http://ml2.jd.163.org:8088/ui2/#/yarn-app" +
+            "/application_1545376183910_0001/attempts");
+        infos.put("label", "YARN JOB");
+        infos.put("tooltip", "View in Yarn web UI");
+        infos.put("noteId", context.getNoteId());
+        infos.put("paraId", context.getParagraphId());
+        context.getIntpEventClient().onParaInfosReceived(infos);
+
+        return jobRun(jobName, noteId, context.out, outStream);
       } else {
         String message = "ERROR: Unsupported command [" + command + "] !";
         message += getSubmarineHelp();
@@ -175,7 +260,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
       if (exitValue == 143) {
         code = InterpreterResult.Code.INCOMPLETE;
         message += "Paragraph received a SIGTERM\n";
-        LOGGER.info("The paragraph " + intpContext.getParagraphId()
+        LOGGER.info("The paragraph " + context.getParagraphId()
             + " stopped executing: " + message);
       }
       message += "ExitValue: " + exitValue;
@@ -197,7 +282,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
 
   @Override
   public FormType getFormType() {
-    return FormType.SIMPLE;
+    return FormType.NATIVE;
   }
 
   @Override
@@ -275,13 +360,14 @@ public class SubmarineInterpreter extends KerberosInterpreter {
       throws IOException {
     HashMap jinjaParams = propertiesToJinjaParams(jobName, noteId, output);
 
-    URL urlTemplate = Resources.getResource(submarineJobRunTFJinja);
+    URL urlTemplate = Resources.getResource(SUBMARINE_JOBRUN_TF_JINJA);
     String template = Resources.toString(urlTemplate, Charsets.UTF_8);
     Jinjava jinjava = new Jinjava();
     String submarineCmd = jinjava.render(template, jinjaParams);
 
     LOGGER.info("Execute : " + submarineCmd);
-    output.write("Submarine submit job : " + jobName);
+    output.write("Submarine submit job : " + jobName + "\n");
+    output.write("Submarine submit command : " + submarineCmd + "\n");
     CommandLine cmdLine = CommandLine.parse(shell);
     cmdLine.addArgument(submarineCmd, false);
 
@@ -321,27 +407,27 @@ public class SubmarineInterpreter extends KerberosInterpreter {
 
     // Check user-set job variables
     String inputPath = submarineContext.getPropertie(noteId,
-        SubmarineConstants.TF_INPUT_PATH);
+        SubmarineConstants.INPUT_PATH);
     if (StringUtils.isEmpty(inputPath)) {
-      setUserPropertiesWarn(sbMessage, SubmarineConstants.TF_INPUT_PATH, "=path...\n");
+      setUserPropertiesWarn(sbMessage, SubmarineConstants.INPUT_PATH, "=path...\n");
     }
     String checkPointPath = submarineContext.getPropertie(noteId,
-        SubmarineConstants.TF_CHECKPOINT_PATH);
+        SubmarineConstants.CHECKPOINT_PATH);
     if (StringUtils.isEmpty(checkPointPath)) {
-      setUserPropertiesWarn(sbMessage, SubmarineConstants.TF_CHECKPOINT_PATH, "=path...\n");
+      setUserPropertiesWarn(sbMessage, SubmarineConstants.CHECKPOINT_PATH, "=path...\n");
     }
     String psLaunchCmd = submarineContext.getPropertie(noteId,
-        SubmarineConstants.TF_PS_LAUNCH_CMD);
+        SubmarineConstants.PS_LAUNCH_CMD);
     if (StringUtils.isEmpty(psLaunchCmd)) {
-      setUserPropertiesWarn(sbMessage, SubmarineConstants.TF_PS_LAUNCH_CMD,
-          "=python /test/cifar10_estimator/cifar10_main.py " +
+      setUserPropertiesWarn(sbMessage, SubmarineConstants.PS_LAUNCH_CMD,
+          "=python cifar10_main.py " +
           "--data-dir=hdfs://mldev/tmp/cifar-10-data " +
           "--job-dir=hdfs://mldev/tmp/cifar-10-jobdir --num-gpus=0\n");
     }
     String workerLaunchCmd = submarineContext.getPropertie(noteId,
-        SubmarineConstants.TF_WORKER_LAUNCH_CMD);
+        SubmarineConstants.WORKER_LAUNCH_CMD);
     if (StringUtils.isEmpty(workerLaunchCmd)) {
-      setUserPropertiesWarn(sbMessage, SubmarineConstants.TF_WORKER_LAUNCH_CMD,
+      setUserPropertiesWarn(sbMessage, SubmarineConstants.WORKER_LAUNCH_CMD,
           "=python /test/cifar10_estimator/cifar10_main.py " +
           "--data-dir=hdfs://mldev/tmp/cifar-10-data " +
           "--job-dir=hdfs://mldev/tmp/cifar-10-jobdir " +
@@ -425,15 +511,36 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     if (StringUtils.isEmpty(algorithmUploadPath)) {
       setIntpPropertiesWarn(sbMessage, SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH);
     }
-    String notePath = algorithmUploadPath + File.separator + noteId + File.separator + "*";
-    List<Path> files = submarineContext.getHDFSUtils().list(new Path(notePath));
-    if (files.size() == 0) {
+    String submarineHadoopKeytab = getProperty(
+        SubmarineConstants.SUBMARINE_HADOOP_KEYTAB, "");
+    if (StringUtils.isEmpty(submarineHadoopKeytab)) {
+      setIntpPropertiesWarn(sbMessage, SubmarineConstants.SUBMARINE_HADOOP_KEYTAB);
+    }
+    file = new File(submarineHadoopKeytab);
+    if (!file.exists()) {
+      sbMessage.append(SubmarineConstants.SUBMARINE_HADOOP_KEYTAB + ":"
+          + submarineHadoopKeytab + " is not a valid file path!\n");
+    }
+    String submarineHadoopPrincipal = getProperty(
+        SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL, "");
+    if (StringUtils.isEmpty(submarineHadoopKeytab)) {
+      setIntpPropertiesWarn(sbMessage, SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL);
+    }
+    String machinelearingDistributed = getProperty(
+        SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE, "false");
+
+    String notePath = algorithmUploadPath + File.separator + noteId;
+    List<String> arrayHdfsFiles = new ArrayList<>();
+    List<Path> hdfsFiles = submarineContext.getHDFSUtils().list(new Path(notePath + "/*"));
+    if (hdfsFiles.size() == 0) {
       sbMessage.append("ERROR: The " + notePath + " file directory was is empty in HDFS!\n");
     } else {
-      output.write("INFO: You commit total of " + files.size() + " algorithm files.\n");
-      for (int i = 0; i < files.size(); i++) {
-        output.write("INFO: [" + files.get(i).getName() + "] -> "
-            + files.get(i).toUri().getPath() + "\n");
+      output.write("INFO: You commit total of " + hdfsFiles.size() + " algorithm files.\n");
+      for (int i = 0; i < hdfsFiles.size(); i++) {
+        String filePath = hdfsFiles.get(i).toUri().toString();
+        arrayHdfsFiles.add(filePath);
+        output.write("INFO: [" + hdfsFiles.get(i).getName() + "] -> "
+            + filePath + "\n");
       }
     }
 
@@ -443,15 +550,24 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     }
 
     // Save user-set variables and interpreter configuration parameters
-    HashMap mapParams = new HashMap();
+    HashMap<String, Object> mapParams = new HashMap();
     mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_HADOOP_HOME), submarineHadoopHome);
     mapParams.put(unifyKey(SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR), submarineJar);
     mapParams.put(unifyKey(SubmarineConstants.JOB_NAME), jobName);
     mapParams.put(unifyKey(SubmarineConstants.DOCKER_CONTAINER_NETWORK), containerNetwork);
-    mapParams.put(unifyKey(SubmarineConstants.TF_INPUT_PATH), inputPath);
-    mapParams.put(unifyKey(SubmarineConstants.TF_CHECKPOINT_PATH), checkPointPath);
-    mapParams.put(unifyKey(SubmarineConstants.TF_PS_LAUNCH_CMD), psLaunchCmd);
-    mapParams.put(unifyKey(SubmarineConstants.TF_WORKER_LAUNCH_CMD), workerLaunchCmd);
+    mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_HADOOP_KEYTAB), submarineHadoopKeytab);
+    mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL),
+        submarineHadoopPrincipal);
+    if (machinelearingDistributed.equals("true")) {
+      mapParams.put(unifyKey(SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE),
+          machinelearingDistributed);
+    }
+    mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH), notePath);
+    mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_FILES), arrayHdfsFiles);
+    mapParams.put(unifyKey(SubmarineConstants.INPUT_PATH), inputPath);
+    mapParams.put(unifyKey(SubmarineConstants.CHECKPOINT_PATH), checkPointPath);
+    mapParams.put(unifyKey(SubmarineConstants.PS_LAUNCH_CMD), psLaunchCmd);
+    mapParams.put(unifyKey(SubmarineConstants.WORKER_LAUNCH_CMD), workerLaunchCmd);
     mapParams.put(unifyKey(SubmarineConstants.TF_PARAMETER_SERVICES_DOCKER_IMAGE),
         parameterServicesImage);
     mapParams.put(unifyKey(SubmarineConstants.TF_PARAMETER_SERVICES_NUM), parameterServicesNum);

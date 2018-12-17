@@ -23,10 +23,10 @@ public class SubmarineConstants {
   public static final String DOCKER_HADOOP_HDFS_HOME = "DOCKER_HADOOP_HDFS_HOME";
 
   public static final String JOB_NAME = "JOB_NAME";
-  public static final String TF_INPUT_PATH = "TF_INPUT_PATH";
-  public static final String TF_CHECKPOINT_PATH = "TF_CHECKPOINT_PATH";
-  public static final String TF_PS_LAUNCH_CMD = "TF_PS_LAUNCH_CMD";
-  public static final String TF_WORKER_LAUNCH_CMD = "TF_WORKER_LAUNCH_CMD";
+  public static final String INPUT_PATH = "INPUT_PATH";
+  public static final String CHECKPOINT_PATH = "CHECKPOINT_PATH";
+  public static final String PS_LAUNCH_CMD = "PS_LAUNCH_CMD";
+  public static final String WORKER_LAUNCH_CMD = "WORKER_LAUNCH_CMD";
 
   public static final String ZEPPELIN_INTERPRETER_RPC_PORTRANGE
       = "zeppelin.interpreter.rpc.portRange";
@@ -43,7 +43,10 @@ public class SubmarineConstants {
   public static final String SUBMARINE_INTERPRETER_DOCKER_IMAGE
       = "submarine.interpreter.docker.image";
   public static final String SUBMARINE_ALGORITHM_HDFS_PATH = "submarine.algorithm.hdfs.path";
+  public static final String SUBMARINE_ALGORITHM_HDFS_FILES = "submarine.algorithm.hdfs.files";
 
+  public static final String MACHINELEARING_DISTRIBUTED_ENABLE
+      = "machinelearing.distributed.enable";
   public static final String TF_PARAMETER_SERVICES_DOCKER_IMAGE
       = "tf.parameter.services.docker.image";
   public static final String TF_PARAMETER_SERVICES_NUM = "tf.parameter.services.num";
@@ -59,7 +62,7 @@ public class SubmarineConstants {
 
   public static final String TF_TENSORBOARD_ENABLE  = "tf.tensorboard.enable";
 
-  public static final String HELP_COMMAND = "help";
+  public static final String COMMAND_HELP     = "help";
   public static final String COMMAND_JOB_LIST = "job list";
   public static final String COMMAND_JOB_SHOW = "job show";
   public static final String COMMAND_JOB_RUN  = "job run";
