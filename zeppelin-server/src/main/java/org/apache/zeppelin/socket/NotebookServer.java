@@ -1213,7 +1213,7 @@ public class NotebookServer extends WebSocketServlet
     if (fromMessage.get("config") != null) {
       config = (Map<String, Object>) fromMessage.get("config");
     } else {
-      config = new HashMap<>();
+      config = getNotebookService().getIntpGroupConfigSetting(noteId);
     }
 
     Paragraph newPara = getNotebookService().insertParagraph(noteId, index, config,
@@ -1302,6 +1302,8 @@ public class NotebookServer extends WebSocketServlet
                 Strings.isNullOrEmpty(p.getScriptText())) &&
                 isTheLastParagraph) {
               Paragraph newPara = p.getNote().addNewParagraph(p.getAuthenticationInfo());
+              Map<String, Object> config = getNotebookService().getIntpGroupConfigSetting(p.getNote().getId());
+              newPara.setConfig(config);
               broadcastNewParagraph(p.getNote(), newPara);
             }
           }

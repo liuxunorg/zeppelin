@@ -403,7 +403,6 @@ public class InterpreterSettingManager implements NoteEventListener {
           new InterpreterInfo(registeredInterpreter.getClassName(), registeredInterpreter.getName(),
               registeredInterpreter.isDefaultInterpreter(), registeredInterpreter.getEditor(),
               registeredInterpreter.getConfig());
-      interpreterInfo.setConfig(registeredInterpreter.getConfig());
       group = registeredInterpreter.getGroup();
       runner = registeredInterpreter.getRunner();
       // use defaultOption if it is not specified in interpreter-setting.json

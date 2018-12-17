@@ -367,6 +367,9 @@ public class NotebookRestApi extends AbstractRestApi {
     if (request.getParagraphs() != null) {
       for (NewParagraphRequest paragraphRequest : request.getParagraphs()) {
         Paragraph p = note.addNewParagraph(subject);
+        Map<String, Object> config = notebook.getInterpreterSettingManager()
+            .getConfigSetting(note.getDefaultInterpreterGroup());
+        p.setConfig(config);
         initParagraph(p, paragraphRequest, user);
       }
     }
@@ -488,6 +491,10 @@ public class NotebookRestApi extends AbstractRestApi {
     } else {
       p = note.insertNewParagraph(indexDouble.intValue(), subject);
     }
+    Map<String, Object> config = notebook.getInterpreterSettingManager()
+        .getConfigSetting(note.getDefaultInterpreterGroup());
+    p.setConfig(config);
+
     initParagraph(p, request, user);
     notebook.saveNote(note, subject);
     notebookServer.broadcastNote(note);

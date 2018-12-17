@@ -78,14 +78,14 @@
       "submarine.algorithm.hdfs.path": {
         "envName": "SUBMARINE_ALGORITHM_HDFS_PATH",
         "propertyName": "submarine.algorithm.hdfs.path",
-        "defaultValue": "",
-        "description": "Algorithm file upload HDFS path",
+        "defaultValue": "hdfs://...",
+        "description": "Algorithm file upload HDFS path, Must be `hdfs://` prefix",
         "type": "string"
       },
       "tf.parameter.services.num": {
         "envName": "TF_PARAMETER_SERVICES_NUM",
         "propertyName": "tf.parameter.services.num",
-        "defaultValue": "0",
+        "defaultValue": "1",
         "description": "Number of parameter services",
         "type": "number"
       },
@@ -171,6 +171,12 @@
       "language": "sh",
       "editOnDblClick": false,
       "completionSupport": false
+    },
+    "config": {
+      "fontSize": 9,
+      "colWidth": 12,
+      "runOnSelectionChange": false,
+      "title": true
     }
   },
   {
@@ -196,6 +202,13 @@
         "propertyName": "zeppelin.python.useIPython",
         "defaultValue": true,
         "description": "whether use IPython when it is available",
+        "type": "checkbox"
+      },
+      "machinelearing.distributed.enable": {
+        "envName": "MACHINELEARING_DISTRIBUTED",
+        "propertyName": "machinelearing.distributed.enable",
+        "defaultValue": false,
+        "description": "Running distributed machine learing",
         "type": "checkbox"
       }
     },

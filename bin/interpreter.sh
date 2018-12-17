@@ -219,14 +219,8 @@ elif [[ "${INTERPRETER_ID}" == "flink" ]]; then
     fi
   fi
 elif [[ "${INTERPRETER_ID}" == "submarine" ]]; then
-  if [[ -z "${SUBMARINE_HADOOP_CONF_DIR}" ]]; then
-    if [[ -n "${HADOOP_HOME}" ]] && [[ -z "${HADOOP_CONF_DIR}" ]]; then
-      if [[ -d "${HADOOP_HOME}/etc/hadoop" ]]; then
-        export SUBMARINE_HADOOP_CONF_DIR="${HADOOP_HOME}/etc/hadoop"
-      elif [[ -d "/etc/hadoop/conf" ]]; then
-        export SUBMARINE_HADOOP_CONF_DIR="/etc/hadoop/conf"
-      fi
-    fi
+  if [[ -n "${SUBMARINE_HADOOP_CONF_DIR}" ]] && [[ -d "${SUBMARINE_HADOOP_CONF_DIR}" ]]; then
+    ZEPPELIN_INTP_CLASSPATH+=":${SUBMARINE_HADOOP_CONF_DIR}"
   fi
   export YARN_BIN="${HADOOP_HOME}/bin/yarn"
   export SUBMARINE_JAVA_INTP_OPTS="-Dfile.encoding=UTF-8 -Dlog4j.configuration=file:///zeppelin/conf/log4j.properties "
@@ -265,8 +259,9 @@ fi
 
 if [[ -n "${SPARK_SUBMIT}" ]]; then
     INTERPRETER_RUN_COMMAND+=' '` echo ${SPARK_SUBMIT} --class ${ZEPPELIN_SERVER} --driver-class-path \"${ZEPPELIN_INTP_CLASSPATH_OVERRIDES}:${ZEPPELIN_INTP_CLASSPATH}\" --driver-java-options \"${JAVA_INTP_OPTS}\" ${SPARK_SUBMIT_OPTIONS} ${ZEPPELIN_SPARK_CONF} ${SPARK_APP_JAR} ${CALLBACK_HOST} ${PORT} ${INTP_GROUP_ID} ${INTP_PORT}`
-elif [[ "${INTERPRETER_ID}" == "submarine" ]]; then
-    INTERPRETER_RUN_COMMAND+=' '` echo ${SUBMARINE_RUNNER} --worker_launch_cmd \"${ZEPPELIN_RUNNER} ${SUBMARINE_JAVA_INTP_OPTS} ${ZEPPELIN_INTP_MEM} -cp ${SUBMARINE_INTP_CLASSPATH} ${ZEPPELIN_SERVER} ${CALLBACK_HOST} ${PORT} ${INTP_GROUP_ID} ${INTP_PORT}\"`
+elif [[ "${INTERPRETER_ID}" == "submarine" && -n "${SUBMARINE_RUNNER}" ]]; then
+    INTERPRETER_RUN_COMMAND+=' '` echo ${ZEPPELIN_RUNNER} ${JAVA_INTP_OPTS} ${ZEPPELIN_INTP_MEM} -cp ${ZEPPELIN_INTP_CLASSPATH_OVERRIDES}:${ZEPPELIN_INTP_CLASSPATH} ${ZEPPELIN_SERVER} ${CALLBACK_HOST} ${PORT} ${INTP_GROUP_ID} ${INTP_PORT}`
+#   INTERPRETER_RUN_COMMAND+=' '` echo ${SUBMARINE_RUNNER} --worker_launch_cmd \"${ZEPPELIN_RUNNER} ${SUBMARINE_JAVA_INTP_OPTS} ${ZEPPELIN_INTP_MEM} -cp ${SUBMARINE_INTP_CLASSPATH} ${ZEPPELIN_SERVER} ${CALLBACK_HOST} ${PORT} ${INTP_GROUP_ID} ${INTP_PORT}\"`
 else
     INTERPRETER_RUN_COMMAND+=' '` echo ${ZEPPELIN_RUNNER} ${JAVA_INTP_OPTS} ${ZEPPELIN_INTP_MEM} -cp ${ZEPPELIN_INTP_CLASSPATH_OVERRIDES}:${ZEPPELIN_INTP_CLASSPATH} ${ZEPPELIN_SERVER} ${CALLBACK_HOST} ${PORT} ${INTP_GROUP_ID} ${INTP_PORT}`
 fi
