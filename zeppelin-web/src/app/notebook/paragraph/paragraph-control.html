@@ -29,7 +29,8 @@ limitations under the License.
       </span>
       <ul class="dropdown-menu" role="menu" style="width:200px;z-index:1002">
         <li ng-class="{'option-disabled': !noteOperationsAllowed()}" ng-repeat="url in paragraph.runtimeInfos.jobUrl.values">
-          <a href="{{url}}" target="_blank"><span class="fa fa-external-link-square"></span> Jobs #{{$index}}</a>
+          <a ng-if="url.split('|').length == 1" href="{{url}}" target="_blank"><span class="fa fa-external-link-square"></span> Jobs #{{$index}}</a>
+          <a ng-if="url.split('|').length > 1" href="{{url.split('|')[1]}}" target="_blank"><span class="fa fa-external-link-square"></span> {{url.split('|')[0]}} </a>
         </li>
       </ul>
     </span>
@@ -64,7 +65,8 @@ limitations under the License.
       </span>
       <ul class="dropdown-menu" role="menu" style="width:200px;z-index:1002">
          <li ng-class="{'option-disabled': !noteOperationsAllowed()}" ng-repeat="url in paragraph.runtimeInfos.jobUrl">
-           <a href="{{url}}" target="_blank"><span class="fa fa-external-link-square"></span> Jobs #{{$index}}</a>
+           <a ng-if="url.split('|').length == 1" href="{{url}}" target="_blank"><span class="fa fa-external-link-square"></span> Jobs #{{$index}}</a>
+           <a ng-if="url.split('|').length > 1" href="{{url.split('|')[1]}}" target="_blank"><span class="fa fa-external-link-square"></span> {{url.split('|')[0]}} </a>
          </li>
       </ul>
     </span>

@@ -25,12 +25,13 @@ import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
+import org.apache.zeppelin.display.AngularObject;
 import org.apache.zeppelin.display.ui.OptionInput.ParamOption;
-import org.apache.zeppelin.interpreter.KerberosInterpreter;
+import org.apache.zeppelin.interpreter.Interpreter;
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterResult;
 import org.apache.zeppelin.interpreter.InterpreterException;
-import org.apache.zeppelin.interpreter.InterpreterOutput;
+import org.apache.zeppelin.interpreter.InterpreterResultMessageOutput;
 import org.apache.zeppelin.interpreter.thrift.InterpreterCompletion;
 import org.apache.zeppelin.scheduler.Scheduler;
 import org.apache.zeppelin.scheduler.SchedulerFactory;
@@ -46,7 +47,6 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -55,13 +55,20 @@ import java.util.Properties;
  * https://github.com/apache/hadoop/blob/trunk/hadoop-yarn-project/hadoop-yarn/
  * hadoop-yarn-applications/hadoop-yarn-submarine/src/site/markdown/QuickStart.md is supported.
  */
-public class SubmarineInterpreter extends KerberosInterpreter {
+public class SubmarineInterpreter extends Interpreter {
   private Logger LOGGER = LoggerFactory.getLogger(SubmarineInterpreter.class);
 
   private ZeppelinConfiguration zconf;
   private File pythonWorkDir = null;
 
-  private static final String SUBMARINE_JOBRUN_TF_JINJA = "submarine-job-run-tf.jinja";
+  private static final String SUBMARINE_JOBRUN_TF_JINJA
+      = "jinja_templates/submarine-job-run-tf.jinja";
+  private static final String SUBMARINE_COMMAND_JINJA
+      = "output_templates/submarine-command.jinja";
+  private static final String SUBMARINE_USAGE_JINJA
+      = "output_templates/submarine-usage.jinja";
+  private static final String SUBMARINE_LOG_TITLE_JINJA
+      = "output_templates/submarine-log-title.jinja";
 
   // Number of submarines executed in parallel for each interpreter instance
   protected int concurrentExecutedMax = 1;
@@ -77,6 +84,9 @@ public class SubmarineInterpreter extends KerberosInterpreter {
   private String submarineJar;
 
   private SubmarineContext submarineContext = null;
+
+  private boolean needUpdateConfig = true;
+  private String currentReplName = "";
 
   public SubmarineInterpreter(Properties property) {
     super(property);
@@ -111,13 +121,11 @@ public class SubmarineInterpreter extends KerberosInterpreter {
 
   @Override
   public void open() {
-    super.open();
     LOGGER.info("Command timeout property: {}", getProperty(TIMEOUT_PROPERTY));
   }
 
   @Override
   public void close() {
-    super.close();
   }
 
   private String createGUI(InterpreterContext context) {
@@ -155,62 +163,67 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     return command;
   }
 
-  @Override
-  public InterpreterResult interpret(String script, InterpreterContext context) {
-    //createGUI(context);
-    //if (true) {
-    //  return new InterpreterResult(InterpreterResult.Code.SUCCESS);
-    //}
-
-    ParamOption[] commandOptions = new ParamOption[4];
-    commandOptions[0] = new ParamOption("", "");
-    commandOptions[1] = new ParamOption(SubmarineConstants.COMMAND_JOB_RUN,
-        SubmarineConstants.COMMAND_JOB_RUN);
-    commandOptions[2] = new ParamOption(SubmarineConstants.COMMAND_JOB_SHOW,
-        SubmarineConstants.COMMAND_JOB_SHOW);
-    commandOptions[3] = new ParamOption(SubmarineConstants.COMMAND_HELP,
-        SubmarineConstants.COMMAND_HELP);
-    String command = (String) context.getGui().
-        select("submarine command", "None", commandOptions);
-
-    String distributed = this.properties.getProperty(
-        SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE, "false");
-
-    String inputPath = "", chkPntPath = "", psLaunchCmd = "", workerLaunchCmd = "";
-    if (command.equals(SubmarineConstants.COMMAND_JOB_RUN)) {
-      inputPath = (String) context.getGui().textbox("Input Path");
-      chkPntPath = (String) context.getGui().textbox("Checkpoink Path");
-      if (distributed.equals("true")) {
-        psLaunchCmd = (String) context.getGui().textbox("PS Launch Command");
-      }
-      workerLaunchCmd = (String) context.getGui().textbox("Worker Launch Command");
+  private void setParagraphConfig(InterpreterContext context) {
+    String replName = context.getReplName();
+    if (StringUtils.equals(currentReplName, replName)) {
+      currentReplName = context.getReplName();
+      needUpdateConfig = true;
     }
+    if (needUpdateConfig) {
+      needUpdateConfig = false;
+      if (currentReplName.equals("submarine") || currentReplName.isEmpty()) {
+        context.getConfig().put("editorHide", true);
+        context.getConfig().put("title", false);
+      } else {
+        context.getConfig().put("editorHide", false);
+        context.getConfig().put("title", true);
+      }
+    }
+  }
+
+  // context.out::List<InterpreterResultMessageOutput> resultMessageOutputs
+  // resultMessageOutputs[0] is UI
+  // resultMessageOutputs[1] is LOG
+  private void createResultMessage(InterpreterContext context) {
+    if (2 == context.out.size()) {
+      return;
+    }
+
+    try {
+      // The first one is the UI interface.
+      context.out.setType(InterpreterResult.Type.ANGULAR);
+      // The second is log output.
+      context.out.setType(InterpreterResult.Type.ANGULAR);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  @Override
+  public InterpreterResult interpret(String script, InterpreterContext context)
+      throws InterpreterException {
+    setParagraphConfig(context);
+    createResultMessage(context);
+
+    String command = "", inputPath = "", chkPntPath = "", psLaunchCmd = "", workerLaunchCmd = "";
 
     LOGGER.debug("Run shell command '" + script + "'");
     OutputStream outStream = new ByteArrayOutputStream();
     String jobName = getJobName(context);
     String noteId = context.getNoteId();
 
+    if (context.getParagraphText().equals(SubmarineConstants.COMMAND_CLEAN)) {
+      // Clean Registry Angular Object
+      context.getAngularObjectRegistry().removeAll(context.getNoteId(), context.getParagraphId());
+    } else {
+      command = getAngularObjectValue(context, SubmarineConstants.COMMAND_TYPE);
+    }
+    inputPath = getAngularObjectValue(context, SubmarineConstants.INPUT_PATH);
+    chkPntPath = getAngularObjectValue(context, SubmarineConstants.CHECKPOINT_PATH);
+    psLaunchCmd = getAngularObjectValue(context, SubmarineConstants.PS_LAUNCH_CMD);
+    workerLaunchCmd = getAngularObjectValue(context, SubmarineConstants.WORKER_LAUNCH_CMD);
+
     try {
-      String algorithmPath = this.properties.getProperty(
-          SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH);
-      if (!algorithmPath.startsWith("hdfs://")) {
-        String message = "Algorithm file upload HDFS path, " +
-            "Must be `hdfs://` prefix. now setting " +  algorithmPath;
-        return new InterpreterResult(InterpreterResult.Code.ERROR, message);
-      }
-
-      Properties properties = submarineContext.getProperties(noteId);
-      if (null == properties) {
-        properties = this.properties;
-        submarineContext.setProperties(noteId, properties);
-        properties.put(SubmarineConstants.JOB_NAME, jobName);
-      }
-
-      String outputMsg = submarineContext.saveParagraphToFiles(noteId, context.getNoteName(),
-          pythonWorkDir == null ? "" : pythonWorkDir.getAbsolutePath());
-      context.out.write(outputMsg);
-
       /*
       CommandParser commandParser = new CommandParser();
       commandParser.populate(script);
@@ -232,25 +245,48 @@ public class SubmarineInterpreter extends KerberosInterpreter {
       cmdLine.addArgument(script, false);
 
       if (command.equalsIgnoreCase(SubmarineConstants.COMMAND_HELP)) {
-        String message = getSubmarineHelp();
-        return new InterpreterResult(InterpreterResult.Code.SUCCESS, message);
-      } else if (command.equalsIgnoreCase(SubmarineConstants.COMMAND_JOB_SHOW)) {
-        return jobShow(jobName, noteId, context.out, outStream);
-      } else if (command.equals(SubmarineConstants.COMMAND_JOB_RUN)) {
+        /*
         Map<String, String> infos = new java.util.HashMap<>();
-        infos.put("jobUrl", "http://ml2.jd.163.org:8088/ui2/#/yarn-app" +
-            "/application_1545376183910_0001/attempts");
-        infos.put("label", "YARN JOB");
-        infos.put("tooltip", "View in Yarn web UI");
+        infos.put("jobUrl", "Tensorboard|http://192.168.0.1/tensorboard");
+        infos.put("label", "Submarine UI");
+        infos.put("tooltip", "View in Submarine web UI");
         infos.put("noteId", context.getNoteId());
         infos.put("paraId", context.getParagraphId());
         context.getIntpEventClient().onParaInfosReceived(infos);
 
-        return jobRun(jobName, noteId, context.out, outStream);
+        Map<String, String> infos2 = new java.util.HashMap<>();
+        infos2.put("jobUrl", "Parameter server|http://192.168.0.1/ps");
+        infos2.put("label", "Submarine UI");
+        infos2.put("tooltip", "View in Submarine web UI");
+        infos2.put("noteId", context.getNoteId());
+        infos2.put("paraId", context.getParagraphId());
+        context.getIntpEventClient().onParaInfosReceived(infos2);
+
+        Map<String, String> infos3 = new java.util.HashMap<>();
+        infos3.put("jobUrl", "Worker server|http://192.168.0.1/ws");
+        infos3.put("label", "Submarine UI");
+        infos3.put("tooltip", "View in Submarine web UI");
+        infos3.put("noteId", context.getNoteId());
+        infos3.put("paraId", context.getParagraphId());
+        context.getIntpEventClient().onParaInfosReceived(infos3);
+        */
+
+        // String message = getSubmarineHelp();
+        printUsageUI(context);
+        return new InterpreterResult(InterpreterResult.Code.SUCCESS);
+      } else if (command.equalsIgnoreCase(SubmarineConstants.COMMAND_JOB_SHOW)) {
+        return jobShow(jobName, noteId, context, outStream);
+      } else if (command.equals(SubmarineConstants.COMMAND_JOB_RUN)) {
+        printCommnadUI(context);
+        printLogUI(context);
+        return jobRun(jobName, noteId, context, outStream);
+      } else if (command.equals("old ui")) {
+        createGUI(context);
       } else {
-        String message = "ERROR: Unsupported command [" + command + "] !";
-        message += getSubmarineHelp();
-        return new InterpreterResult(InterpreterResult.Code.ERROR, message);
+        printCommnadUI(context);
+        String message = "ERROR: Unknown command !";
+        outputLog(context, "Unknown command", message);
+        return new InterpreterResult(InterpreterResult.Code.ERROR);
       }
     } catch (ExecuteException e) {
       int exitValue = e.getExitValue();
@@ -264,14 +300,112 @@ public class SubmarineInterpreter extends KerberosInterpreter {
             + " stopped executing: " + message);
       }
       message += "ExitValue: " + exitValue;
-
+      outputLog(context, "Execute exception", message);
       return new InterpreterResult(code, message);
     } catch (Exception e) {
+      if (Boolean.parseBoolean(getProperty("zeppelin.submarine.stacktrace"))) {
+        throw new InterpreterException(e);
+      }
       LOGGER.error("Can not run " + script, e);
       String message = outStream.toString() + "\n" + e.getMessage();
-      return new InterpreterResult(InterpreterResult.Code.ERROR, message);
+      outputLog(context, "Execute exception", message);
+      return new InterpreterResult(InterpreterResult.Code.ERROR);
     } finally {
 
+    }
+    return new InterpreterResult(InterpreterResult.Code.ERROR);
+  }
+
+  private String getAngularObjectValue(InterpreterContext context, String name) {
+    String value = "";
+    AngularObject angularObject = context.getAngularObjectRegistry()
+        .get(name, context.getNoteId(), context.getParagraphId());
+    if (null != angularObject && null != angularObject.get()) {
+      value = angularObject.get().toString();
+    }
+    return value;
+  }
+
+  private void printUsageUI(InterpreterContext context) {
+    try {
+      HashMap<String, Object> mapParams = new HashMap();
+      mapParams.put(unifyKey(SubmarineConstants.PARAGRAPH_ID), context.getParagraphId());
+
+      URL urlTemplate = Resources.getResource(SUBMARINE_USAGE_JINJA);
+      String template = Resources.toString(urlTemplate, Charsets.UTF_8);
+      Jinjava jinjava = new Jinjava();
+      String submarineUsage = jinjava.render(template, mapParams);
+
+      InterpreterResultMessageOutput outputUI = context.out.getOutputAt(0);
+      outputUI.clear();
+      outputUI.write(submarineUsage);
+      outputUI.flush();
+
+      // UI update, log needs to be cleaned at the same time
+      InterpreterResultMessageOutput outputLOG = context.out.getOutputAt(1);
+      outputLOG.clear();
+      outputLOG.flush();
+    } catch (IOException e) {
+      LOGGER.error("Can't print usage", e);
+    }
+  }
+
+  private void printLogUI(InterpreterContext context) {
+    try {
+      HashMap<String, Object> mapParams = new HashMap();
+      URL urlTemplate = Resources.getResource(SUBMARINE_LOG_TITLE_JINJA);
+      String template = Resources.toString(urlTemplate, Charsets.UTF_8);
+      Jinjava jinjava = new Jinjava();
+      String submarineUsage = jinjava.render(template, mapParams);
+
+      InterpreterResultMessageOutput outputUI = context.out.getOutputAt(1);
+      outputUI.clear();
+      outputUI.write(submarineUsage);
+      outputUI.flush();
+    } catch (IOException e) {
+      LOGGER.error("Can't print usage", e);
+    }
+  }
+
+  private void printCommnadUI(InterpreterContext context) {
+    try {
+      HashMap<String, Object> mapParams = new HashMap();
+      mapParams.put(unifyKey(SubmarineConstants.PARAGRAPH_ID), context.getParagraphId());
+
+      URL urlTemplate = Resources.getResource(SUBMARINE_COMMAND_JINJA);
+      String template = Resources.toString(urlTemplate, Charsets.UTF_8);
+      Jinjava jinjava = new Jinjava();
+      String submarineUsage = jinjava.render(template, mapParams);
+
+      InterpreterResultMessageOutput outputUI = context.out.getOutputAt(0);
+      outputUI.clear();
+      outputUI.write(submarineUsage);
+      outputUI.flush();
+
+      // UI update, log needs to be cleaned at the same time
+      InterpreterResultMessageOutput outputLOG = context.out.getOutputAt(1);
+      outputLOG.clear();
+      outputLOG.flush();
+    } catch (IOException e) {
+      LOGGER.error("Can't print usage", e);
+    }
+  }
+
+  private void outputLog(InterpreterContext context, String title, String message) {
+    try {
+      StringBuffer formatMsg = new StringBuffer();
+      formatMsg.append("<div>");
+      formatMsg.append(title);
+      formatMsg.append("<pre>");
+      formatMsg.append(message);
+      formatMsg.append("</pre>");
+      formatMsg.append("</div>\n");
+
+      InterpreterResultMessageOutput outputLOG = context.out.getOutputAt(1);
+      outputLOG.write(formatMsg.toString());
+      outputLOG.flush();
+    } catch (IOException e) {
+      e.printStackTrace();
     }
   }
 
@@ -282,7 +416,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
 
   @Override
   public FormType getFormType() {
-    return FormType.NATIVE;
+    return FormType.SIMPLE;
   }
 
   @Override
@@ -307,48 +441,9 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     return null;
   }
 
-  @Override
-  protected boolean runKerberosLogin() {
-    try {
-      createSecureConfiguration();
-      return true;
-    } catch (Exception e) {
-      LOGGER.error("Unable to run kinit for zeppelin", e);
-    }
-    return false;
-  }
-
   public void setPythonWorkDir(File pythonWorkDir) {
     this.pythonWorkDir = pythonWorkDir;
   }
-
-  public void createSecureConfiguration() throws InterpreterException {
-    Properties properties = getProperties();
-    CommandLine cmdLine = CommandLine.parse(shell);
-    cmdLine.addArgument("-c", false);
-    String kinitCommand = String.format("kinit -k -t %s %s",
-        properties.getProperty(SubmarineConstants.SUBMARINE_HADOOP_KEYTAB),
-        properties.getProperty(SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL));
-    cmdLine.addArgument(kinitCommand, false);
-    DefaultExecutor executor = new DefaultExecutor();
-    try {
-      executor.execute(cmdLine);
-    } catch (Exception e) {
-      LOGGER.error("Unable to run kinit for submarine user " + kinitCommand, e);
-      throw new InterpreterException(e);
-    }
-  }
-
-  @Override
-  protected boolean isKerboseEnabled() {
-    /*
-    if (!StringUtils.isAnyEmpty(getProperty("zeppelin.shell.auth.type")) && getProperty(
-        "zeppelin.shell.auth.type").equalsIgnoreCase("kerberos")) {
-      return true;
-    }*/
-    return false;
-  }
-
 
   // yarn application match the pattern [a-z][a-z0-9-]*
   private String getJobName(InterpreterContext contextIntp) {
@@ -356,9 +451,29 @@ public class SubmarineInterpreter extends KerberosInterpreter {
   }
 
   private InterpreterResult jobRun(String jobName, String noteId,
-                                   InterpreterOutput output, OutputStream outStream)
+                                   InterpreterContext context, OutputStream outStream)
       throws IOException {
-    HashMap jinjaParams = propertiesToJinjaParams(jobName, noteId, output);
+    String algorithmPath = this.properties.getProperty(
+        SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH);
+    if (!algorithmPath.startsWith("hdfs://")) {
+      String message = "Algorithm file upload HDFS path, " +
+          "Must be `hdfs://` prefix. now setting " +  algorithmPath;
+      outputLog(context, "Configuration error", message);
+      return new InterpreterResult(InterpreterResult.Code.ERROR);
+    }
+
+    Properties properties = submarineContext.getProperties(noteId);
+    if (null == properties) {
+      properties = this.properties;
+      submarineContext.setProperties(noteId, properties);
+      properties.put(SubmarineConstants.JOB_NAME, jobName);
+    }
+
+    String outputMsg = submarineContext.saveParagraphToFiles(noteId, context.getNoteName(),
+        pythonWorkDir == null ? "" : pythonWorkDir.getAbsolutePath());
+    outputLog(context, "Save algorithm file", outputMsg);
+
+    HashMap jinjaParams = propertiesToJinjaParams(jobName, noteId, context);
 
     URL urlTemplate = Resources.getResource(SUBMARINE_JOBRUN_TF_JINJA);
     String template = Resources.toString(urlTemplate, Charsets.UTF_8);
@@ -366,13 +481,13 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     String submarineCmd = jinjava.render(template, jinjaParams);
 
     LOGGER.info("Execute : " + submarineCmd);
-    output.write("Submarine submit job : " + jobName + "\n");
-    output.write("Submarine submit command : " + submarineCmd + "\n");
+    outputLog(context, "Execution information", "Submarine submit job : " + jobName);
+    outputLog(context, "Execution information", "Submarine submit command : " + submarineCmd);
     CommandLine cmdLine = CommandLine.parse(shell);
     cmdLine.addArgument(submarineCmd, false);
 
     DefaultExecutor executor = new DefaultExecutor();
-    executor.setStreamHandler(new PumpStreamHandler(output, output));
+    executor.setStreamHandler(new PumpStreamHandler(context.out, context.out));
     long timeout = Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty));
 
     executor.setWatchdog(new ExecuteWatchdog(timeout));
@@ -401,7 +516,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
   }
 
   // Convert properties to Map and check that the variable cannot be empty
-  private HashMap propertiesToJinjaParams(String jobName, String noteId, InterpreterOutput output)
+  private HashMap propertiesToJinjaParams(String jobName, String noteId, InterpreterContext context)
       throws IOException {
     StringBuffer sbMessage = new StringBuffer();
 
@@ -428,7 +543,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
         SubmarineConstants.WORKER_LAUNCH_CMD);
     if (StringUtils.isEmpty(workerLaunchCmd)) {
       setUserPropertiesWarn(sbMessage, SubmarineConstants.WORKER_LAUNCH_CMD,
-          "=python /test/cifar10_estimator/cifar10_main.py " +
+          "=python cifar10_main.py " +
           "--data-dir=hdfs://mldev/tmp/cifar-10-data " +
           "--job-dir=hdfs://mldev/tmp/cifar-10-jobdir " +
           "--train-steps=500 --eval-batch-size=16 --train-batch-size=16 --sync --num-gpus=1\n");
@@ -535,12 +650,13 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     if (hdfsFiles.size() == 0) {
       sbMessage.append("ERROR: The " + notePath + " file directory was is empty in HDFS!\n");
     } else {
-      output.write("INFO: You commit total of " + hdfsFiles.size() + " algorithm files.\n");
+      outputLog(context, "Execution information",
+          "INFO: You commit total of " + hdfsFiles.size() + " algorithm files.\n");
       for (int i = 0; i < hdfsFiles.size(); i++) {
         String filePath = hdfsFiles.get(i).toUri().toString();
         arrayHdfsFiles.add(filePath);
-        output.write("INFO: [" + hdfsFiles.get(i).getName() + "] -> "
-            + filePath + "\n");
+        outputLog(context, "Execution information", "INFO: ["
+            + hdfsFiles.get(i).getName() + "] -> " + filePath + "\n");
       }
     }
 
@@ -591,12 +707,12 @@ public class SubmarineInterpreter extends KerberosInterpreter {
   }
 
   private InterpreterResult jobShow(String jobName, String noteId,
-                                    InterpreterOutput output, OutputStream outStream)
+                                    InterpreterContext context, OutputStream outStream)
       throws IOException {
     String yarnPath = submarineHadoopHome + "/bin/yarn";
     File file = new File(yarnPath);
     if (!file.exists()) {
-      output.write("ERROR：Yarn file does not exist！" + yarnPath);
+      outputLog(context, "Configuration error", "ERROR：Yarn file does not exist！" + yarnPath);
       throw new RuntimeException(SubmarineConstants.SUBMARINE_HADOOP_HOME
           + " is not specified in interpreter-setting");
     }
@@ -608,7 +724,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     subamrineCmd.append(jobName);
 
     LOGGER.info("Execute : " + subamrineCmd.toString());
-    output.write("Execute : " + subamrineCmd.toString());
+    outputLog(context, "Execution information", "Execute : " + subamrineCmd.toString());
 
     String cmd = "echo > " + subamrineCmd;
 
@@ -616,7 +732,7 @@ public class SubmarineInterpreter extends KerberosInterpreter {
     cmdLine.addArgument(cmd, false);
 
     DefaultExecutor executor = new DefaultExecutor();
-    executor.setStreamHandler(new PumpStreamHandler(output, output));
+    executor.setStreamHandler(new PumpStreamHandler(context.out, context.out));
 
     long timeout = Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty));
 
