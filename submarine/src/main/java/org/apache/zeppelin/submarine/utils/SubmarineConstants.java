@@ -62,9 +62,13 @@ public class SubmarineConstants {
 
   public static final String TF_TENSORBOARD_ENABLE  = "tf.tensorboard.enable";
 
+  public static final String COMMAND_TYPE     = "COMMAND_TYPE";
   public static final String COMMAND_HELP     = "help";
   public static final String COMMAND_JOB_LIST = "job list";
   public static final String COMMAND_JOB_SHOW = "job show";
   public static final String COMMAND_JOB_RUN  = "job run";
+  public static final String COMMAND_CLEAN    = "clean";
+
+  public static final String PARAGRAPH_ID  = "PARAGRAPH_ID";
 
 }

@@ -219,6 +219,11 @@ public class SubmarineContext {
 
   private ArrayList<SubmarineParagraph> parseNote(String noteContext) {
     ArrayList<SubmarineParagraph> paragraphs = new ArrayList<>();
+
+    if (null == noteContext || noteContext.isEmpty()) {
+      return paragraphs;
+    }
+
     try {
       JsonParser jsonParser = new JsonParser();
       JsonObject jsonObject = (JsonObject) jsonParser.parse(noteContext);
