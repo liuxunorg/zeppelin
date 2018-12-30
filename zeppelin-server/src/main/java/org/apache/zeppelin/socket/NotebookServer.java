@@ -620,13 +620,33 @@ public class NotebookServer extends WebSocketServlet
           public void onSuccess(Note note, ServiceContext context) throws IOException {
             connectionManager.addNoteConnection(note.getId(), conn);
             conn.send(serializeMessage(new Message(OP.NOTE).put("note", note)));
+
+            // update AngularObject
+            for(Paragraph paragraph : note.getParagraphs()) {
+              InterpreterGroup interpreterGroup = null;
+              try {
+                interpreterGroup = findInterpreterGroupForParagraph(note, paragraph.getId());
+              } catch (Exception e) {
+                e.printStackTrace();
+              }
+              RemoteAngularObjectRegistry registry = (RemoteAngularObjectRegistry)
+                  interpreterGroup.getAngularObjectRegistry();
+
+              List<AngularObject> angularObjects = note.getAngularObjects(interpreterGroup.getId());
+              for (AngularObject ao : angularObjects) {
+                if (StringUtils.equals(ao.getNoteId(), note.getId())
+                    && StringUtils.equals(ao.getParagraphId(), paragraph.getId())) {
+                  pushAngularObjectToRemoteRegistry(ao.getNoteId(), ao.getParagraphId(),
+                      ao.getName(), ao.get(), registry, interpreterGroup.getId(), conn);
+                }
+              }
+            }
             sendAllAngularObjects(note, context.getAutheInfo().getUser(), conn);
           }
         });
   }
 
-  private void getHomeNote(NotebookSocket conn,
-                           Message fromMessage) throws IOException {
+  private void getHomeNote(NotebookSocket conn, Message fromMessage) throws IOException {
 
     getNotebookService().getHomeNote(getServiceContext(fromMessage),
         new WebSocketServiceCallback<Note>(conn) {
@@ -1065,8 +1085,8 @@ public class NotebookServer extends WebSocketServlet
    * Push the given Angular variable to the target interpreter angular registry given a noteId
    * and a paragraph id.
    */
-  protected void angularObjectClientBind(NotebookSocket conn,
-                                         Message fromMessage) throws Exception {
+  protected void angularObjectClientBind(NotebookSocket conn, Message fromMessage)
+      throws Exception {
     String noteId = fromMessage.getType("noteId");
     String varName = fromMessage.getType("name");
     Object varValue = fromMessage.get("value");
@@ -1082,8 +1102,9 @@ public class NotebookServer extends WebSocketServlet
       final InterpreterGroup interpreterGroup = findInterpreterGroupForParagraph(note, paragraphId);
       final RemoteAngularObjectRegistry registry = (RemoteAngularObjectRegistry)
           interpreterGroup.getAngularObjectRegistry();
-      pushAngularObjectToRemoteRegistry(noteId, paragraphId, varName, varValue, registry,
+      AngularObject ao = pushAngularObjectToRemoteRegistry(noteId, paragraphId, varName, varValue, registry,
           interpreterGroup.getId(), conn);
+      note.addOrUpdateAngularObject(interpreterGroup.getId(), ao);
     }
   }
 
@@ -1091,8 +1112,7 @@ public class NotebookServer extends WebSocketServlet
    * Remove the given Angular variable to the target interpreter(s) angular registry given a noteId
    * and an optional list of paragraph id(s).
    */
-  protected void angularObjectClientUnbind(NotebookSocket conn,
-                                           Message fromMessage)
+  protected void angularObjectClientUnbind(NotebookSocket conn, Message fromMessage)
       throws Exception {
     String noteId = fromMessage.getType("noteId");
     String varName = fromMessage.getType("name");
@@ -1108,9 +1128,9 @@ public class NotebookServer extends WebSocketServlet
       final InterpreterGroup interpreterGroup = findInterpreterGroupForParagraph(note, paragraphId);
       final RemoteAngularObjectRegistry registry = (RemoteAngularObjectRegistry)
           interpreterGroup.getAngularObjectRegistry();
-      removeAngularFromRemoteRegistry(noteId, paragraphId, varName, registry,
+      AngularObject ao = removeAngularFromRemoteRegistry(noteId, paragraphId, varName, registry,
           interpreterGroup.getId(), conn);
-
+      note.deleteAngularObject(interpreterGroup.getId(), ao);
     }
   }
 
@@ -1123,7 +1143,7 @@ public class NotebookServer extends WebSocketServlet
     return paragraph.getBindedInterpreter().getInterpreterGroup();
   }
 
-  private void pushAngularObjectToRemoteRegistry(String noteId, String paragraphId, String varName,
+  private AngularObject pushAngularObjectToRemoteRegistry(String noteId, String paragraphId, String varName,
                                                  Object varValue,
                                                  RemoteAngularObjectRegistry remoteRegistry,
                                                  String interpreterGroupId,
@@ -1135,9 +1155,11 @@ public class NotebookServer extends WebSocketServlet
         .put("angularObject", ao)
         .put("interpreterGroupId", interpreterGroupId).put("noteId", noteId)
         .put("paragraphId", paragraphId), conn);
+
+    return ao;
   }
 
-  private void removeAngularFromRemoteRegistry(String noteId, String paragraphId, String varName,
+  private AngularObject removeAngularFromRemoteRegistry(String noteId, String paragraphId, String varName,
                                                RemoteAngularObjectRegistry remoteRegistry,
                                                String interpreterGroupId,
                                                NotebookSocket conn) {
@@ -1147,6 +1169,8 @@ public class NotebookServer extends WebSocketServlet
         .put("angularObject", ao)
         .put("interpreterGroupId", interpreterGroupId).put("noteId", noteId)
         .put("paragraphId", paragraphId), conn);
+
+    return ao;
   }
 
   private void moveParagraph(NotebookSocket conn,
@@ -1710,20 +1734,16 @@ public class NotebookServer extends WebSocketServlet
 
   @Override
   public void onUpdate(String interpreterGroupId, AngularObject object) {
-    if (getNotebook() == null) {
+    if (getNotebook() == null || object.getNoteId() == null) {
       return;
     }
 
-    List<Note> notes = getNotebook().getAllNotes();
-    for (Note note : notes) {
-      if (object.getNoteId() != null && !note.getId().equals(object.getNoteId())) {
-        continue;
-      }
-
+    Note note = getNotebook().getNote(object.getNoteId());
+    if (null != note) {
       List<InterpreterSetting> intpSettings =
           getNotebook().getInterpreterSettingManager().getInterpreterSettings(note.getId());
       if (intpSettings.isEmpty()) {
-        continue;
+        return;
       }
 
       connectionManager.broadcast(note.getId(), new Message(OP.ANGULAR_OBJECT_UPDATE)
