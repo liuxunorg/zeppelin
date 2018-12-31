@@ -83,13 +83,15 @@ public class SubmarineContextTest {
 
   @Test
   public void splitParagraphToFilesTest() {
+    Properties properties = new Properties();
+
     String notebookDir = zConf.getNotebookDir();
 
     for (int i = 0; i < noteFiles.size(); i++) {
       String noteFileName = noteFiles.get(i).getAbsolutePath().replace(notebookDir, "");
 
       String outMsg = submarineContext.saveParagraphToFiles(noteFileName,
-          "/Users/liuxun/Downloads/saveNoteParagraphTest", "");
+          "/Users/liuxun/Downloads/saveNoteParagraphTest", "", properties);
       LOGGER.info(outMsg);
     }
   }

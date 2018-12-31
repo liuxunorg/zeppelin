@@ -48,7 +48,7 @@ public class SubmarinePythonInterpreter extends PythonInterpreter {
       throws InterpreterException {
 
     submarineContext.saveParagraphToFiles(context.getNoteId(),
-        context.getNoteName(), getPythonWorkDir().getAbsolutePath());
+        context.getNoteName(), getPythonWorkDir().getAbsolutePath(), properties);
 
     return super.interpret(st, context);
   }
