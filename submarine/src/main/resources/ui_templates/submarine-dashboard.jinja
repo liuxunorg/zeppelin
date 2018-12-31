@@ -14,15 +14,17 @@ limitations under the License.
     <div class="row" style="width:100%">
       <div class="col-md-12">
         <h3 class="new_h3">
-          Submarine
+          Submarine dashboard
         </h3>
       </div>
     </div>
     <div class="row" style="width:100%">
       <div class="col-md-12">
-        You can execute the selected command by entering the parameters in the interface below. <a
-          ng-click="z.angularBind('COMMAND_TYPE','help','{{ PARAGRAPH_ID }}');
-          z.runParagraph('{{ PARAGRAPH_ID }}')">HELP</a>
+        You can execute the selected command by entering the parameters in the interface below.
+        <a style="text-decoration:underline; cursor:pointer"
+          ng-click="z.angularBind('COMMAND_TYPE','USAGE','{{ PARAGRAPH_ID }}');z.runParagraph('{{ PARAGRAPH_ID }}')">
+          [Submarine Usage]
+        </a>
       </div>
     </div>
   </div>
@@ -35,14 +37,18 @@ limitations under the License.
         <span class="btn-group">
           <label style="width:140px;text-align:right;margin-right:4px;">Command: </label>
           <select ng-model="submarineCommand" style="width:200px;margin-right:10px" class="form-control"
-                ng-change="z.angularBind('COMMAND_TYPE',submarineCommand,'{{ PARAGRAPH_ID }}');">
+                ng-change="z.angularBind('COMMAND_TYPE',submarineCommand,'{{ PARAGRAPH_ID }}');z.runParagraph('{{ PARAGRAPH_ID }}')">
             <option value="" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'==''">-- Please select --</option>
             <option value="JOB RUN" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'=='JOB RUN'">JOB RUN</option>
+            <option value="JOB SHOW" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'=='JOB SHOW'">JOB SHOW</option>
+            <option value="JOB LIST" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'=='JOB LIST'">JOB LIST</option>
             <option value="OLD UI" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'=='OLD UI'">OLD UI</option>
-            <option value="HELP" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'=='HELP'">HELP</option>
+            <option value="USAGE" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'=='USAGE'">USAGE</option>
           </select>
         </span>
-        <button type="submit" class="btn btn-primary" ng-click="z.runParagraph('{{ PARAGRAPH_ID }}')">
+        <button type="submit" class="btn btn-primary"
+          ng-click="z.angularBind('COMMAND_ACTIVE','TRUE','{{ PARAGRAPH_ID }}');
+          z.runParagraph('{{ PARAGRAPH_ID }}')">
           Run Command
         </button>
       </div>
@@ -50,11 +56,13 @@ limitations under the License.
   </div>
 </div>
 
+{% if COMMAND_TYPE == "JOB RUN" %}
 <form class="form-inline" style="margin-top: 10px;">
   <div class="form-group">
     <label style="width:140px;text-align:right;margin-right:4px;">Data Path: </label>
     <input type="text" style="width:800px" class="form-control" id="inputPath"
-    placeholder="Please input data path ( eg. hdfs://cluster1/... )" ng-value="{% raw %}{{INPUT_PATH}}{% endraw %}" ng-change="z.angularBind('INPUT_PATH',inputPath,'{{ PARAGRAPH_ID }}')" ng-model="inputPath"></input>
+      placeholder="Please input data path ( eg. hdfs://cluster1/... )" ng-value="{% raw %}{{INPUT_PATH}}{% endraw %}"
+      ng-change="z.angularBind('INPUT_PATH',inputPath,'{{ PARAGRAPH_ID }}')" ng-model="inputPath"></input>
   </div>
 </form>
 
@@ -71,8 +79,9 @@ limitations under the License.
   <div class="form-group">
     <label style="width:140px;text-align:right;margin-right:4px;">PS launch cmd: </label>
     <input type="text" style="width:800px" class="form-control" id="psLaunchCmd"
-    placeholder="Please input PS launch command (eg. python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0 ...)"
-    ng-value="{% raw %}{{PS_LAUNCH_CMD}}{% endraw %}" ng-change="z.angularBind('PS_LAUNCH_CMD',psLaunchCmd,'{{ PARAGRAPH_ID }}')" ng-model="psLaunchCmd"></input>
+      placeholder="Please input PS launch command (eg. python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0 ...)"
+      ng-value="{% raw %}{{PS_LAUNCH_CMD}}{% endraw %}" ng-change="z.angularBind('PS_LAUNCH_CMD',psLaunchCmd,'{{ PARAGRAPH_ID }}')"
+      ng-model="psLaunchCmd"></input>
   </div>
 </form>
 
@@ -80,7 +89,9 @@ limitations under the License.
   <div class="form-group">
     <label style="width:140px;text-align:right;margin-right:4px;">Worker launch cmd: </label>
     <input type="text" style="width:800px" class="form-control" id="workerLaunchCmd"
-    placeholder="Please input Work launch command (eg. python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=1 ...)"
-    ng-value="{% raw %}{{WORKER_LAUNCH_CMD}}{% endraw %}" ng-change="z.angularBind('WORKER_LAUNCH_CMD',workerLaunchCmd,'{{ PARAGRAPH_ID }}')" ng-model="workerLaunchCmd"></input>
+      placeholder="Please input Work launch command (eg. python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=1 ...)"
+      ng-value="{% raw %}{{WORKER_LAUNCH_CMD}}{% endraw %}" ng-change="z.angularBind('WORKER_LAUNCH_CMD',workerLaunchCmd,'{{ PARAGRAPH_ID }}')"
+      ng-model="workerLaunchCmd"></input>
   </div>
 </form>
+{% endif %}

@@ -79,9 +79,9 @@ public class SubmarineContext {
     return hdfsUtils;
   }
 
-  public String saveParagraphToFiles(String noteId, String noteName, String dirName) {
+  public String saveParagraphToFiles(String noteId, String noteName,
+                                     String dirName, Properties properties) {
     StringBuffer outputMsg = new StringBuffer();
-    Properties properties = getProperties(noteId);
 
     // zeppelin 0.9 version note name format
     String noteFileName = noteName + "_" + noteId + ".zpln";
@@ -281,6 +281,7 @@ public class SubmarineContext {
     return paragraph;
   }
 
+  /*
   public Properties getProperties(String noteId) {
     Properties properties = null;
 
@@ -310,5 +311,5 @@ public class SubmarineContext {
     } else {
       return "";
     }
-  }
+  }*/
 }

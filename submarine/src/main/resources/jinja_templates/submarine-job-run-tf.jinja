@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -#}
+{{ SUBMARINE_HADOOP_HOME }}/bin/yarn app -destroy {{ JOB_NAME }}; \
 {{ SUBMARINE_HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
   job run \
   --name {{ JOB_NAME }} \
@@ -42,5 +43,4 @@
   --keytab {{ SUBMARINE_HADOOP_KEYTAB }} \
   --principal {{ SUBMARINE_HADOOP_PRINCIPAL }} \
   --distribute_keytab \
-  --wait_job_finish \
   --verbose
