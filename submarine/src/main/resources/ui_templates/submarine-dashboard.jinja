@@ -35,7 +35,7 @@ limitations under the License.
     <div class="job-search-tool">
       <div class="form-inline">
         <span class="btn-group">
-          <label style="width:140px;text-align:right;margin-right:4px;">Command: </label>
+          <label style="width:150px;text-align:right;margin-right:4px;">Command: </label>
           <select ng-model="submarineCommand" style="width:200px;margin-right:10px" class="form-control"
                 ng-change="z.angularBind('COMMAND_TYPE',submarineCommand,'{{ PARAGRAPH_ID }}');z.runParagraph('{{ PARAGRAPH_ID }}')">
             <option value="" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'==''">-- Please select --</option>
@@ -59,7 +59,7 @@ limitations under the License.
 {% if COMMAND_TYPE == "JOB RUN" %}
 <form class="form-inline" style="margin-top: 10px;">
   <div class="form-group">
-    <label style="width:140px;text-align:right;margin-right:4px;">Data Path: </label>
+    <label style="width:150px;text-align:right;margin-right:4px;">Data Path: </label>
     <input type="text" style="width:800px" class="form-control" id="inputPath"
       placeholder="Please input data path ( eg. hdfs://cluster1/... )" ng-value="{% raw %}{{INPUT_PATH}}{% endraw %}"
       ng-change="z.angularBind('INPUT_PATH',inputPath,'{{ PARAGRAPH_ID }}')" ng-model="inputPath"></input>
@@ -68,7 +68,7 @@ limitations under the License.
 
 <form class="form-inline" style="margin-top: 10px;">
   <div class="form-group">
-    <label style="width:140px;text-align:right;margin-right:4px;">Checkpoint path: </label>
+    <label style="width:150px;text-align:right;margin-right:4px;">Checkpoint Path: </label>
     <input type="text" style="width:800px" class="form-control" id="checkpointPath"
     placeholder="Please input checkpoint data path ( eg. hdfs://cluster1/... )" ng-value="{% raw %}{{CHECKPOINT_PATH}}{% endraw %}"
     ng-change="z.angularBind('CHECKPOINT_PATH',checkpointPath,'{{ PARAGRAPH_ID }}')" ng-model="checkpointPath"></input>
@@ -77,7 +77,7 @@ limitations under the License.
 
 <form class="form-inline" style="margin-top: 10px;">
   <div class="form-group">
-    <label style="width:140px;text-align:right;margin-right:4px;">PS launch cmd: </label>
+    <label style="width:150px;text-align:right;margin-right:4px;">PS Launch Cmd: </label>
     <input type="text" style="width:800px" class="form-control" id="psLaunchCmd"
       placeholder="Please input PS launch command (eg. python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0 ...)"
       ng-value="{% raw %}{{PS_LAUNCH_CMD}}{% endraw %}" ng-change="z.angularBind('PS_LAUNCH_CMD',psLaunchCmd,'{{ PARAGRAPH_ID }}')"
@@ -87,7 +87,7 @@ limitations under the License.
 
 <form class="form-inline" style="margin-top: 10px;">
   <div class="form-group">
-    <label style="width:140px;text-align:right;margin-right:4px;">Worker launch cmd: </label>
+    <label style="width:150px;text-align:right;margin-right:4px;">Worker Launch Cmd: </label>
     <input type="text" style="width:800px" class="form-control" id="workerLaunchCmd"
       placeholder="Please input Work launch command (eg. python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=1 ...)"
       ng-value="{% raw %}{{WORKER_LAUNCH_CMD}}{% endraw %}" ng-change="z.angularBind('WORKER_LAUNCH_CMD',workerLaunchCmd,'{{ PARAGRAPH_ID }}')"

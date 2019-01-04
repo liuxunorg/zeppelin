@@ -36,14 +36,19 @@
   <properties>
     <!--library versions-->
     <interpreter.name>submarine</interpreter.name>
-    <hadoop.version>2.7.3</hadoop.version>
+    <hadoop.version>3.2.1-SNAPSHOT</hadoop.version>
     <jinjava.version>2.4.0</jinjava.version>
-
+    <jersey.version>1.19</jersey.version>
     <!--test library versions-->
     <hamcrest.all.version>1.3</hamcrest.all.version>
   </properties>
 
   <dependencies>
+    <dependency>
+      <groupId>org.apache.zeppelin</groupId>
+      <artifactId>zeppelin-python</artifactId>
+      <version>0.9.0-SNAPSHOT</version>
+    </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest-all</artifactId>
@@ -61,15 +66,19 @@
       <version>${hadoop.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-services-core</artifactId>
+      <version>${hadoop.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-yarn-services-api</artifactId>
+      <version>${hadoop.version}</version>
+    </dependency>
+    <dependency>
       <groupId>com.hubspot.jinjava</groupId>
       <artifactId>jinjava</artifactId>
       <version>${jinjava.version}</version>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.zeppelin</groupId>
-        <artifactId>zeppelin-python</artifactId>
-        <version>0.9.0-SNAPSHOT</version>
-        <scope>compile</scope>
     </dependency>
   </dependencies>
 
