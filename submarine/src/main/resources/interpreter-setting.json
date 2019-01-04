@@ -5,6 +5,13 @@
     "className": "org.apache.zeppelin.submarine.SubmarineInterpreter",
     "defaultInterpreter": true,
     "properties": {
+      "yarn.webapp.http.address": {
+        "envName": "YARN_WEBAPP_HTTP_ADDRESS",
+        "propertyName": "yarn.webapp.http.address",
+        "defaultValue": "",
+        "description": "YARN web ui address",
+        "type": "string"
+      },
       "hadoop.yarn.submarine.jar": {
         "envName": "HADOOP_YARN_SUBMARINE_JAR",
         "propertyName": "hadoop.yarn.submarine.jar",

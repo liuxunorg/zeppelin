@@ -67,11 +67,17 @@ public class SubmarineConstants {
   public static final String COMMAND_JOB_LIST = "JOB LIST";
   public static final String COMMAND_JOB_SHOW = "JOB SHOW";
   public static final String COMMAND_JOB_RUN  = "JOB RUN";
+  public static final String COMMAND_JOB_CANCEL  = "JOB CANCEL";
   public static final String COMMAND_CLEAN    = "clean";
   public static final String COMMAND_ACTIVE   = "COMMAND_ACTIVE";
 
   public static final String PARAGRAPH_ID  = "PARAGRAPH_ID";
 
   public static final String COMMANDLINE_OPTIONS = "COMMANDLINE_OPTIONS";
+
+
+  // YARN
+  public static final String YARN_WEB_HTTP_ADDRESS
+      = "yarn.webapp.http.address";
 
 }

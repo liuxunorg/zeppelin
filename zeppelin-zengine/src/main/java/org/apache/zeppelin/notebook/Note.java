@@ -307,21 +307,24 @@ public class Note implements JsonSerializable {
       // Delete existing AngularObject
       Iterator<AngularObject> iter = angularObjectList.iterator();
       while(iter.hasNext()){
-        String noteId = "", paragraphId = "";
+        String noteId = "", paragraphId = "", name = "";
         Object object = iter.next();
         if (object instanceof AngularObject) {
           AngularObject ao = (AngularObject)object;
           noteId = ao.getNoteId();
           paragraphId = ao.getParagraphId();
+          name = ao.getName();
         } else if (object instanceof RemoteAngularObject) {
           RemoteAngularObject rao = (RemoteAngularObject)object;
           noteId = rao.getNoteId();
           paragraphId = rao.getParagraphId();
+          name = rao.getName();
         } else {
           continue;
         }
         if (StringUtils.equals(noteId, angularObject.getNoteId())
-            && StringUtils.equals(paragraphId, angularObject.getParagraphId())) {
+            && StringUtils.equals(paragraphId, angularObject.getParagraphId())
+            && StringUtils.equals(name, angularObject.getName())) {
           iter.remove();
         }
       }

@@ -40,6 +40,7 @@ import org.apache.zeppelin.interpreter.thrift.InterpreterCompletion;
 import org.apache.zeppelin.scheduler.Scheduler;
 import org.apache.zeppelin.scheduler.SchedulerFactory;
 import org.apache.zeppelin.submarine.utils.SubmarineConstants;
+import org.apache.zeppelin.submarine.utils.YarnClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,6 +54,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -101,6 +103,11 @@ public class SubmarineInterpreter extends Interpreter {
   private boolean needUpdateConfig = true;
   private String currentReplName = "";
 
+  private YarnClient yarnClient = null;
+
+  // Submarine WEB UI
+  private Map<String, String> mapMenuUI = new HashMap<>();
+
   public SubmarineInterpreter(Properties property) {
     super(property);
 
@@ -130,6 +137,8 @@ public class SubmarineInterpreter extends Interpreter {
     if (!file.exists()) {
       LOGGER.error(submarineJar + " is not a valid file path!");
     }
+
+    yarnClient = new YarnClient(properties);
   }
 
   @Override
@@ -452,7 +461,8 @@ public class SubmarineInterpreter extends Interpreter {
     }
     Gson gson = new Gson();
     commandlineOptions = gson.fromJson(strbuf.toString(),
-        new TypeToken<List<CommandlineOption>>(){}.getType());
+        new TypeToken<List<CommandlineOption>>() {
+        }.getType());
 
     return commandlineOptions;
   }
@@ -526,6 +536,7 @@ public class SubmarineInterpreter extends Interpreter {
   @Override
   public void cancel(InterpreterContext context) {
     String jobName = getJobName(context);
+    submarineCommand(SubmarineCommand.JOB_CANCEL, jobName, context);
   }
 
   @Override
@@ -535,6 +546,55 @@ public class SubmarineInterpreter extends Interpreter {
 
   @Override
   public int getProgress(InterpreterContext context) {
+    String jobName = getJobName(context);
+    Map<String, Object> mapStatus = yarnClient.getAppStatus(jobName);
+
+    if (mapStatus.containsKey(YarnClient.APPLICATION_ID)
+        && mapStatus.containsKey(YarnClient.APPLICATION_NAME)
+        && mapStatus.containsKey(YarnClient.APPLICATION_STATUS)) {
+      String appId = mapStatus.get(YarnClient.APPLICATION_ID).toString();
+      String appName = mapStatus.get(YarnClient.APPLICATION_NAME).toString();
+      String appStatus = mapStatus.get(YarnClient.APPLICATION_STATUS).toString();
+
+      if (!mapMenuUI.containsKey(YarnClient.APPLICATION_ID)) {
+        // create YARN UI link
+        StringBuffer sbUrl = new StringBuffer();
+        String yarnBaseUrl = properties.getProperty(SubmarineConstants.YARN_WEB_HTTP_ADDRESS, "");
+        sbUrl.append(yarnBaseUrl);
+        sbUrl.append("/ui2/#/yarn-app/");
+        sbUrl.append(appId);
+        sbUrl.append("/components?service=");
+        sbUrl.append(appName);
+
+        Map<String, String> infos = new java.util.HashMap<>();
+        infos.put("jobUrl", "Yarn log|" + sbUrl.toString());
+        infos.put("label", "Submarine WEB");
+        infos.put("tooltip", "View in Submarine web UI");
+        infos.put("noteId", context.getNoteId());
+        infos.put("paraId", context.getParagraphId());
+        context.getIntpEventClient().onParaInfosReceived(infos);
+
+        Map<String, String> infos2 = new java.util.HashMap<>();
+        infos2.put("jobUrl", "Tensorboard|http://192.168.0.1/tensorboard");
+        infos2.put("label", "Submarine WEB");
+        infos2.put("tooltip", "View in Submarine web UI");
+        infos2.put("noteId", context.getNoteId());
+        infos2.put("paraId", context.getParagraphId());
+        context.getIntpEventClient().onParaInfosReceived(infos2);
+
+        mapMenuUI.put(YarnClient.APPLICATION_ID, sbUrl.toString());
+      }
+
+      if (StringUtils.equals(appStatus, YarnClient.APPLICATION_STATUS_FINISHED)
+          || StringUtils.equals(appStatus, YarnClient.APPLICATION_STATUS_FAILED)) {
+        return 0;
+      } else if (StringUtils.equals(appStatus, YarnClient.APPLICATION_STATUS_ACCEPT)) {
+        return 1;
+      } else if (StringUtils.equals(appStatus, YarnClient.APPLICATION_STATUS_RUNNING)) {
+        return 10;
+      }
+    }
+
     return 0;
   }
 
@@ -571,7 +631,7 @@ public class SubmarineInterpreter extends Interpreter {
         SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH);
     if (!algorithmPath.startsWith("hdfs://")) {
       String message = "Algorithm file upload HDFS path, " +
-          "Must be `hdfs://` prefix. now setting " +  algorithmPath;
+          "Must be `hdfs://` prefix. now setting " + algorithmPath;
       outputLog(context, "Configuration error", message, true);
       return new InterpreterResult(InterpreterResult.Code.ERROR);
     }
@@ -588,7 +648,7 @@ public class SubmarineInterpreter extends Interpreter {
         pythonWorkDir == null ? "" : pythonWorkDir.getAbsolutePath(), properties);
     outputLog(context, "Save algorithm file", outputMsg, true);
 
-    HashMap jinjaParams = propertiesToJinjaParams(jobName, noteId, context, true);
+    HashMap jinjaParams = propertiesToJinjaParams(jobName, context, true);
 
     URL urlTemplate = Resources.getResource(SUBMARINE_JOBRUN_TF_JINJA);
     String template = Resources.toString(urlTemplate, Charsets.UTF_8);
@@ -634,8 +694,8 @@ public class SubmarineInterpreter extends Interpreter {
   }
 
   // Convert properties to Map and check that the variable cannot be empty
-  private HashMap propertiesToJinjaParams(String jobName, String noteId,
-                                          InterpreterContext context, boolean outputLog)
+  private HashMap propertiesToJinjaParams(String jobName, InterpreterContext context,
+                                          boolean outputLog)
       throws IOException {
     StringBuffer sbMessage = new StringBuffer();
 
@@ -652,16 +712,16 @@ public class SubmarineInterpreter extends Interpreter {
     if (StringUtils.isEmpty(psLaunchCmd) && outputLog) {
       setUserPropertiesWarn(sbMessage, SubmarineConstants.PS_LAUNCH_CMD,
           "=python cifar10_main.py " +
-          "--data-dir=hdfs://mldev/tmp/cifar-10-data " +
-          "--job-dir=hdfs://mldev/tmp/cifar-10-jobdir --num-gpus=0\n");
+              "--data-dir=hdfs://mldev/tmp/cifar-10-data " +
+              "--job-dir=hdfs://mldev/tmp/cifar-10-jobdir --num-gpus=0\n");
     }
     String workerLaunchCmd = properties.getProperty(SubmarineConstants.WORKER_LAUNCH_CMD);
     if (StringUtils.isEmpty(workerLaunchCmd) && outputLog) {
       setUserPropertiesWarn(sbMessage, SubmarineConstants.WORKER_LAUNCH_CMD,
           "=python cifar10_main.py " +
-          "--data-dir=hdfs://mldev/tmp/cifar-10-data " +
-          "--job-dir=hdfs://mldev/tmp/cifar-10-jobdir " +
-          "--train-steps=500 --eval-batch-size=16 --train-batch-size=16 --sync --num-gpus=1\n");
+              "--data-dir=hdfs://mldev/tmp/cifar-10-data " +
+              "--job-dir=hdfs://mldev/tmp/cifar-10-jobdir " +
+              "--train-steps=500 --eval-batch-size=16 --train-batch-size=16 --sync --num-gpus=1\n");
     }
 
     // Check interpretere set Properties
@@ -759,7 +819,7 @@ public class SubmarineInterpreter extends Interpreter {
     String machinelearingDistributed = getProperty(
         SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE, "false");
 
-    String notePath = algorithmUploadPath + File.separator + noteId;
+    String notePath = algorithmUploadPath + File.separator + context.getNoteId();
     List<String> arrayHdfsFiles = new ArrayList<>();
     List<Path> hdfsFiles = submarineContext.getHDFSUtils().list(new Path(notePath + "/*"));
     if (hdfsFiles.size() == 0) {
@@ -820,45 +880,56 @@ public class SubmarineInterpreter extends Interpreter {
   }
 
   private InterpreterResult jobShow(SubmarineCommand command, String jobName, String noteId,
-                                    InterpreterContext context)
-      throws IOException {
-    HashMap jinjaParams = propertiesToJinjaParams(jobName, noteId, context, false);
-    jinjaParams.put(unifyKey(SubmarineConstants.JOB_NAME), jobName);
-    jinjaParams.put(unifyKey(SubmarineConstants.COMMAND_TYPE), command.getCommand());
+                                    InterpreterContext context) {
+    Map<String, Object> mapStatus = yarnClient.getAppStatus(jobName);
 
-    URL urlTemplate = Resources.getResource(SUBMARINE_COMMAND_JINJA);
-    String template = Resources.toString(urlTemplate, Charsets.UTF_8);
-    Jinjava jinjava = new Jinjava();
-    String submarineCmd = jinjava.render(template, jinjaParams);
+    return new InterpreterResult(InterpreterResult.Code.SUCCESS);
+  }
 
-    LOGGER.info("Execute : " + submarineCmd);
-    outputLog(context, "Submarine submit command", submarineCmd, true);
-    CommandLine cmdLine = CommandLine.parse(shell);
-    cmdLine.addArgument(submarineCmd, false);
+  private InterpreterResult submarineCommand(
+      SubmarineCommand command, String jobName, InterpreterContext context) {
+    HashMap jinjaParams = null;
+    try {
+      jinjaParams = propertiesToJinjaParams(jobName, context, false);
+      jinjaParams.put(unifyKey(SubmarineConstants.JOB_NAME), jobName);
+      jinjaParams.put(unifyKey(SubmarineConstants.COMMAND_TYPE), command.getCommand());
 
-    InterpreterOutput interpreterOutput = context.out;
+      URL urlTemplate = Resources.getResource(SUBMARINE_COMMAND_JINJA);
+      String template = Resources.toString(urlTemplate, Charsets.UTF_8);
+      Jinjava jinjava = new Jinjava();
+      String submarineCmd = jinjava.render(template, jinjaParams);
 
-    DefaultExecutor executor = new DefaultExecutor();
+      LOGGER.info("Execute : " + submarineCmd);
+      outputLog(context, "Submarine submit command", submarineCmd, true);
+      CommandLine cmdLine = CommandLine.parse(shell);
+      cmdLine.addArgument(submarineCmd, false);
 
-    StringBuffer sbLogOutput = new StringBuffer();
-    executor.setStreamHandler(new PumpStreamHandler(new LogOutputStream() {
-      @Override
-      protected void processLine(String line, int level) {
-        sbLogOutput.append(line);
-        outputLog(context, "", line, false);
+      InterpreterOutput interpreterOutput = context.out;
+
+      DefaultExecutor executor = new DefaultExecutor();
+
+      StringBuffer sbLogOutput = new StringBuffer();
+      executor.setStreamHandler(new PumpStreamHandler(new LogOutputStream() {
+        @Override
+        protected void processLine(String line, int level) {
+          sbLogOutput.append(line);
+          outputLog(context, "", line, false);
+        }
+      }));
+
+      // executor.setStreamHandler(new PumpStreamHandler(interpreterOutput, interpreterOutput));
+      long timeout = Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty));
+
+      executor.setWatchdog(new ExecuteWatchdog(timeout));
+      if (Boolean.valueOf(getProperty(DIRECTORY_USER_HOME))) {
+        executor.setWorkingDirectory(new File(System.getProperty("user.home")));
       }
-    }));
 
-    // executor.setStreamHandler(new PumpStreamHandler(interpreterOutput, interpreterOutput));
-    long timeout = Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty));
-
-    executor.setWatchdog(new ExecuteWatchdog(timeout));
-    if (Boolean.valueOf(getProperty(DIRECTORY_USER_HOME))) {
-      executor.setWorkingDirectory(new File(System.getProperty("user.home")));
+      int exitVal = executor.execute(cmdLine);
+      LOGGER.info("jobName {} return with exit value: {}", jobName, exitVal);
+    } catch (IOException e) {
+      e.printStackTrace();
     }
-
-    int exitVal = executor.execute(cmdLine);
-    LOGGER.info("jobName {} return with exit value: {}", jobName, exitVal);
 
     return new InterpreterResult(InterpreterResult.Code.SUCCESS);
   }
@@ -894,6 +965,7 @@ public class SubmarineInterpreter extends Interpreter {
     JOB_RUN("JOB RUN"),
     JOB_SHOW("JOB SHOW"),
     JOB_LIST("JOB LIST"),
+    JOB_CANCEL("JOB CANCEL"),
     EMPTY(""),
     OLD_UI("OLD UI"),
     UNKNOWN("Unknown");

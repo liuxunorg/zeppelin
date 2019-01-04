@@ -17,3 +17,6 @@
 {%- if COMMAND_TYPE == "JOB SHOW" -%}
 {{ SUBMARINE_HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} job show --name {{ JOB_NAME }}
 {%- endif -%}
+{%- if COMMAND_TYPE == "JOB CANCEL" -%}
+{{ SUBMARINE_HADOOP_HOME }}/bin/yarn app -destroy {{ JOB_NAME }}
+{%- endif -%}
