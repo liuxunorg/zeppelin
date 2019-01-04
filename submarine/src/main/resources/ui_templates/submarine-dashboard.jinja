@@ -1,20 +1,25 @@
-<!--
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
+{#
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+-#}
 <div id="job-manager-header">
   <div class="header">
     <div class="row" style="width:100%">
       <div class="col-md-12">
         <h3 class="new_h3">
-          Submarine dashboard
+          Submarine Dashboard
         </h3>
       </div>
     </div>
@@ -22,7 +27,8 @@ limitations under the License.
       <div class="col-md-12">
         You can execute the selected command by entering the parameters in the interface below.
         <a style="text-decoration:underline; cursor:pointer"
-          ng-click="z.angularBind('COMMAND_TYPE','USAGE','{{ PARAGRAPH_ID }}');z.runParagraph('{{ PARAGRAPH_ID }}')">
+          ng-click="z.angularBind('COMMAND_TYPE','USAGE','{{ PARAGRAPH_ID }}');
+            z.runParagraph('{{ PARAGRAPH_ID }}');">
           [Submarine Usage]
         </a>
       </div>
@@ -47,8 +53,9 @@ limitations under the License.
           </select>
         </span>
         <button type="submit" class="btn btn-primary"
-          ng-click="z.angularBind('COMMAND_ACTIVE','TRUE','{{ PARAGRAPH_ID }}');
-          z.runParagraph('{{ PARAGRAPH_ID }}')">
+          ng-click="ACTIVE_COUNT=ACTIVE_COUNT+1;
+            z.angularBind('COMMAND_ACTIVE',ACTIVE_COUNT,'{{ PARAGRAPH_ID }}');
+            z.runParagraph('{{ PARAGRAPH_ID }}')">
           Run Command
         </button>
       </div>
@@ -61,7 +68,7 @@ limitations under the License.
   <div class="form-group">
     <label style="width:150px;text-align:right;margin-right:4px;">Data Path: </label>
     <input type="text" style="width:800px" class="form-control" id="inputPath"
-      placeholder="Please input data path ( eg. hdfs://cluster1/... )" ng-value="{% raw %}{{INPUT_PATH}}{% endraw %}"
+      placeholder="Please input data path ( eg. hdfs://cluster1/... )" ng-value="INPUT_PATH"
       ng-change="z.angularBind('INPUT_PATH',inputPath,'{{ PARAGRAPH_ID }}')" ng-model="inputPath"></input>
   </div>
 </form>
@@ -70,7 +77,7 @@ limitations under the License.
   <div class="form-group">
     <label style="width:150px;text-align:right;margin-right:4px;">Checkpoint Path: </label>
     <input type="text" style="width:800px" class="form-control" id="checkpointPath"
-    placeholder="Please input checkpoint data path ( eg. hdfs://cluster1/... )" ng-value="{% raw %}{{CHECKPOINT_PATH}}{% endraw %}"
+    placeholder="Please input checkpoint data path ( eg. hdfs://cluster1/... )" ng-value="CHECKPOINT_PATH"
     ng-change="z.angularBind('CHECKPOINT_PATH',checkpointPath,'{{ PARAGRAPH_ID }}')" ng-model="checkpointPath"></input>
   </div>
 </form>
@@ -80,7 +87,7 @@ limitations under the License.
     <label style="width:150px;text-align:right;margin-right:4px;">PS Launch Cmd: </label>
     <input type="text" style="width:800px" class="form-control" id="psLaunchCmd"
       placeholder="Please input PS launch command (eg. python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0 ...)"
-      ng-value="{% raw %}{{PS_LAUNCH_CMD}}{% endraw %}" ng-change="z.angularBind('PS_LAUNCH_CMD',psLaunchCmd,'{{ PARAGRAPH_ID }}')"
+      ng-value="PS_LAUNCH_CMD" ng-change="z.angularBind('PS_LAUNCH_CMD',psLaunchCmd,'{{ PARAGRAPH_ID }}')"
       ng-model="psLaunchCmd"></input>
   </div>
 </form>
@@ -90,8 +97,30 @@ limitations under the License.
     <label style="width:150px;text-align:right;margin-right:4px;">Worker Launch Cmd: </label>
     <input type="text" style="width:800px" class="form-control" id="workerLaunchCmd"
       placeholder="Please input Work launch command (eg. python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=1 ...)"
-      ng-value="{% raw %}{{WORKER_LAUNCH_CMD}}{% endraw %}" ng-change="z.angularBind('WORKER_LAUNCH_CMD',workerLaunchCmd,'{{ PARAGRAPH_ID }}')"
+      ng-value="WORKER_LAUNCH_CMD" ng-change="z.angularBind('WORKER_LAUNCH_CMD',workerLaunchCmd,'{{ PARAGRAPH_ID }}')"
       ng-model="workerLaunchCmd"></input>
   </div>
 </form>
 {% endif %}
+
+<hr style="margin-top:10px; margin-bottom:10px;"/>
+<div class="job" style="margin-bottom:15px;">
+  <div>
+    <a style="text-decoration: none !important; margin-left: 10px;" ng-href="#/notebook/2DZ3X4X3F" href="#/notebook/2DZ3X4X3F">
+      <span class="ng-binding" style="color: rgb(0, 0, 0);">YARN Application ID : </span>
+      <span class="ng-binding" >{% raw %}{{APPLICATION_ID}}{% endraw %}</span>
+    </a>
+    <i ng-style="{'color':'red'}" tooltip-placement="top-left" uib-tooltip="paragraph_1546610902754_-1210407436 is READY" class="fa fa-spinner" style="color: rgb(0, 128, 0);">
+    </i>
+    <span class="ng-binding ng-scope" style="background: rgba(255,255,255,0.85); color: #999; font-size:12px; margin-right: 5px;">{% raw %}{{EXECUTE_TIME}}{% endraw %}</span>
+    <span class="ng-binding ng-scope" style="background: rgba(255,255,255,0.85); color: #999; font-size:12px; margin-right: 5px;">{% raw %}{{JOB_STATS}}{% endraw %}</span>
+    <span class="ng-binding ng-scope" style="background: rgba(255,255,255,0.85); color: #999; font-size:12px; margin-right: 5px;">{% raw %}{{JOB_PROGRESS}}%{% endraw %}</span>
+    <!-- job progress bar: start -->
+    <div id="submarineRunControl" class="runControl">
+      <div id="submarineProgress" class="progress ng-scope"">
+        <div class="progress-bar progress-bar-striped active" role="progressbar" style="width: {% raw %}{{JOB_PROGRESS}}%{% endraw %};"/>
+      </div>
+    </div>
+    <!-- job progress bar: end -->
+  </div>
+</div>

@@ -68,7 +68,7 @@ public class SubmarineConstants {
   public static final String COMMAND_JOB_SHOW = "JOB SHOW";
   public static final String COMMAND_JOB_RUN  = "JOB RUN";
   public static final String COMMAND_JOB_CANCEL  = "JOB CANCEL";
-  public static final String COMMAND_CLEAN    = "clean";
+  public static final String COMMAND_CLEAN    = "CLEAN";
   public static final String COMMAND_ACTIVE   = "COMMAND_ACTIVE";
 
   public static final String PARAGRAPH_ID  = "PARAGRAPH_ID";

@@ -38,7 +38,8 @@
     <interpreter.name>submarine</interpreter.name>
     <hadoop.version>3.2.1-SNAPSHOT</hadoop.version>
     <jinjava.version>2.4.0</jinjava.version>
-    <jersey.version>1.19</jersey.version>
+    <squirrel.version>0.3.8</squirrel.version>
+    <guava.version>20.0</guava.version>
     <!--test library versions-->
     <hamcrest.all.version>1.3</hamcrest.all.version>
   </properties>
@@ -79,6 +80,22 @@
       <groupId>com.hubspot.jinjava</groupId>
       <artifactId>jinjava</artifactId>
       <version>${jinjava.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.squirrelframework</groupId>
+      <artifactId>squirrel-foundation</artifactId>
+      <version>${squirrel.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.guava</groupId>
+          <artifactId>guava</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>${guava.version}</version>
     </dependency>
   </dependencies>
 

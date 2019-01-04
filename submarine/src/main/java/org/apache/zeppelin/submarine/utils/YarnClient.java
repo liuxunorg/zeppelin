@@ -16,7 +16,6 @@ package org.apache.zeppelin.submarine.utils;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonIOException;
@@ -36,8 +35,6 @@ public class YarnClient {
 
   private Configuration hadoopConf;
 
-  private Properties properties;
-
   public static final String APPLICATION_ID     = "APPLICATION_ID";
   public static final String APPLICATION_NAME   = "APPLICATION_NAME";
   public static final String APPLICATION_STATUS = "APPLICATION_STATUS";
@@ -47,10 +44,8 @@ public class YarnClient {
   public static final String APPLICATION_STATUS_FINISHED  = "Finished";
   public static final String APPLICATION_STATUS_FAILED    = "Failed";
 
-  public YarnClient(Properties properties) {
+  public YarnClient() {
     this.hadoopConf = new Configuration();
-
-    this.properties = properties;
   }
 
   public Map<String, Object> getAppStatus(String appIdOrName) {
