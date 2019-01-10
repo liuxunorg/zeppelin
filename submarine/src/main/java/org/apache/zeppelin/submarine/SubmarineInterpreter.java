@@ -34,7 +34,6 @@ import org.apache.zeppelin.submarine.statemachine.SubmarineJob;
 import org.apache.zeppelin.submarine.utils.SubmarineCommand;
 import org.apache.zeppelin.submarine.utils.SubmarineConstants;
 import org.apache.zeppelin.submarine.utils.SubmarineUtils;
-import org.apache.zeppelin.submarine.utils.YarnClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,9 +42,9 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 
+import static org.apache.zeppelin.submarine.utils.SubmarineCommand.CLEAN_RUNTIME_CACHE;
 import static org.apache.zeppelin.submarine.utils.SubmarineUtils.unifyKey;
 
 /**
@@ -71,15 +70,7 @@ public class SubmarineInterpreter extends Interpreter {
   private boolean needUpdateConfig = true;
   private String currentReplName = "";
 
-
-  private YarnClient yarnClient = null;
-
-  // Submarine WEB UI
-  private Map<String, String> mapMenuUI = new HashMap<>();
-
   SubmarineContext submarineContext = null;
-
-  private float preActiveCount = 0;
 
 
   public SubmarineInterpreter(Properties properties) {
@@ -89,8 +80,6 @@ public class SubmarineInterpreter extends Interpreter {
         getProperty(SubmarineConstants.SUBMARINE_CONCURRENT_MAX, "1"));
 
     submarineContext = SubmarineContext.getInstance();
-
-    yarnClient = new YarnClient();
   }
 
   @Override
@@ -155,13 +144,6 @@ public class SubmarineInterpreter extends Interpreter {
     }
   }
 
-  public InterpreterResult interpret1(String script, InterpreterContext context) {
-    SubmarineJob submarineJob = submarineContext.addOrGetSubmarineJob(properties, context);
-    submarineJob.onJobRun(true);
-
-    return new InterpreterResult(InterpreterResult.Code.SUCCESS);
-  }
-
   @Override
   public InterpreterResult interpret(String script, InterpreterContext context) {
     try {
@@ -170,34 +152,18 @@ public class SubmarineInterpreter extends Interpreter {
 
       setParagraphConfig(context);
 
-      String command = "", activeCount = "";
+      String command = "";
       String inputPath = "", chkPntPath = "", psLaunchCmd = "", workerLaunchCmd = "";
 
       LOGGER.debug("Run shell command '" + script + "'");
       String noteId = context.getNoteId();
       String paragraphId = context.getParagraphId();
-      String jobName = SubmarineUtils.getJobName(noteId);
 
       if (script.equalsIgnoreCase(SubmarineConstants.COMMAND_CLEAN)) {
         // Clean Registry Angular Object
-        context.getAngularObjectRegistry().removeAll(context.getNoteId(), paragraphId);
+        command = CLEAN_RUNTIME_CACHE.getCommand();
       } else {
         command = SubmarineUtils.getAngularObjectValue(context, SubmarineConstants.COMMAND_TYPE);
-      }
-      boolean isActive = false;
-      activeCount = SubmarineUtils.getAngularObjectValue(context,
-          SubmarineConstants.COMMAND_ACTIVE);
-      if (!StringUtils.isEmpty(activeCount)) {
-        try {
-          float curActiveCount = Float.parseFloat(activeCount);
-          if (curActiveCount != preActiveCount) {
-            this.preActiveCount = curActiveCount;
-            isActive = true;
-          }
-        } catch (NumberFormatException e) {
-          // clean
-          SubmarineUtils.setAngularObjectValue(context, SubmarineConstants.COMMAND_TYPE, "");
-        }
       }
 
       inputPath = SubmarineUtils.getAngularObjectValue(context, SubmarineConstants.INPUT_PATH);
@@ -218,16 +184,17 @@ public class SubmarineInterpreter extends Interpreter {
           submarineJob.onShowUsage();
           break;
         case JOB_RUN:
-          submarineJob.onJobRun(isActive);
+          submarineJob.onJobRun();
           break;
         case JOB_SHOW:
-          submarineJob.onJobShow(isActive);
+          submarineJob.onJobShow();
           break;
         case OLD_UI:
           createOldGUI(context);
           break;
+        case CLEAN_RUNTIME_CACHE:
         default:
-          submarineJob.onDashboard();
+          submarineJob.onCleanRuntimeCache();
           break;
       }
     } catch (Exception e) {
@@ -240,8 +207,7 @@ public class SubmarineInterpreter extends Interpreter {
 
   @Override
   public void cancel(InterpreterContext context) {
-    String jobName = SubmarineUtils.getJobName(context.getNoteId());
-    submarineCommand(SubmarineCommand.JOB_CANCEL, jobName, context);
+    submarineCommand(SubmarineCommand.JOB_CANCEL, context.getNoteId(), context);
   }
 
   @Override
@@ -251,57 +217,6 @@ public class SubmarineInterpreter extends Interpreter {
 
   @Override
   public int getProgress(InterpreterContext context) {
-    String jobName = SubmarineUtils.getJobName(context.getNoteId());
-    Map<String, Object> mapStatus = yarnClient.getAppStatus(jobName);
-
-    if (mapStatus.containsKey(YarnClient.APPLICATION_ID)
-        && mapStatus.containsKey(YarnClient.APPLICATION_NAME)
-        && mapStatus.containsKey(YarnClient.APPLICATION_STATUS)) {
-      String appId = mapStatus.get(YarnClient.APPLICATION_ID).toString();
-      String appName = mapStatus.get(YarnClient.APPLICATION_NAME).toString();
-      String appStatus = mapStatus.get(YarnClient.APPLICATION_STATUS).toString();
-
-      if (!mapMenuUI.containsKey(YarnClient.APPLICATION_ID)) {
-        // create YARN UI link
-        StringBuffer sbUrl = new StringBuffer();
-        String yarnBaseUrl = properties.getProperty(SubmarineConstants.YARN_WEB_HTTP_ADDRESS, "");
-        sbUrl.append(yarnBaseUrl);
-        sbUrl.append("/ui2/#/yarn-app/");
-        sbUrl.append(appId);
-        sbUrl.append("/components?service=");
-        sbUrl.append(appName);
-
-        Map<String, String> infos = new java.util.HashMap<>();
-        infos.put("jobUrl", sbUrl.toString());
-        infos.put("jobLabel", "Yarn log");
-        infos.put("label", "Submarine WEB");
-        infos.put("tooltip", "View in Submarine web UI");
-        infos.put("noteId", context.getNoteId());
-        infos.put("paraId", context.getParagraphId());
-        context.getIntpEventClient().onParaInfosReceived(infos);
-
-        Map<String, String> infos2 = new java.util.HashMap<>();
-        infos2.put("jobUrl", "http://192.168.0.1/tensorboard");
-        infos2.put("jobLabel", "Tensorboard");
-        infos2.put("label", "Submarine WEB");
-        infos2.put("tooltip", "View in Submarine web UI");
-        infos2.put("noteId", context.getNoteId());
-        infos2.put("paraId", context.getParagraphId());
-        context.getIntpEventClient().onParaInfosReceived(infos2);
-
-        mapMenuUI.put(YarnClient.APPLICATION_ID, sbUrl.toString());
-      }
-
-      if (StringUtils.equals(appStatus, YarnClient.APPLICATION_STATUS_FINISHED)
-          || StringUtils.equals(appStatus, YarnClient.APPLICATION_STATUS_FAILED)) {
-        return 0;
-      } else if (StringUtils.equals(appStatus, YarnClient.APPLICATION_STATUS_ACCEPT)) {
-        return 1;
-      } else if (StringUtils.equals(appStatus, YarnClient.APPLICATION_STATUS_RUNNING)) {
-        return 10;
-      }
-    }
-
     return 0;
   }
 
@@ -329,28 +244,16 @@ public class SubmarineInterpreter extends Interpreter {
     }
   }
 
-  private InterpreterResult jobList(String jobName, String noteId,
-                                    InterpreterContext context)
-      throws IOException {
-    return new InterpreterResult(InterpreterResult.Code.SUCCESS, context.out.toString());
-  }
-
-  private InterpreterResult jobShow(SubmarineCommand command, String jobName, String noteId,
-                                    InterpreterContext context) {
-    Map<String, Object> mapStatus = yarnClient.getAppStatus(jobName);
-
-    return new InterpreterResult(InterpreterResult.Code.SUCCESS);
-  }
-
   private InterpreterResult submarineCommand(
-      SubmarineCommand command, String jobName, InterpreterContext context) {
+      SubmarineCommand command, String noteId, InterpreterContext context) {
     SubmarineJob submarineJob = submarineContext.getSubmarineJob(context.getNoteId());
 
     HashMap jinjaParams = null;
     try {
       jinjaParams = SubmarineUtils.propertiesToJinjaParams(submarineJob.getProperties(),
           submarineJob.getSubmarineUI(), submarineJob.getHdfsUtils(),
-          jobName, false);
+          noteId, false);
+      String jobName = SubmarineUtils.getJobName(noteId);
       jinjaParams.put(unifyKey(SubmarineConstants.JOB_NAME), jobName);
       jinjaParams.put(unifyKey(SubmarineConstants.COMMAND_TYPE), command.getCommand());
 
@@ -384,7 +287,7 @@ public class SubmarineInterpreter extends Interpreter {
 
       int exitVal = executor.execute(cmdLine);
       LOGGER.info("jobName {} return with exit value: {}", jobName, exitVal);
-      submarineJob.getSubmarineUI().outputLog(null, sbLogOutput.toString());
+      submarineJob.getSubmarineUI().outputLog(command.getCommand(), sbLogOutput.toString());
     } catch (IOException e) {
       e.printStackTrace();
     }

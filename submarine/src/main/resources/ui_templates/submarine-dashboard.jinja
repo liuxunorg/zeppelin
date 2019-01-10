@@ -26,36 +26,35 @@
     <div class="row" style="width:100%">
       <div class="col-md-12">
         You can execute the selected command by entering the parameters in the interface below.
-        <a style="text-decoration:underline; cursor:pointer"
-          ng-click="z.angularBind('COMMAND_TYPE','USAGE','{{ PARAGRAPH_ID }}');
-            z.runParagraph('{{ PARAGRAPH_ID }}');">
-          [Submarine Usage]
-        </a>
+        <button class="btn btn-default btn-xs" style="margin-left:10px;"
+          ng-click="z.angularBind('COMMAND_TYPE','USAGE','{{ PARAGRAPH_ID }}');z.runParagraph('{{ PARAGRAPH_ID }}');"
+          tooltip-placement="top" uib-tooltip="Show submarine usage & Parameter Description"> <span class="fa fa-info-circle"></span> Usage</button>
+        <button class="btn btn-default btn-xs" style="margin-left:2px;"
+          ng-click="z.angularBind('COMMAND_TYPE','CLEAN_RUNTIME_CACHE','{{ PARAGRAPH_ID }}');z.runParagraph('{{ PARAGRAPH_ID }}');"
+          tooltip-placement="top" uib-tooltip="Clean submarine runtime cache"> <span class="fa fa-trash"></span> Clean</button>
       </div>
     </div>
   </div>
 
   <hr style="margin-top: 10px; margin-bottom: 10px;"/>
 
-  <div class="row" style="width:100%">
+  <div class="row" style="width:100%; margin-top:20px;">
     <div class="job-search-tool">
       <div class="form-inline">
         <span class="btn-group">
           <label style="width:150px;text-align:right;margin-right:4px;">Command: </label>
           <select ng-model="submarineCommand" style="width:200px;margin-right:10px" class="form-control"
-                ng-change="z.angularBind('COMMAND_TYPE',submarineCommand,'{{ PARAGRAPH_ID }}');z.runParagraph('{{ PARAGRAPH_ID }}')">
-            <option value="" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'==''">-- Please select --</option>
-            <option value="JOB RUN" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'=='JOB RUN'">JOB RUN</option>
-            <option value="JOB SHOW" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'=='JOB SHOW'">JOB SHOW</option>
-            <option value="JOB LIST" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'=='JOB LIST'">JOB LIST</option>
-            <option value="OLD UI" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'=='OLD UI'">OLD UI</option>
-            <option value="USAGE" ng-selected="'{% raw %}{{COMMAND_TYPE}}{% endraw %}'=='USAGE'">USAGE</option>
+                ng-change="COMMAND_TYPE=submarineCommand">
+            <option value="" ng-selected="'{%raw%}{{COMMAND_TYPE}}{%endraw%}'==''">-- Please select --</option>
+            <option value="JOB_RUN" ng-selected="'{%raw%}{{COMMAND_TYPE}}{%endraw%}'=='JOB_RUN'">JOB RUN</option>
+            <option value="JOB_SHOW" ng-selected="'{%raw%}{{COMMAND_TYPE}}{%endraw%}'=='JOB_SHOW'">JOB SHOW</option>
+            <option value="JOB_CANCEL" ng-selected="'{%raw%}{{COMMAND_TYPE}}{%endraw%}'=='JOB_CANCEL'">JOB CANCEL</option>
+            <option value="OLD_UI" ng-selected="'{%raw%}{{COMMAND_TYPE}}{%endraw%}'=='OLD_UI'">OLD UI</option>
+            <option value="USAGE" ng-selected="'{%raw%}{{COMMAND_TYPE}}{%endraw%}'=='USAGE'">USAGE</option>
           </select>
         </span>
         <button type="submit" class="btn btn-primary"
-          ng-click="ACTIVE_COUNT=ACTIVE_COUNT+1;
-            z.angularBind('COMMAND_ACTIVE',ACTIVE_COUNT,'{{ PARAGRAPH_ID }}');
-            z.runParagraph('{{ PARAGRAPH_ID }}')">
+          ng-click="z.angularBind('COMMAND_TYPE',COMMAND_TYPE,'{{ PARAGRAPH_ID }}');z.runParagraph('{{ PARAGRAPH_ID }}')">
           Run Command
         </button>
       </div>
@@ -63,62 +62,74 @@
   </div>
 </div>
 
-{% if COMMAND_TYPE == "JOB RUN" %}
-<form class="form-inline" style="margin-top: 10px;">
-  <div class="form-group">
-    <label style="width:150px;text-align:right;margin-right:4px;">Data Path: </label>
-    <input type="text" style="width:800px" class="form-control" id="inputPath"
-      placeholder="Please input data path ( eg. hdfs://cluster1/... )" ng-value="INPUT_PATH"
-      ng-change="z.angularBind('INPUT_PATH',inputPath,'{{ PARAGRAPH_ID }}')" ng-model="inputPath"></input>
-  </div>
-</form>
+<div ng-if="COMMAND_TYPE=='JOB_RUN'">
+  <form class="form-inline" style="margin-top: 10px;">
+    <div class="form-group">
+      <label style="width:150px;text-align:right;margin-right:4px;">Data Path: </label>
+      <input type="text" style="width:800px" class="form-control" id="inputPath"
+        placeholder="Please input data path ( eg. hdfs://cluster1/... )" ng-value="INPUT_PATH"
+        ng-change="z.angularBind('INPUT_PATH',inputPath,'{{ PARAGRAPH_ID }}')" ng-model="inputPath"></input>
+    </div>
+  </form>
 
-<form class="form-inline" style="margin-top: 10px;">
-  <div class="form-group">
-    <label style="width:150px;text-align:right;margin-right:4px;">Checkpoint Path: </label>
-    <input type="text" style="width:800px" class="form-control" id="checkpointPath"
-    placeholder="Please input checkpoint data path ( eg. hdfs://cluster1/... )" ng-value="CHECKPOINT_PATH"
-    ng-change="z.angularBind('CHECKPOINT_PATH',checkpointPath,'{{ PARAGRAPH_ID }}')" ng-model="checkpointPath"></input>
-  </div>
-</form>
+  <form class="form-inline" style="margin-top: 10px;">
+    <div class="form-group">
+      <label style="width:150px;text-align:right;margin-right:4px;">Checkpoint Path: </label>
+      <input type="text" style="width:800px" class="form-control" id="checkpointPath"
+      placeholder="Please input checkpoint data path ( eg. hdfs://cluster1/... )" ng-value="CHECKPOINT_PATH"
+      ng-change="z.angularBind('CHECKPOINT_PATH',checkpointPath,'{{ PARAGRAPH_ID }}')" ng-model="checkpointPath"></input>
+    </div>
+  </form>
 
-<form class="form-inline" style="margin-top: 10px;">
-  <div class="form-group">
-    <label style="width:150px;text-align:right;margin-right:4px;">PS Launch Cmd: </label>
-    <input type="text" style="width:800px" class="form-control" id="psLaunchCmd"
-      placeholder="Please input PS launch command (eg. python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0 ...)"
-      ng-value="PS_LAUNCH_CMD" ng-change="z.angularBind('PS_LAUNCH_CMD',psLaunchCmd,'{{ PARAGRAPH_ID }}')"
-      ng-model="psLaunchCmd"></input>
-  </div>
-</form>
+  <form class="form-inline" style="margin-top: 10px;">
+    <div class="form-group">
+      <label style="width:150px;text-align:right;margin-right:4px;">PS Launch Cmd: </label>
+      <input type="text" style="width:800px" class="form-control" id="psLaunchCmd"
+        placeholder="Please input PS launch command (eg. python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0 ...)"
+        ng-value="PS_LAUNCH_CMD" ng-change="z.angularBind('PS_LAUNCH_CMD',psLaunchCmd,'{{ PARAGRAPH_ID }}')"
+        ng-model="psLaunchCmd"></input>
+    </div>
+  </form>
 
-<form class="form-inline" style="margin-top: 10px;">
-  <div class="form-group">
-    <label style="width:150px;text-align:right;margin-right:4px;">Worker Launch Cmd: </label>
-    <input type="text" style="width:800px" class="form-control" id="workerLaunchCmd"
-      placeholder="Please input Work launch command (eg. python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=1 ...)"
-      ng-value="WORKER_LAUNCH_CMD" ng-change="z.angularBind('WORKER_LAUNCH_CMD',workerLaunchCmd,'{{ PARAGRAPH_ID }}')"
-      ng-model="workerLaunchCmd"></input>
-  </div>
-</form>
-{% endif %}
+  <form class="form-inline" style="margin-top: 10px;">
+    <div class="form-group">
+      <label style="width:150px;text-align:right;margin-right:4px;">Worker Launch Cmd: </label>
+      <input type="text" style="width:800px" class="form-control" id="workerLaunchCmd"
+        placeholder="Please input Work launch command (eg. python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=1 ...)"
+        ng-value="WORKER_LAUNCH_CMD" ng-change="z.angularBind('WORKER_LAUNCH_CMD',workerLaunchCmd,'{{ PARAGRAPH_ID }}')"
+        ng-model="workerLaunchCmd"></input>
+    </div>
+  </form>
+</div>
 
-<hr style="margin-top:10px; margin-bottom:10px;"/>
-<div class="job" style="margin-bottom:15px;">
+<div class="job" style="margin-top:10px; margin-bottom:10px;" ng-if="JOB_STATUS!=undefined && JOB_STATUS!='READY'">
   <div>
-    <a style="text-decoration: none !important; margin-left: 10px;" ng-href="#/notebook/2DZ3X4X3F" href="#/notebook/2DZ3X4X3F">
-      <span class="ng-binding" style="color: rgb(0, 0, 0);">YARN Application ID : </span>
-      <span class="ng-binding" >{% raw %}{{APPLICATION_ID}}{% endraw %}</span>
+    <label style="width:140px;text-align:right;margin-right:4px;">Submarine Runtime: </label>
+
+    <i ng-if="JOB_STATUS=='ACCEPT' || JOB_STATUS=='YARN NEW' || JOB_STATUS=='YARN NEW SAVING' || JOB_STATUS=='YARN_ACCEPTED'"
+      ng-style="{'color':'green'}" tooltip-placement="top" uib-tooltip="{%raw%}{{YARN_APPLICATION_ID}}{%endraw%} is Accept" class="fa fa-circle-o"">  {%raw%}{{JOB_STATUS}}{%endraw%}</i>
+    <i ng-if="JOB_STATUS=='EXECUTE SUBMARINE' || JOB_STATUS=='YARN_SUBMITTED' || JOB_STATUS=='YARN RUNNING'"
+      ng-style="{'color':'green'}" tooltip-placement="top" uib-tooltip="{%raw%}{{YARN_APPLICATION_ID}}{%endraw%} is Running" class="fa fa-spinner"">  {%raw%}{{JOB_STATUS}}{%endraw%}</i>
+    <i ng-if="JOB_STATUS=='EXECUTE SUBMARINE FINISHED' || JOB_STATUS=='YARN_FINISHED'"
+      ng-style="{'color':'green'}" tooltip-placement="top" uib-tooltip="{%raw%}{{YARN_APPLICATION_ID}}{%endraw%} is Finished" class="fa fa-circle"">  {%raw%}{{JOB_STATUS}}{%endraw%}</i>
+    <i ng-if="JOB_STATUS=='EXECUTE SUBMARINE ERROR' || JOB_STATUS=='YARN_FAILED' || JOB_STATUS=='YARN_KILLED'"
+      ng-style="{'color':'red'}" tooltip-placement="top" uib-tooltip="{%raw%}{{YARN_APPLICATION_ID}}{%endraw%} is Failed" class="fa fa-circle"">  {%raw%}{{JOB_STATUS}}{%endraw%}</i>
+
+    <span ng-if="YARN_APP_EXECUTE_TIME!=undefined" class="ng-binding ng-scope" style="background: rgba(255,255,255,0.85); color: #999; font-size:12px; margin-left: 10px;">{%raw%}{{YARN_APP_EXECUTE_TIME}}{%endraw%}</span>
+    <!--span ng-if="YARN_APPLICATION_ID!=undefined" class="ng-binding ng-scope" style="background: rgba(255,255,255,0.85); color: #999; font-size:12px; margin-left: 10px;">{%raw%}{{JOB_PROGRESS}}%{%endraw%}</span-->
+
+    <a ng-if="YARN_APPLICATION_URL!=undefined" style="text-decoration: none !important;text-decoration:underline; cursor:pointer;margin-left: 10px;" ng-href="{%raw%}{{YARN_APPLICATION_URL}}{%endraw%}" target="_blank" tooltip-placement="top" uib-tooltip="click view application in YARN">
+      <span class="fa fa-external-link-square" ></span> YARN {%raw%}{{YARN_APPLICATION_ID}}{%endraw%}
     </a>
-    <i ng-style="{'color':'red'}" tooltip-placement="top-left" uib-tooltip="paragraph_1546610902754_-1210407436 is READY" class="fa fa-spinner" style="color: rgb(0, 128, 0);">
-    </i>
-    <span class="ng-binding ng-scope" style="background: rgba(255,255,255,0.85); color: #999; font-size:12px; margin-right: 5px;">{% raw %}{{EXECUTE_TIME}}{% endraw %}</span>
-    <span class="ng-binding ng-scope" style="background: rgba(255,255,255,0.85); color: #999; font-size:12px; margin-right: 5px;">{% raw %}{{JOB_STATS}}{% endraw %}</span>
-    <span class="ng-binding ng-scope" style="background: rgba(255,255,255,0.85); color: #999; font-size:12px; margin-right: 5px;">{% raw %}{{JOB_PROGRESS}}%{% endraw %}</span>
+
+    <a ng-if="YARN_APP_TENSORFLOW_URL!=undefined" style="text-decoration: none !important;text-decoration:underline; cursor:pointer;margin-left: 10px;" ng-href="{%raw%}{{YARN_APP_TENSORFLOW_URL}}{%endraw%}" target="_blank" tooltip-placement="top" uib-tooltip="click view training in TENSORBOARD">
+      <span class="fa fa-external-link-square" style="font-size:12px;"></span> Tensorboard
+    </a>
+
     <!-- job progress bar: start -->
-    <div id="submarineRunControl" class="runControl">
+    <div id="submarineRunControl" class="runControl" ng-if="JOB_STATUS=='ACCEPT' || JOB_STATUS=='YARN NEW' || JOB_STATUS=='YARN NEW SAVING' || JOB_STATUS=='YARN_ACCEPTED' || JOB_STATUS=='EXECUTE SUBMARINE' || JOB_STATUS=='YARN_SUBMITTED' || JOB_STATUS=='YARN RUNNING'">
       <div id="submarineProgress" class="progress ng-scope"">
-        <div class="progress-bar progress-bar-striped active" role="progressbar" style="width: {% raw %}{{JOB_PROGRESS}}%{% endraw %};"/>
+        <div class="progress-bar progress-bar-striped active" role="progressbar" style="width: {%raw%}{{JOB_PROGRESS}}%{%endraw%};"/>
       </div>
     </div>
     <!-- job progress bar: end -->

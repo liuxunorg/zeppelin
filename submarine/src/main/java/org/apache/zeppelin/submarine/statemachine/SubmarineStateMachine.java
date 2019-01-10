@@ -39,7 +39,7 @@ public class SubmarineStateMachine extends AbstractStateMachine<SubmarineStateMa
 
       if (context.getActiveAndReset()) {
         submarineUI.createLogHeadUI();
-        submarineJob.jobRun();
+        //submarineJob.jobRun();
       }
     }
   }

@@ -336,7 +336,7 @@ public class HDFSUtils {
         }
 
         // save to hdfs
-        if (!org.apache.commons.lang3.StringUtils.isEmpty(hdfsUploadPath)) {
+        if (!StringUtils.isEmpty(hdfsUploadPath)) {
           String fileDir = hdfsUploadPath + "/" + noteId + "/" + fileName;
           // upload algorithm file
           LOGGER.info("Commit algorithm to HDFS: {}", fileDir);

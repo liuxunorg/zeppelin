@@ -68,8 +68,6 @@ public class SubmarineUI {
       intpContext.out.setType(InterpreterResult.Type.ANGULAR);
       // The second is Execution information.
       intpContext.out.setType(InterpreterResult.Type.ANGULAR);
-      // The third is log output.
-      intpContext.out.setType(InterpreterResult.Type.ANGULAR);
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -106,10 +104,6 @@ public class SubmarineUI {
 
       // UI update, log needs to be cleaned at the same time
       InterpreterResultMessageOutput outputLOG = intpContext.out.getOutputAt(1);
-      outputLOG.clear();
-      outputLOG.flush();
-
-      outputLOG = intpContext.out.getOutputAt(2);
       outputLOG.clear();
       outputLOG.flush();
     } catch (IOException e) {
@@ -211,21 +205,15 @@ public class SubmarineUI {
     try {
       StringBuffer formatMsg = new StringBuffer();
       InterpreterResultMessageOutput output = null;
-      if (null == title || StringUtils.isEmpty(title)) {
-        output = intpContext.out.getOutputAt(2);
-        message = message.replace("\n", "<br>");
-        formatMsg.append("<div style=\"width:100%\">");
-        formatMsg.append(message);
-        formatMsg.append("</div>\n");
-      } else {
-        output = intpContext.out.getOutputAt(1);
-        formatMsg.append("<div style=\"width:100%\">");
+      output = intpContext.out.getOutputAt(1);
+      formatMsg.append("<div style=\"width:100%\">");
+      if (!StringUtils.isEmpty(title)) {
         formatMsg.append(title);
-        formatMsg.append("<pre>");
-        formatMsg.append(message);
-        formatMsg.append("</pre>");
-        formatMsg.append("</div>\n");
       }
+      formatMsg.append("<pre style=\"max-height:120px\">");
+      formatMsg.append(message);
+      formatMsg.append("</pre>");
+      formatMsg.append("</div>\n");
       output.write(formatMsg.toString());
       output.flush();
     } catch (IOException e) {

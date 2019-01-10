@@ -80,4 +80,18 @@ public class SubmarineConstants {
   public static final String YARN_WEB_HTTP_ADDRESS
       = "yarn.webapp.http.address";
 
+  public static final String YARN_APPLICATION_ID     = "YARN_APPLICATION_ID";
+  public static final String YARN_APPLICATION_NAME   = "YARN_APPLICATION_NAME";
+  public static final String YARN_APPLICATION_STATUS = "YARN_APPLICATION_STATUS";
+  public static final String YARN_APPLICATION_URL    = "YARN_APPLICATION_URL";
+  public static final String YARN_APP_TENSORFLOW_URL = "YARN_APP_TENSORFLOW_URL";
+  public static final String YARN_APP_EXECUTE_TIME   = "YARN_APP_EXECUTE_TIME";
+
+  public static final String YARN_APPLICATION_STATUS_ACCEPT    = "ACCEPT";
+  public static final String YARN_APPLICATION_STATUS_RUNNING   = "RUNNING";
+  public static final String YARN_APPLICATION_STATUS_FINISHED  = "EXECUTE_SUBMARINE_FINISHED";
+  public static final String YARN_APPLICATION_STATUS_FAILED    = "FAILED";
+
+  public static final String JOB_STATUS   = "JOB_STATUS";
+  public static final String JOB_PROGRESS = "JOB_PROGRESS";
 }
