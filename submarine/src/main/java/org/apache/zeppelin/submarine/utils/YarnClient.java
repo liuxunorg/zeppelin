@@ -35,15 +35,6 @@ public class YarnClient {
 
   private Configuration hadoopConf;
 
-  public static final String APPLICATION_ID     = "APPLICATION_ID";
-  public static final String APPLICATION_NAME   = "APPLICATION_NAME";
-  public static final String APPLICATION_STATUS = "APPLICATION_STATUS";
-
-  public static final String APPLICATION_STATUS_ACCEPT    = "Accept";
-  public static final String APPLICATION_STATUS_RUNNING   = "Running";
-  public static final String APPLICATION_STATUS_FINISHED  = "Finished";
-  public static final String APPLICATION_STATUS_FAILED    = "Failed";
-
   public YarnClient() {
     this.hadoopConf = new Configuration();
   }
@@ -84,13 +75,13 @@ public class YarnClient {
       String appName = (elementAppName == null) ? "" : elementAppName.getAsString();
 
       if (!StringUtils.isEmpty(appId)) {
-        mapStatus.put(APPLICATION_ID, appId);
+        mapStatus.put(SubmarineConstants.YARN_APPLICATION_ID, appId);
       }
       if (!StringUtils.isEmpty(appName)) {
-        mapStatus.put(APPLICATION_NAME, appName);
+        mapStatus.put(SubmarineConstants.YARN_APPLICATION_NAME, appName);
       }
       if (!StringUtils.isEmpty(appState)) {
-        mapStatus.put(APPLICATION_STATUS, appState);
+        mapStatus.put(SubmarineConstants.YARN_APPLICATION_STATUS, appState);
       }
     } catch (JsonIOException e) {
       e.printStackTrace();

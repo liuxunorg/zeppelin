@@ -199,7 +199,8 @@ public class SubmarineUtils {
     List<String> arrayHdfsFiles = new ArrayList<>();
     List<Path> hdfsFiles = hdfsUtils.list(new Path(notePath + "/*"));
     if (hdfsFiles.size() == 0) {
-      sbMessage.append("ERROR: The " + notePath + " file directory was is empty in HDFS!\n");
+      sbMessage.append("EXECUTE_SUBMARINE_ERROR: The " + notePath
+          + " file directory was is empty in HDFS!\n");
     } else {
       if (outputLog) {
         StringBuffer sbCommitFiles = new StringBuffer();
@@ -259,7 +260,7 @@ public class SubmarineUtils {
 
   private static StringBuffer setUserPropertiesWarn(
       StringBuffer sbMessage, String key, String info) {
-    sbMessage.append("ERROR: Please set the parameter ");
+    sbMessage.append("EXECUTE_SUBMARINE_ERROR: Please set the parameter ");
     sbMessage.append(key);
     sbMessage.append(" first, \nfor example: ");
     sbMessage.append(key + info);
@@ -268,7 +269,7 @@ public class SubmarineUtils {
   }
 
   private static void setIntpPropertiesWarn(StringBuffer sbMessage, String key) {
-    sbMessage.append("ERROR: Please set the submarine interpreter properties : ");
+    sbMessage.append("EXECUTE_SUBMARINE_ERROR: Please set the submarine interpreter properties : ");
     sbMessage.append(key).append("\n");
   }
 }

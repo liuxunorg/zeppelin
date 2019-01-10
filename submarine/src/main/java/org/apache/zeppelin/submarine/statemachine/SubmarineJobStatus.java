@@ -14,17 +14,24 @@
 
 package org.apache.zeppelin.submarine.statemachine;
 
-public enum SubmarineNoteStatus {
+public enum SubmarineJobStatus {
+  UNKNOWN("UNKNOWN"),
   READY("READY"),
-  FINISHED("FINISHED"),
-  ABORT("ABORT"),
-  ERROR("ERROR"),
-  PENDING("PENDING"),
-  RUNNING("RUNNING");
+  EXECUTE_SUBMARINE("EXECUTE SUBMARINE"),
+  EXECUTE_SUBMARINE_ERROR("EXECUTE SUBMARINE ERROR"),
+  EXECUTE_SUBMARINE_FINISHED("EXECUTE SUBMARINE FINISHED"),
+  YARN_NEW("YARN NEW"),
+  YARN_NEW_SAVING("YARN NEW SAVING"),
+  YARN_SUBMITTED("YARN SUBMITTED"),
+  YARN_ACCEPTED("YARN ACCEPTED"),
+  YARN_RUNNING("YARN RUNNING"),
+  YARN_FINISHED("YARN FINISHED"),
+  YARN_FAILED("YARN FAILED"),
+  YARN_KILLED("YARN KILLED");
 
   private String status;
 
-  SubmarineNoteStatus(String status){
+  SubmarineJobStatus(String status){
     this.status = status;
   }
 
@@ -32,13 +39,13 @@ public enum SubmarineNoteStatus {
     return status;
   }
 
-  public static SubmarineNoteStatus fromState(String status) {
-    for (SubmarineNoteStatus noteStatus : SubmarineNoteStatus.values()) {
+  public static SubmarineJobStatus fromState(String status) {
+    for (SubmarineJobStatus noteStatus : SubmarineJobStatus.values()) {
       if (noteStatus.getStatus().equals(status)) {
         return noteStatus;
       }
     }
 
-    return ERROR;
+    return EXECUTE_SUBMARINE_ERROR;
   }
 }
