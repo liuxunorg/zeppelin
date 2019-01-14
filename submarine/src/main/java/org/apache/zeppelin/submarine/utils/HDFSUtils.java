@@ -71,8 +71,8 @@ public class HDFSUtils {
       = "org.apache.zeppelin.notebook.repo.FileSystemNotebookRepo";
   private String noteStorageClassName = "";
 
-  public HDFSUtils(String path, Properties properties) {
-    String krb5conf = properties.getProperty(SubmarineConstants.SUBMARINE_KRB5_CONF, "");
+  public HDFSUtils(Properties properties) {
+    String krb5conf = properties.getProperty(SubmarineConstants.SUBMARINE_HADOOP_KRB5_CONF, "");
     if (!StringUtils.isEmpty(krb5conf)) {
       System.setProperty("java.security.krb5.conf", krb5conf);
     }
@@ -109,12 +109,14 @@ public class HDFSUtils {
         UserGroupInformation.loginUserFromKeytab(principal, keytab);
       } catch (IOException e) {
         throw new RuntimeException("Fail to login via keytab:" + keytab +
-            ", principal:" + principal, e);
+        ", principal:" + principal, e);
+      } catch (Exception e) {
+        e.printStackTrace();
       }
     }
 
     try {
-      this.fs = FileSystem.get(new URI(path), this.hadoopConf);
+      this.fs = FileSystem.get(new URI("/"), this.hadoopConf);
     } catch (IOException e) {
       e.printStackTrace();
     } catch (URISyntaxException e) {

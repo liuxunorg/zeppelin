@@ -12,16 +12,23 @@
         "description": "YARN web ui address",
         "type": "string"
       },
-      "hadoop.yarn.submarine.jar": {
+      "INTERPRETER_LAUNCH_MODE": {
+        "envName": "INTERPRETER_LAUNCH_MODE",
+        "propertyName": "interpreter.launch.mode",
+        "defaultValue": "local",
+        "description": "Submarine interpreter launch in local/yarn",
+        "type": "string"
+      },
+      "HADOOP_YARN_SUBMARINE_JAR": {
         "envName": "HADOOP_YARN_SUBMARINE_JAR",
         "propertyName": "hadoop.yarn.submarine.jar",
         "defaultValue": "",
         "description": "Submarine executive full path, ex) ../hadoop/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0.jar",
         "type": "string"
       },
-      "submarine.interpreter.docker.image": {
+      "SUBMARINE_INTERPRETER_DOCKER_IMAGE": {
         "envName": "SUBMARINE_INTERPRETER_DOCKER_IMAGE",
-        "propertyName": "submarine.interpreter.docker.image",
+        "propertyName": "SUBMARINE_INTERPRETER_DOCKER_IMAGE",
         "defaultValue": "",
         "description": "Docker image of submarine interpreter",
         "type": "string"
@@ -55,20 +62,20 @@
         "type": "string"
       },
       "submarine.hadoop.krb5.conf": {
-        "envName": "SUBMARINE_KRB5_CONF",
-        "propertyName": "submarine.krb5.conf",
+        "envName": "SUBMARINE_HADOOP_KRB5_CONF",
+        "propertyName": "submarine.hadoop.krb5.conf",
         "defaultValue": "/etc/krb5.conf",
         "description": "submarine user-defined hdfs/yarn kerberos authentication krb5.conf",
         "type": "string"
       },
-      "submarine.hadoop.keytab": {
+      "SUBMARINE_HADOOP_KEYTAB": {
         "envName": "SUBMARINE_HADOOP_KEYTAB",
         "propertyName": "submarine.hadoop.keytab",
         "defaultValue": "",
         "description": "submarine hdfs/yarn kerberos authentication",
         "type": "string"
       },
-      "submarine.hadoop.principal": {
+      "SUBMARINE_HADOOP_PRINCIPAL": {
         "envName": "SUBMARINE_HADOOP_PRINCIPAL",
         "propertyName": "submarine.hadoop.principal",
         "defaultValue": "",

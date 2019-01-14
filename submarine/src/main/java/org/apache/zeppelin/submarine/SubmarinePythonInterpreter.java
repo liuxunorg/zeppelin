@@ -18,7 +18,7 @@ import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterException;
 import org.apache.zeppelin.interpreter.InterpreterResult;
 import org.apache.zeppelin.python.PythonInterpreter;
-import org.apache.zeppelin.submarine.statemachine.SubmarineJob;
+import org.apache.zeppelin.submarine.utils.SubmarineJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

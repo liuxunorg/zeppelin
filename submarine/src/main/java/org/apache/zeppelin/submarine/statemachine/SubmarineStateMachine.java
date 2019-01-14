@@ -14,6 +14,7 @@
 
 package org.apache.zeppelin.submarine.statemachine;
 
+import org.apache.zeppelin.submarine.utils.SubmarineJob;
 import org.apache.zeppelin.submarine.utils.SubmarineCommand;
 import org.apache.zeppelin.submarine.utils.SubmarineUI;
 import org.slf4j.Logger;
