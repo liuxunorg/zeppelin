@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.submarine.statemachine;
+package org.apache.zeppelin.submarine.utils;
 
 import com.google.common.io.Resources;
 import com.hubspot.jinjava.Jinjava;
@@ -23,15 +23,12 @@ import org.apache.commons.exec.LogOutputStream;
 import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
-import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
-import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.zeppelin.interpreter.InterpreterContext;
-import org.apache.zeppelin.submarine.utils.HDFSUtils;
-import org.apache.zeppelin.submarine.utils.SubmarineCommand;
-import org.apache.zeppelin.submarine.utils.SubmarineConstants;
-import org.apache.zeppelin.submarine.utils.SubmarineUI;
-import org.apache.zeppelin.submarine.utils.SubmarineUtils;
-import org.apache.zeppelin.submarine.utils.YarnClient;
+import org.apache.zeppelin.submarine.statemachine.SubmarineJobStatus;
+import org.apache.zeppelin.submarine.statemachine.SubmarineStateMachine;
+import org.apache.zeppelin.submarine.statemachine.SubmarineStateMachineContext;
+import org.apache.zeppelin.submarine.statemachine.SubmarineStateMachineEvent;
+import org.apache.zeppelin.submarine.statemachine.SubmarineStateMachineState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.squirrelframework.foundation.fsm.StateMachineBuilder;
@@ -62,11 +59,32 @@ import static org.apache.zeppelin.submarine.statemachine.SubmarineStateMachineSt
 import static org.apache.zeppelin.submarine.utils.SubmarineUtils.unifyKey;
 
 public class SubmarineJob {
+  // org/apache/hadoop/yarn/api/records/YarnApplicationState.class
+  public enum YarnApplicationState {
+    NEW,
+    NEW_SAVING,
+    SUBMITTED,
+    ACCEPTED,
+    RUNNING,
+    FINISHED,
+    FAILED,
+    KILLED;
+  }
+
+  // org/apache/hadoop/yarn/api/records/FinalApplicationStatus.class
+  public enum FinalApplicationStatus {
+    UNDEFINED,
+    SUCCEEDED,
+    FAILED,
+    KILLED,
+    ENDED;
+  }
+
   private Logger LOGGER = LoggerFactory.getLogger(SubmarineJob.class);
 
   private AtomicBoolean running = new AtomicBoolean(true);
 
-  private YarnClient yarnClient = null;
+  private YarnRestClient yarnClient = null;
 
   private SubmarineUI submarineUI = null;
 
@@ -109,8 +127,8 @@ public class SubmarineJob {
     this.intpContext = context;
     this.properties = properties;
     this.noteId = context.getNoteId();
-    this.yarnClient = new YarnClient();
-    this.hdfsUtils = new HDFSUtils("/", properties);
+    this.yarnClient = new YarnRestClient(properties);
+    this.hdfsUtils = new HDFSUtils(properties);
     this.submarineUI = new SubmarineUI(intpContext);
 
     // createSubmarineStateMachine(context);
@@ -182,11 +200,11 @@ public class SubmarineJob {
   }
 
   public void onJobRun() {
+    // Need to display the UI when the page is reloaded, don't create it in the thread
+    submarineUI.createSubmarineUI(SubmarineCommand.JOB_RUN);
     // Check if it already exists
     Map<String, Object> mapYarnAppStatus = getJobStateByYarn();
     if (mapYarnAppStatus.size() == 0) {
-      // Need to display the UI when the page is reloaded, don't create it in the thread
-      submarineUI.createSubmarineUI(SubmarineCommand.JOB_RUN);
       jobRunThread();
     }
   }
@@ -196,11 +214,11 @@ public class SubmarineJob {
   }
 
   public void onJobShow() {
+    // Need to display the UI when the page is reloaded, don't create it in the thread
+    submarineUI.createSubmarineUI(SubmarineCommand.JOB_SHOW);
     // Check if it already exists
     Map<String, Object> mapYarnAppStatus = getJobStateByYarn();
-    if (mapYarnAppStatus.size() > 0) {
-      // Need to display the UI when the page is reloaded, don't create it in the thread
-      submarineUI.createSubmarineUI(SubmarineCommand.JOB_SHOW);
+    if (mapYarnAppStatus.size() == 0) {
       jobShowThread();
     }
   }
@@ -379,7 +397,7 @@ public class SubmarineJob {
 
   public Map<String, Object> getJobStateByYarn() {
     String jobName = SubmarineUtils.getJobName(noteId);
-    Map<String, Object> mapStatus = yarnClient.getAppStatus(jobName);
+    Map<String, Object> mapStatus = yarnClient.getAppState(jobName);
 
     if (mapStatus.containsKey(SubmarineConstants.YARN_APPLICATION_ID)
         && mapStatus.containsKey(SubmarineConstants.YARN_APPLICATION_NAME)

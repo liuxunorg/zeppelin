@@ -15,6 +15,8 @@
 package org.apache.zeppelin.submarine.statemachine;
 
 
+import org.apache.zeppelin.submarine.utils.SubmarineJob;
+
 /**
  * 状态机的上下文环境（根据业务实现自己的状态机流程控制）
  */

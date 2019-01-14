@@ -29,7 +29,7 @@
         <button class="btn btn-default btn-xs" style="margin-left:10px;"
           ng-click="z.angularBind('COMMAND_TYPE','USAGE','{{ PARAGRAPH_ID }}');z.runParagraph('{{ PARAGRAPH_ID }}');"
           tooltip-placement="top" uib-tooltip="Show submarine usage & Parameter Description"> <span class="fa fa-info-circle"></span> Usage</button>
-        <button class="btn btn-default btn-xs" style="margin-left:2px;"
+        <button class="btn btn-default btn-xs" style="margin-left:4px;"
           ng-click="z.angularBind('COMMAND_TYPE','CLEAN_RUNTIME_CACHE','{{ PARAGRAPH_ID }}');z.runParagraph('{{ PARAGRAPH_ID }}');"
           tooltip-placement="top" uib-tooltip="Clean submarine runtime cache"> <span class="fa fa-trash"></span> Clean</button>
       </div>
@@ -106,13 +106,13 @@
   <div>
     <label style="width:140px;text-align:right;margin-right:4px;">Submarine Runtime: </label>
 
-    <i ng-if="JOB_STATUS=='ACCEPT' || JOB_STATUS=='YARN NEW' || JOB_STATUS=='YARN NEW SAVING' || JOB_STATUS=='YARN_ACCEPTED'"
+    <i ng-if="JOB_STATUS=='ACCEPT' || JOB_STATUS=='YARN NEW' || JOB_STATUS=='YARN NEW SAVING' || JOB_STATUS=='YARN ACCEPTED'"
       ng-style="{'color':'green'}" tooltip-placement="top" uib-tooltip="{%raw%}{{YARN_APPLICATION_ID}}{%endraw%} is Accept" class="fa fa-circle-o"">  {%raw%}{{JOB_STATUS}}{%endraw%}</i>
-    <i ng-if="JOB_STATUS=='EXECUTE SUBMARINE' || JOB_STATUS=='YARN_SUBMITTED' || JOB_STATUS=='YARN RUNNING'"
+    <i ng-if="JOB_STATUS=='EXECUTE SUBMARINE' || JOB_STATUS=='YARN SUBMITTED' || JOB_STATUS=='YARN RUNNING'"
       ng-style="{'color':'green'}" tooltip-placement="top" uib-tooltip="{%raw%}{{YARN_APPLICATION_ID}}{%endraw%} is Running" class="fa fa-spinner"">  {%raw%}{{JOB_STATUS}}{%endraw%}</i>
     <i ng-if="JOB_STATUS=='EXECUTE SUBMARINE FINISHED' || JOB_STATUS=='YARN_FINISHED'"
       ng-style="{'color':'green'}" tooltip-placement="top" uib-tooltip="{%raw%}{{YARN_APPLICATION_ID}}{%endraw%} is Finished" class="fa fa-circle"">  {%raw%}{{JOB_STATUS}}{%endraw%}</i>
-    <i ng-if="JOB_STATUS=='EXECUTE SUBMARINE ERROR' || JOB_STATUS=='YARN_FAILED' || JOB_STATUS=='YARN_KILLED'"
+    <i ng-if="JOB_STATUS=='EXECUTE SUBMARINE ERROR' || JOB_STATUS=='YARN FAILED' || JOB_STATUS=='YARN KILLED'"
       ng-style="{'color':'red'}" tooltip-placement="top" uib-tooltip="{%raw%}{{YARN_APPLICATION_ID}}{%endraw%} is Failed" class="fa fa-circle"">  {%raw%}{{JOB_STATUS}}{%endraw%}</i>
 
     <span ng-if="YARN_APP_EXECUTE_TIME!=undefined" class="ng-binding ng-scope" style="background: rgba(255,255,255,0.85); color: #999; font-size:12px; margin-left: 10px;">{%raw%}{{YARN_APP_EXECUTE_TIME}}{%endraw%}</span>
@@ -127,7 +127,7 @@
     </a>
 
     <!-- job progress bar: start -->
-    <div id="submarineRunControl" class="runControl" ng-if="JOB_STATUS=='ACCEPT' || JOB_STATUS=='YARN NEW' || JOB_STATUS=='YARN NEW SAVING' || JOB_STATUS=='YARN_ACCEPTED' || JOB_STATUS=='EXECUTE SUBMARINE' || JOB_STATUS=='YARN_SUBMITTED' || JOB_STATUS=='YARN RUNNING'">
+    <div id="submarineRunControl" class="runControl" ng-if="JOB_STATUS=='ACCEPT' || JOB_STATUS=='YARN NEW' || JOB_STATUS=='YARN NEW SAVING' || JOB_STATUS=='YARN ACCEPTED' || JOB_STATUS=='EXECUTE SUBMARINE' || JOB_STATUS=='YARN SUBMITTED' || JOB_STATUS=='YARN RUNNING'">
       <div id="submarineProgress" class="progress ng-scope"">
         <div class="progress-bar progress-bar-striped active" role="progressbar" style="width: {%raw%}{{JOB_PROGRESS}}%{%endraw%};"/>
       </div>

@@ -46,6 +46,11 @@
             <artifactId>launcher-standard</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.zeppelin</groupId>
+            <artifactId>zeppelin-submarine</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
     <build>

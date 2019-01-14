@@ -1,0 +1,431 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.zeppelin.submarine.utils;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.security.Principal;
+import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonIOException;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
+import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.UserGroupInformation;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.auth.AuthSchemeProvider;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.Credentials;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.AuthSchemes;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.config.Lookup;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.impl.auth.SPNegoSchemeFactory;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.zeppelin.conf.ZeppelinConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.security.auth.login.AppConfigurationEntry;
+import javax.security.auth.login.LoginContext;
+
+public class YarnRestClient {
+  private Logger LOGGER = LoggerFactory.getLogger(YarnRestClient.class);
+
+  private Configuration hadoopConf;
+
+  private String principal;
+  private String keytab;
+
+  private String yarnWebHttpAddr;
+
+  public static final String YARN_REST_APPATTEMPTS = "appAttempts";
+  public static final String YARN_REST_CONTAINER = "container";
+  public static final String YARN_REST_APPATTEMPT = "appAttempt";
+  public static final String YARN_REST_APPATTEMPTID = "appAttemptId";
+
+  public static final String YARN_REST_EXPOSEDPORTS = "EXPOSEDPORTS";
+  public static final String CONTAINER_IP = "CONTAINER_IP";
+  public static final String CONTAINER_PORT = "CONTAINER_PORT";
+  public static final String HOST_IP = "HOST_IP";
+  public static final String HOST_PORT = "HOST_PORT";
+
+  public YarnRestClient(Properties properties) {
+    this.hadoopConf = new Configuration();
+
+    yarnWebHttpAddr = properties.getProperty(SubmarineConstants.YARN_WEB_HTTP_ADDRESS, "");
+    boolean isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
+    if (isSecurityEnabled) {
+      String krb5conf = properties.getProperty(SubmarineConstants.SUBMARINE_HADOOP_KRB5_CONF, "");
+      if (StringUtils.isEmpty(krb5conf)) {
+        krb5conf = "/etc/krb5.conf";
+        System.setProperty("java.security.krb5.conf", krb5conf);
+      }
+
+      String keytab = properties.getProperty(
+          SubmarineConstants.SUBMARINE_HADOOP_KEYTAB, "");
+      String principal = properties.getProperty(
+          SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL, "");
+
+      ZeppelinConfiguration zConf = ZeppelinConfiguration.create();
+      if (StringUtils.isEmpty(keytab)) {
+        keytab = zConf.getString(
+            ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_KEYTAB);
+      }
+      if (StringUtils.isEmpty(principal)) {
+        principal = zConf.getString(
+            ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_PRINCIPAL);
+      }
+      if (StringUtils.isBlank(keytab) || StringUtils.isBlank(principal)) {
+        throw new RuntimeException("keytab and principal can not be empty, keytab: " + keytab
+            + ", principal: " + principal);
+      }
+
+      this.principal = principal;
+      this.keytab = keytab;
+      if (LOGGER.isDebugEnabled()) {
+        System.setProperty("sun.security.spnego.debug", "true");
+        System.setProperty("sun.security.krb5.debug", "true");
+      }
+    }
+  }
+
+  // http://yarn-web-http-address/app/v1/services/${appIdOrName}
+  public Map<String, Object> getAppState(String appIdOrName) {
+    Map<String, Object> mapStatus = new HashMap<>();
+    String appUrl = this.yarnWebHttpAddr + "/app/v1/services/" + appIdOrName
+        + "?_=" + System.currentTimeMillis();
+
+    try {
+      HttpResponse response = callRestUrl(appUrl, principal);
+      InputStream is = response.getEntity().getContent();
+      LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
+      LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
+      String result = new BufferedReader(new InputStreamReader(is))
+          .lines().collect(Collectors.joining(System.lineSeparator()));
+      LOGGER.info("string：\n" + result);
+
+      // parse app status json
+      mapStatus = parseAppState(result);
+    } catch (Exception exp) {
+      exp.printStackTrace();
+    }
+
+    return mapStatus;
+  }
+
+  // http://yarn-web-http-address/ws/v1/cluster/apps/${appId}/appattempts
+  public List<Map<String, Object>> getAppAttempts(String appId) {
+    List<Map<String, Object>> appAttempts = new ArrayList<>();
+    String appUrl = this.yarnWebHttpAddr + "/ws/v1/cluster/apps/" + appId
+        + "/appattempts?_=" + System.currentTimeMillis();
+
+    try {
+      HttpResponse response = callRestUrl(appUrl, principal);
+      InputStream is = response.getEntity().getContent();
+      LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
+      LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
+      String result = new BufferedReader(new InputStreamReader(is))
+          .lines().collect(Collectors.joining(System.lineSeparator()));
+      LOGGER.info("string：\n" + result);
+
+      // parse app status json
+      appAttempts = parseAppAttempts(result);
+    } catch (Exception exp) {
+      exp.printStackTrace();
+    }
+
+    return appAttempts;
+  }
+
+  // http://yarn-web-http-address/ws/v1/cluster/apps/${appId}/appattempts/${appAttemptId}/containers
+  public List<Map<String, Object>> getAppAttemptsContainers(String appId, String appAttemptId) {
+    List<Map<String, Object>> appAttemptsContainers = new ArrayList<>();
+    String appUrl = this.yarnWebHttpAddr + "/ws/v1/cluster/apps/" + appId
+        + "/appattempts/" + appAttemptId + "/containers?_=" + System.currentTimeMillis();
+
+    try {
+      HttpResponse response = callRestUrl(appUrl, principal);
+      InputStream is = response.getEntity().getContent();
+      LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
+      LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
+      String result = new BufferedReader(new InputStreamReader(is))
+          .lines().collect(Collectors.joining(System.lineSeparator()));
+      LOGGER.info("string：\n" + result);
+
+      // parse app status json
+      appAttemptsContainers = parseAppAttemptsContainers(result);
+    } catch (Exception exp) {
+      exp.printStackTrace();
+    }
+
+    return appAttemptsContainers;
+  }
+
+  public List<Map<String, Object>> getAppAttemptsContainersExportPorts(String appId) {
+    List<Map<String, Object>> listExportPorts = new ArrayList<>();
+
+    // appId -> appAttemptId
+    List<Map<String, Object>> listAppAttempts = getAppAttempts(appId);
+    for (Map<String, Object> mapAppAttempts : listAppAttempts) {
+      if (mapAppAttempts.containsKey(YARN_REST_APPATTEMPTID)) {
+        String appAttemptId = (String) mapAppAttempts.get(YARN_REST_APPATTEMPTID);
+        List<Map<String, Object>> exportPorts = getAppAttemptsContainers(appId, appAttemptId);
+        if (exportPorts.size() > 0) {
+          listExportPorts.addAll(exportPorts);
+        }
+      }
+    }
+
+    return listExportPorts;
+  }
+
+  // Kerberos authentication for simulated curling
+  private static HttpClient buildSpengoHttpClient() {
+    HttpClientBuilder builder = HttpClientBuilder.create();
+    Lookup<AuthSchemeProvider> authSchemeRegistry
+        = RegistryBuilder.<AuthSchemeProvider>create().register(
+            AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true)).build();
+    builder.setDefaultAuthSchemeRegistry(authSchemeRegistry);
+    BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+    credentialsProvider.setCredentials(new AuthScope(null, -1, null), new Credentials() {
+      @Override
+      public Principal getUserPrincipal() {
+        return null;
+      }
+
+      @Override
+      public String getPassword() {
+        return null;
+      }
+    });
+    builder.setDefaultCredentialsProvider(credentialsProvider);
+    CloseableHttpClient httpClient = builder.build();
+    return httpClient;
+  }
+
+  public HttpResponse callRestUrl(final String url, final String userId) {
+    LOGGER.debug(String.format("Calling YarnRestClient %s %s %s",
+        this.principal, this.keytab, url));
+    javax.security.auth.login.Configuration config = new javax.security.auth.login.Configuration() {
+      @SuppressWarnings("serial")
+      @Override
+      public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
+        return new AppConfigurationEntry[]{new AppConfigurationEntry(
+            "com.sun.security.auth.module.Krb5LoginModule",
+            AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+            new HashMap<String, Object>() {
+              {
+                put("useTicketCache", "false");
+                put("useKeyTab", "true");
+                put("keyTab", keytab);
+                // Krb5 in GSS API needs to be refreshed so it does not throw the error
+                // Specified version of key is not available
+                put("refreshKrb5Config", "true");
+                put("principal", principal);
+                put("storeKey", "true");
+                put("doNotPrompt", "true");
+                put("isInitiator", "true");
+                put("debug", "true");
+              }
+            })};
+      }
+    };
+
+    Set<Principal> principals = new HashSet<Principal>(1);
+    principals.add(new KerberosPrincipal(userId));
+    Subject sub = new Subject(false, principals, new HashSet<Object>(), new HashSet<Object>());
+    try {
+      // Authentication module: Krb5Login
+      LoginContext loginContext = new LoginContext("Krb5Login", sub, null, config);
+      loginContext.login();
+      Subject serviceSubject = loginContext.getSubject();
+      return Subject.doAs(serviceSubject, new PrivilegedAction<HttpResponse>() {
+        HttpResponse httpResponse = null;
+
+        @Override
+        public HttpResponse run() {
+          try {
+            HttpUriRequest request = new HttpGet(url);
+
+            HttpClient spnegoHttpClient = buildSpengoHttpClient();
+            httpResponse = spnegoHttpClient.execute(request);
+            return httpResponse;
+          } catch (IOException ioe) {
+            ioe.printStackTrace();
+          }
+          return httpResponse;
+        }
+      });
+    } catch (Exception le) {
+      le.printStackTrace();
+    }
+    return null;
+  }
+
+  private Map<String, Object> parseAppState(String appJson) {
+    Map<String, Object> mapStatus = new HashMap<>();
+
+    try {
+      JsonParser jsonParser = new JsonParser();
+      JsonObject jsonObject = (JsonObject) jsonParser.parse(appJson);
+
+      JsonElement elementAppId = jsonObject.get("id");
+      JsonElement elementAppState = jsonObject.get("state");
+      JsonElement elementAppName = jsonObject.get("name");
+
+      String appId = (elementAppId == null) ? "" : elementAppId.getAsString();
+      String appState = (elementAppState == null) ? "" : elementAppState.getAsString();
+      String appName = (elementAppName == null) ? "" : elementAppName.getAsString();
+
+      if (!StringUtils.isEmpty(appId)) {
+        mapStatus.put(SubmarineConstants.YARN_APPLICATION_ID, appId);
+      }
+      if (!StringUtils.isEmpty(appName)) {
+        mapStatus.put(SubmarineConstants.YARN_APPLICATION_NAME, appName);
+      }
+      if (!StringUtils.isEmpty(appState)) {
+        mapStatus.put(SubmarineConstants.YARN_APPLICATION_STATUS, appState);
+      }
+    } catch (JsonIOException e) {
+      e.printStackTrace();
+    } catch (JsonSyntaxException e) {
+      e.printStackTrace();
+    }
+
+    return mapStatus;
+  }
+
+  // appJson format : submarine/src/test/resources/appAttempts.json
+  public List<Map<String, Object>> parseAppAttempts(String jsonContent) {
+    List<Map<String, Object>> appAttempts = new ArrayList<>();
+
+    try {
+      JsonParser jsonParser = new JsonParser();
+      JsonObject jsonObject = (JsonObject) jsonParser.parse(jsonContent);
+
+      JsonObject jsonAppAttempts = jsonObject.get(YARN_REST_APPATTEMPTS).getAsJsonObject();
+      if (null == jsonAppAttempts) {
+        return appAttempts;
+      }
+      JsonArray jsonAppAttempt = jsonAppAttempts.get(YARN_REST_APPATTEMPT).getAsJsonArray();
+      if (null == jsonAppAttempt) {
+        return appAttempts;
+      }
+      for (int i = 0; i < jsonAppAttempt.size(); i++) {
+        Map<String, Object> mapAppAttempt = new HashMap<>();
+
+        JsonObject jsonParagraph = jsonAppAttempt.get(i).getAsJsonObject();
+
+        JsonElement jsonElement = jsonParagraph.get("id");
+        String id = (jsonElement == null) ? "" : jsonElement.getAsString();
+        mapAppAttempt.put("id", id);
+
+        jsonElement = jsonParagraph.get(YARN_REST_APPATTEMPTID);
+        String appAttemptId = (jsonElement == null) ? "" : jsonElement.getAsString();
+        mapAppAttempt.put(YARN_REST_APPATTEMPTID, appAttemptId);
+
+        appAttempts.add(mapAppAttempt);
+      }
+    } catch (JsonIOException e) {
+      e.printStackTrace();
+    } catch (JsonSyntaxException e) {
+      e.printStackTrace();
+    }
+
+    return appAttempts;
+  }
+
+
+  // appJson format : submarine/src/test/resources/appAttempts.json
+  public List<Map<String, Object>> parseAppAttemptsContainers(String jsonContent) {
+    List<Map<String, Object>> appContainers = new ArrayList<>();
+
+    try {
+      JsonParser jsonParser = new JsonParser();
+      JsonObject jsonObject = (JsonObject) jsonParser.parse(jsonContent);
+
+      JsonArray jsonContainers = jsonObject.get(YARN_REST_CONTAINER).getAsJsonArray();
+      for (int i = 0; i < jsonContainers.size(); i++) {
+        String hostIp = "";
+
+        JsonObject jsonContainer = jsonContainers.get(i).getAsJsonObject();
+
+        JsonElement jsonElement = jsonContainer.get("nodeId");
+        String nodeId = (jsonElement == null) ? "" : jsonElement.getAsString();
+        String[] nodeIdParts = nodeId.split(":");
+        if (nodeIdParts.length == 2) {
+          hostIp = nodeIdParts[0];
+        }
+
+        jsonElement = jsonContainer.get("exposedPorts");
+        String exposedPorts = (jsonElement == null) ? "" : jsonElement.getAsString();
+
+        Gson gson = new Gson();
+        Map<String, List<Map<String, String>>> listExposedPorts = gson.fromJson(exposedPorts,
+            new TypeToken<Map<String, List<Map<String, String>>>>() {
+            }.getType());
+        if (null == listExposedPorts) {
+          continue;
+        }
+        for (Map.Entry<String, List<Map<String, String>>> entry : listExposedPorts.entrySet()) {
+          String containerPort = entry.getKey();
+          String[] containerPortParts = containerPort.split("/");
+          if (containerPortParts.length == 2) {
+            List<Map<String, String>> hostIps = entry.getValue();
+            for (Map<String, String> hostAttrib : hostIps) {
+              Map<String, Object> containerExposedPort = new HashMap<>();
+              String hostPort = hostAttrib.get("HostPort");
+              containerExposedPort.put(HOST_IP, hostIp);
+              containerExposedPort.put(HOST_PORT, hostPort);
+              containerExposedPort.put(CONTAINER_PORT, containerPortParts[0]);
+              appContainers.add(containerExposedPort);
+            }
+          }
+        }
+      }
+    } catch (JsonIOException e) {
+      e.printStackTrace();
+    } catch (JsonSyntaxException e) {
+      e.printStackTrace();
+    }
+
+    return appContainers;
+  }
+}
