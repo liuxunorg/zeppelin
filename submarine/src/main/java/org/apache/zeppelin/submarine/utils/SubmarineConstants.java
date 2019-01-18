@@ -18,16 +18,21 @@ package org.apache.zeppelin.submarine.utils;
  * NOTE: use lowercase + "_" for the option name
  */
 public class SubmarineConstants {
+  // hadoop home in docker container
+  public static final String DOCKER_HADOOP_HDFS_HOME = "DOCKER_HADOOP_HDFS_HOME";
+  public static final String DOCKER_JAVA_HOME   = "DOCKER_JAVA_HOME";
+  public static final String INTERPRETER_LAUNCH_MODE = "INTERPRETER_LAUNCH_MODE";
+
   // interpreter.sh Environmental variable
   public static final String SUBMARINE_HADOOP_HOME  = "SUBMARINE_HADOOP_HOME";
-  public static final String DOCKER_JAVA_HOME       = "DOCKER_JAVA_HOME";
-  public static final String DOCKER_HADOOP_HDFS_HOME = "DOCKER_HADOOP_HDFS_HOME";
   public static final String HADOOP_YARN_SUBMARINE_JAR  = "HADOOP_YARN_SUBMARINE_JAR";
   public static final String SUBMARINE_INTERPRETER_DOCKER_IMAGE
       = "SUBMARINE_INTERPRETER_DOCKER_IMAGE";
 
+  public static final String SUBMARINE_HADOOP_CONF_DIR = "SUBMARINE_HADOOP_CONF_DIR";
   public static final String SUBMARINE_HADOOP_KEYTAB    = "SUBMARINE_HADOOP_KEYTAB";
   public static final String SUBMARINE_HADOOP_PRINCIPAL = "SUBMARINE_HADOOP_PRINCIPAL";
+  public static final String SUBMARINE_HADOOP_KRB5_CONF = "submarine.hadoop.krb5.conf";
 
   public static final String JOB_NAME = "JOB_NAME";
   public static final String INPUT_PATH = "INPUT_PATH";
@@ -41,7 +46,6 @@ public class SubmarineConstants {
   public static final String DOCKER_CONTAINER_NETWORK   = "docker.container.network";
   public static final String SUBMARINE_YARN_QUEUE       = "submarine.yarn.queue";
   public static final String SUBMARINE_CONCURRENT_MAX   = "submarine.concurrent.max";
-  public static final String SUBMARINE_HADOOP_KRB5_CONF = "submarine.hadoop.krb5.conf";
 
   public static final String SUBMARINE_ALGORITHM_HDFS_PATH = "submarine.algorithm.hdfs.path";
   public static final String SUBMARINE_ALGORITHM_HDFS_FILES = "submarine.algorithm.hdfs.files";
@@ -76,7 +80,7 @@ public class SubmarineConstants {
 
   public static final String COMMANDLINE_OPTIONS = "COMMANDLINE_OPTIONS";
 
-  public static final String INTERPRETER_LAUNCH_MODE = "INTERPRETER_LAUNCH_MODE";
+
 
   // YARN
   public static final String YARN_WEB_HTTP_ADDRESS

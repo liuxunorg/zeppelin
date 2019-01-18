@@ -66,134 +66,85 @@ public class SubmarineUtils {
                                                 HDFSUtils hdfsUtils, String noteId,
                                                 boolean outputLog)
       throws IOException {
-    // Properties properties = submarineJob.getProperties();
-
-    String submarineHadoopHome;
-    String submarineJar;
-    submarineHadoopHome = properties.getProperty(SubmarineConstants.SUBMARINE_HADOOP_HOME, "");
-    submarineJar = properties.getProperty(SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR, "");
-
     StringBuffer sbMessage = new StringBuffer();
 
     // Check user-set job variables
-    String inputPath = properties.getProperty(SubmarineConstants.INPUT_PATH);
-    if (StringUtils.isEmpty(inputPath) && outputLog) {
-      setUserPropertiesWarn(sbMessage, SubmarineConstants.INPUT_PATH, "=path...\n");
-    }
-    String checkPointPath = properties.getProperty(SubmarineConstants.CHECKPOINT_PATH);
-    if (StringUtils.isEmpty(checkPointPath) && outputLog) {
-      setUserPropertiesWarn(sbMessage, SubmarineConstants.CHECKPOINT_PATH, "=path...\n");
-    }
-    String psLaunchCmd = properties.getProperty(SubmarineConstants.PS_LAUNCH_CMD);
-    if (StringUtils.isEmpty(psLaunchCmd) && outputLog) {
-      setUserPropertiesWarn(sbMessage, SubmarineConstants.PS_LAUNCH_CMD,
-          "=python cifar10_main.py " +
-              "--data-dir=hdfs://mldev/tmp/cifar-10-data " +
-              "--job-dir=hdfs://mldev/tmp/cifar-10-jobdir --num-gpus=0\n");
-    }
-    String workerLaunchCmd = properties.getProperty(SubmarineConstants.WORKER_LAUNCH_CMD);
-    if (StringUtils.isEmpty(workerLaunchCmd) && outputLog) {
-      setUserPropertiesWarn(sbMessage, SubmarineConstants.WORKER_LAUNCH_CMD,
-          "=python cifar10_main.py " +
-              "--data-dir=hdfs://mldev/tmp/cifar-10-data " +
-              "--job-dir=hdfs://mldev/tmp/cifar-10-jobdir " +
-              "--train-steps=500 --eval-batch-size=16 --train-batch-size=16 --sync --num-gpus=1\n");
-    }
+    String inputPath = getProperty(
+        properties, SubmarineConstants.INPUT_PATH, outputLog, sbMessage);
+    String checkPointPath = getProperty(
+        properties, SubmarineConstants.CHECKPOINT_PATH, outputLog, sbMessage);
+    String psLaunchCmd = getProperty(
+        properties, SubmarineConstants.PS_LAUNCH_CMD, outputLog, sbMessage);
+
+    String workerLaunchCmd = getProperty(
+        properties, SubmarineConstants.WORKER_LAUNCH_CMD, outputLog, sbMessage);
 
     // Check interpretere set Properties
-    if (StringUtils.isEmpty(submarineHadoopHome) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.SUBMARINE_HADOOP_HOME);
-    }
+    String submarineHadoopHome;
+    submarineHadoopHome = getProperty(
+        properties, SubmarineConstants.SUBMARINE_HADOOP_HOME, outputLog, sbMessage);
     File file = new File(submarineHadoopHome);
     if (!file.exists()) {
-      sbMessage.append(SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR + ": "
+      sbMessage.append(SubmarineConstants.SUBMARINE_HADOOP_HOME + ": "
           + submarineHadoopHome + " is not a valid file path!\n");
     }
-    if (StringUtils.isEmpty(submarineJar) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR);
-    }
+
+    String submarineJar = getProperty(
+        properties, SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR, outputLog, sbMessage);
     file = new File(submarineJar);
     if (!file.exists()) {
       sbMessage.append(SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR + ":"
           + submarineJar + " is not a valid file path!\n");
     }
-    String containerNetwork = properties.getProperty(
-        SubmarineConstants.DOCKER_CONTAINER_NETWORK, "");
-    if (StringUtils.isEmpty(containerNetwork) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.DOCKER_CONTAINER_NETWORK);
-    }
-    String parameterServicesImage = properties.getProperty(
-        SubmarineConstants.TF_PARAMETER_SERVICES_DOCKER_IMAGE, "");
-    if (StringUtils.isEmpty(parameterServicesImage) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.TF_PARAMETER_SERVICES_DOCKER_IMAGE);
-    }
-    String parameterServicesNum = properties.getProperty(
-        SubmarineConstants.TF_PARAMETER_SERVICES_NUM, "");
-    if (StringUtils.isEmpty(parameterServicesNum) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.TF_PARAMETER_SERVICES_NUM);
-    }
-    String parameterServicesGpu = properties.getProperty(
-        SubmarineConstants.TF_PARAMETER_SERVICES_GPU, "");
-    if (StringUtils.isEmpty(parameterServicesGpu) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.TF_PARAMETER_SERVICES_GPU);
-    }
-    String parameterServicesCpu = properties.getProperty(
-        SubmarineConstants.TF_PARAMETER_SERVICES_CPU, "");
-    if (StringUtils.isEmpty(parameterServicesCpu) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.TF_PARAMETER_SERVICES_CPU);
-    }
-    String parameterServicesMemory = properties.getProperty(
-        SubmarineConstants.TF_PARAMETER_SERVICES_MEMORY, "");
-    if (StringUtils.isEmpty(parameterServicesMemory) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.TF_PARAMETER_SERVICES_MEMORY);
-    }
-    String workerServicesImage = properties.getProperty(
-        SubmarineConstants.TF_WORKER_SERVICES_DOCKER_IMAGE, "");
-    if (StringUtils.isEmpty(workerServicesImage) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.TF_WORKER_SERVICES_DOCKER_IMAGE);
-    }
-    String workerServicesNum = properties.getProperty(
-        SubmarineConstants.TF_WORKER_SERVICES_NUM, "");
-    if (StringUtils.isEmpty(workerServicesNum) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.TF_WORKER_SERVICES_NUM);
-    }
-    String workerServicesGpu = properties.getProperty(
-        SubmarineConstants.TF_WORKER_SERVICES_GPU, "");
-    if (StringUtils.isEmpty(workerServicesGpu) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.TF_WORKER_SERVICES_GPU);
-    }
-    String workerServicesCpu = properties.getProperty(
-        SubmarineConstants.TF_WORKER_SERVICES_CPU, "");
-    if (StringUtils.isEmpty(workerServicesCpu) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.TF_WORKER_SERVICES_CPU);
-    }
-    String workerServicesMemory = properties.getProperty(
-        SubmarineConstants.TF_WORKER_SERVICES_MEMORY, "");
-    if (StringUtils.isEmpty(workerServicesMemory) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.TF_WORKER_SERVICES_MEMORY);
-    }
-    String algorithmUploadPath = properties.getProperty(
-        SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH, "");
-    if (StringUtils.isEmpty(algorithmUploadPath) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH);
-    }
-    String submarineHadoopKeytab = properties.getProperty(
-        SubmarineConstants.SUBMARINE_HADOOP_KEYTAB, "");
-    if (StringUtils.isEmpty(submarineHadoopKeytab) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.SUBMARINE_HADOOP_KEYTAB);
-    }
+    String containerNetwork = getProperty(
+        properties, SubmarineConstants.DOCKER_CONTAINER_NETWORK, outputLog, sbMessage);
+    String parameterServicesImage = getProperty(
+        properties, SubmarineConstants.TF_PARAMETER_SERVICES_DOCKER_IMAGE, outputLog, sbMessage);
+    String parameterServicesNum = getProperty(
+        properties, SubmarineConstants.TF_PARAMETER_SERVICES_NUM, outputLog, sbMessage);
+    String parameterServicesGpu = getProperty(
+        properties, SubmarineConstants.TF_PARAMETER_SERVICES_GPU, outputLog, sbMessage);
+    String parameterServicesCpu = getProperty(
+        properties, SubmarineConstants.TF_PARAMETER_SERVICES_CPU, outputLog, sbMessage);
+    String parameterServicesMemory = getProperty(
+        properties, SubmarineConstants.TF_PARAMETER_SERVICES_MEMORY, outputLog, sbMessage);
+    String workerServicesImage = getProperty(
+        properties, SubmarineConstants.TF_WORKER_SERVICES_DOCKER_IMAGE, outputLog, sbMessage);
+    String workerServicesNum = getProperty(
+        properties, SubmarineConstants.TF_WORKER_SERVICES_NUM, outputLog, sbMessage);
+    String workerServicesGpu = getProperty(
+        properties, SubmarineConstants.TF_WORKER_SERVICES_GPU, outputLog, sbMessage);
+    String workerServicesCpu = getProperty(
+        properties, SubmarineConstants.TF_WORKER_SERVICES_CPU, outputLog, sbMessage);
+    String workerServicesMemory = getProperty(
+        properties, SubmarineConstants.TF_WORKER_SERVICES_MEMORY, outputLog, sbMessage);
+    String algorithmUploadPath = getProperty(
+        properties, SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH, outputLog, sbMessage);
+    String submarineHadoopKeytab = getProperty(
+        properties, SubmarineConstants.SUBMARINE_HADOOP_KEYTAB, outputLog, sbMessage);
     file = new File(submarineHadoopKeytab);
     if (!file.exists()) {
       sbMessage.append(SubmarineConstants.SUBMARINE_HADOOP_KEYTAB + ":"
           + submarineHadoopKeytab + " is not a valid file path!\n");
     }
-    String submarineHadoopPrincipal = properties.getProperty(
-        SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL, "");
-    if (StringUtils.isEmpty(submarineHadoopKeytab) && outputLog) {
-      setIntpPropertiesWarn(sbMessage, SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL);
+    String submarineHadoopPrincipal = getProperty(
+        properties, SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL, outputLog, sbMessage);
+    String machinelearingDistributed = getProperty(
+        properties, SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE, outputLog, sbMessage);
+    if (StringUtils.isEmpty(machinelearingDistributed)) {
+      machinelearingDistributed = "false"; // default
     }
-    String machinelearingDistributed = properties.getProperty(
-        SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE, "false");
+    String dockerHadoopHdfsHome = getProperty(
+        properties, SubmarineConstants.DOCKER_HADOOP_HDFS_HOME, outputLog, sbMessage);
+    String dockerJavaHome = getProperty(
+        properties, SubmarineConstants.DOCKER_JAVA_HOME, outputLog, sbMessage);
+    String intpLaunchMode = getProperty(
+        properties, SubmarineConstants.INTERPRETER_LAUNCH_MODE, outputLog, sbMessage);
+    if (StringUtils.isEmpty(intpLaunchMode)) {
+      intpLaunchMode = "local"; // default
+    }
+    String sumbarineHadoopConfDir = getProperty(
+        properties, SubmarineConstants.SUBMARINE_HADOOP_CONF_DIR, outputLog, sbMessage);
 
     String notePath = algorithmUploadPath + File.separator + noteId;
     List<String> arrayHdfsFiles = new ArrayList<>();
@@ -224,7 +175,11 @@ public class SubmarineUtils {
     // Save user-set variables and interpreter configuration parameters
     String jobName = SubmarineUtils.getJobName(noteId);
     HashMap<String, Object> mapParams = new HashMap();
+    mapParams.put(unifyKey(SubmarineConstants.INTERPRETER_LAUNCH_MODE), intpLaunchMode);
     mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_HADOOP_HOME), submarineHadoopHome);
+    mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_HADOOP_CONF_DIR), sumbarineHadoopConfDir);
+    mapParams.put(unifyKey(SubmarineConstants.DOCKER_HADOOP_HDFS_HOME), dockerHadoopHdfsHome);
+    mapParams.put(unifyKey(SubmarineConstants.DOCKER_JAVA_HOME), dockerJavaHome);
     mapParams.put(unifyKey(SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR), submarineJar);
     mapParams.put(unifyKey(SubmarineConstants.JOB_NAME), jobName);
     mapParams.put(unifyKey(SubmarineConstants.DOCKER_CONTAINER_NETWORK), containerNetwork);
@@ -258,18 +213,15 @@ public class SubmarineUtils {
     return mapParams;
   }
 
-  private static StringBuffer setUserPropertiesWarn(
-      StringBuffer sbMessage, String key, String info) {
-    sbMessage.append("EXECUTE_SUBMARINE_ERROR: Please set the parameter ");
-    sbMessage.append(key);
-    sbMessage.append(" first, \nfor example: ");
-    sbMessage.append(key + info);
+  private static String getProperty(Properties properties, String key,
+                                    boolean outputLog, StringBuffer sbMessage) {
+    String value = properties.getProperty(key, "");
+    if (StringUtils.isEmpty(value) && outputLog) {
+      sbMessage.append("EXECUTE_SUBMARINE_ERROR: " +
+          "Please set the submarine interpreter properties : ");
+      sbMessage.append(key).append("\n");
+    }
 
-    return sbMessage;
-  }
-
-  private static void setIntpPropertiesWarn(StringBuffer sbMessage, String key) {
-    sbMessage.append("EXECUTE_SUBMARINE_ERROR: Please set the submarine interpreter properties : ");
-    sbMessage.append(key).append("\n");
+    return value;
   }
 }

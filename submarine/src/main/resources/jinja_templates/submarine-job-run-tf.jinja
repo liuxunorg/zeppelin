@@ -13,18 +13,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
--#}
-{{ SUBMARINE_HADOOP_HOME }}/bin/yarn app -destroy {{ JOB_NAME }}; \
-{{ SUBMARINE_HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
+#}
+{%- if INTERPRETER_LAUNCH_MODE and INTERPRETER_LAUNCH_MODE == 'yarn' -%}
+  {{ DOCKER_HADOOP_HDFS_HOME }}/bin/yarn app -destroy {{ JOB_NAME }}; \
+  {{ DOCKER_HADOOP_HDFS_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
+{%- else -%}
+  {{ SUBMARINE_HADOOP_HOME }}/bin/yarn app -destroy {{ JOB_NAME }}; \
+  {{ SUBMARINE_HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
+{%- endif %}
   job run \
   --name {{ JOB_NAME }} \
-  --env DOCKER_JAVA_HOME=/opt/java \
-  --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 \
+  --env DOCKER_JAVA_HOME={{ DOCKER_JAVA_HOME }} \
+  --env DOCKER_HADOOP_HDFS_HOME={{ DOCKER_HADOOP_HDFS_HOME }} \
   --env PYTHONPATH="./submarine_algorithm:$PYTHONPATH" \
   --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK={{ DOCKER_CONTAINER_NETWORK }} \
   --input_path {{ INPUT_PATH }} \
   --checkpoint_path {{ CHECKPOINT_PATH }} \
-{%- if MACHINELEARING_DISTRIBUTED_ENABLE -%}
+{%- if MACHINELEARING_DISTRIBUTED_ENABLE and MACHINELEARING_DISTRIBUTED_ENABLE == 'true' %}
   --num_ps {{ TF_PARAMETER_SERVICES_NUM }} \
   --ps_docker_image {{ TF_PARAMETER_SERVICES_DOCKER_IMAGE }} \
   --ps_resources memory={{ TF_PARAMETER_SERVICES_MEMORY }},vcores={{ TF_PARAMETER_SERVICES_CPU }},gpu={{ TF_PARAMETER_SERVICES_GPU }} \
@@ -33,12 +38,12 @@
   --num_workers {{ TF_WORKER_SERVICES_NUM }} \
 {%- else -%}
   --docker_image {{ TF_WORKER_SERVICES_DOCKER_IMAGE }} \
-{%- endif -%}
+{%- endif %}
   --worker_resources memory={{ TF_WORKER_SERVICES_MEMORY }},vcores={{ TF_WORKER_SERVICES_CPU }},gpu={{ TF_WORKER_SERVICES_GPU }} \
   --worker_launch_cmd "{{ WORKER_LAUNCH_CMD }}" \
-{% for file in SUBMARINE_ALGORITHM_HDFS_FILES -%}
+{%- for file in SUBMARINE_ALGORITHM_HDFS_FILES %}
   --localization "{{ file }}:." \
-{% endfor -%}
+{%- endfor %}
   --localization "{{ SUBMARINE_ALGORITHM_HDFS_PATH }}:./submarine_algorithm" \
   --keytab {{ SUBMARINE_HADOOP_KEYTAB }} \
   --principal {{ SUBMARINE_HADOOP_PRINCIPAL }} \

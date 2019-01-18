@@ -223,10 +223,10 @@ elif [[ "${INTERPRETER_ID}" == "submarine" ]]; then
     ZEPPELIN_INTP_CLASSPATH+=":${SUBMARINE_HADOOP_CONF_DIR}"
   fi
   export YARN_BIN="${HADOOP_HOME}/bin/yarn"
-  export SUBMARINE_JAVA_INTP_OPTS="/usr/bin/java -Dfile.encoding=UTF-8 -Dlog4j.configuration=file:///zeppelin/conf/log4j.properties "
-  SUBMARINE_JAVA_INTP_OPTS="${SUBMARINE_JAVA_INTP_OPTS} -Dzeppelin.log.file=/zeppelin/logs/zeppelin-interpreter-submarine.log"
-  export SUBMARINE_INTP_CLASSPATH=":/zeppelin/interpreter/submarine/*"
-  SUBMARINE_INTP_CLASSPATH="${SUBMARINE_INTP_CLASSPATH}:/zeppelin/lib/interpreter/*"
+  export SUBMARINE_DOCKER_JAVA_INTP_OPTS="${DOCKER_JAVA_HOME}/bin/java -Dfile.encoding=UTF-8 -Dlog4j.configuration=file:///submarine/zeppelin/conf/log4j.properties "
+  SUBMARINE_DOCKER_JAVA_INTP_OPTS="${SUBMARINE_DOCKER_JAVA_INTP_OPTS} -Dzeppelin.log.file=/tmp/zeppelin-interpreter-submarine.log"
+  export SUBMARINE_INTP_CLASSPATH=":/submarine/zeppelin/interpreter/submarine/*"
+  SUBMARINE_INTP_CLASSPATH="${SUBMARINE_INTP_CLASSPATH}:/submarine/zeppelin/lib/interpreter/*"
   SUBMARINE_INTP_CLASSPATH="${SUBMARINE_INTP_CLASSPATH}:/usr/lib/jvm/java-8-openjdk-amd64/lib"
   SUBMARINE_INTP_CLASSPATH="${SUBMARINE_INTP_CLASSPATH}:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib"
   SUBMARINE_INTP_CLASSPATH="${SUBMARINE_INTP_CLASSPATH}:/usr/lib/jvm/java-8-openjdk-amd64/jre/lib/charsets.jar"
@@ -235,8 +235,8 @@ elif [[ "${INTERPRETER_ID}" == "submarine" ]]; then
       export SUBMARINE_RUNNER="${YARN_BIN} app -destroy ${SUBMARINE_JOB_NAME}; "
       SUBMARINE_RUNNER="${SUBMARINE_RUNNER} ${YARN_BIN} jar ${HADOOP_YARN_SUBMARINE_JAR} "
       SUBMARINE_RUNNER="${SUBMARINE_RUNNER} job run --name ${SUBMARINE_JOB_NAME} "
-      SUBMARINE_RUNNER="${SUBMARINE_RUNNER} --env DOCKER_JAVA_HOME=/opt/java "
-      SUBMARINE_RUNNER="${SUBMARINE_RUNNER} --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 "
+      SUBMARINE_RUNNER="${SUBMARINE_RUNNER} --env DOCKER_JAVA_HOME=${DOCKER_JAVA_HOME} "
+      SUBMARINE_RUNNER="${SUBMARINE_RUNNER} --env DOCKER_HADOOP_HDFS_HOME=${DOCKER_HADOOP_HDFS_HOME} "
       SUBMARINE_RUNNER="${SUBMARINE_RUNNER} --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=bridge "
       SUBMARINE_RUNNER="${SUBMARINE_RUNNER} ${SUBMARINE_ZEPPELIN_CONF_DIR_EVN} "
       SUBMARINE_RUNNER="${SUBMARINE_RUNNER} ${SUBMARINE_LOCALIZATION} "
@@ -269,7 +269,7 @@ if [[ -n "${SPARK_SUBMIT}" ]]; then
     INTERPRETER_RUN_COMMAND+=' '` echo ${SPARK_SUBMIT} --class ${ZEPPELIN_SERVER} --driver-class-path \"${ZEPPELIN_INTP_CLASSPATH_OVERRIDES}:${ZEPPELIN_INTP_CLASSPATH}\" --driver-java-options \"${JAVA_INTP_OPTS}\" ${SPARK_SUBMIT_OPTIONS} ${ZEPPELIN_SPARK_CONF} ${SPARK_APP_JAR} ${CALLBACK_HOST} ${PORT} ${INTP_GROUP_ID} ${INTP_PORT}`
 elif [[ "${INTERPRETER_ID}" == "submarine" && -n "${SUBMARINE_RUNNER}" ]]; then
     if [[ "${INTERPRETER_LAUNCH_MODE}" == "yarn" ]]; then
-        INTERPRETER_RUN_COMMAND+=' '` echo ${SUBMARINE_RUNNER} --worker_launch_cmd \"${SUBMARINE_JAVA_INTP_OPTS} ${ZEPPELIN_INTP_MEM} -cp ${SUBMARINE_INTP_CLASSPATH} ${ZEPPELIN_SERVER} ${CALLBACK_HOST} ${PORT} ${INTP_GROUP_ID} ${INTP_PORT} \&\& sleep infinity\"`
+        INTERPRETER_RUN_COMMAND+=' '` echo ${SUBMARINE_RUNNER} --worker_launch_cmd \"${SUBMARINE_DOCKER_JAVA_INTP_OPTS} ${ZEPPELIN_INTP_MEM} -cp ${SUBMARINE_INTP_CLASSPATH} ${ZEPPELIN_SERVER} ${CALLBACK_HOST} ${PORT} ${INTP_GROUP_ID} ${INTP_PORT} \&\& sleep infinity\"`
     else
         INTERPRETER_RUN_COMMAND+=' '` echo ${ZEPPELIN_RUNNER} ${JAVA_INTP_OPTS} ${ZEPPELIN_INTP_MEM} -cp ${ZEPPELIN_INTP_CLASSPATH_OVERRIDES}:${ZEPPELIN_INTP_CLASSPATH} ${ZEPPELIN_SERVER} ${CALLBACK_HOST} ${PORT} ${INTP_GROUP_ID} ${INTP_PORT}`
     fi

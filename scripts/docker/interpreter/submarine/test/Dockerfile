@@ -32,5 +32,3 @@ RUN tar zxvf /zeppelin-${Z_VERSION}.tar.gz && \
 
 EXPOSE 8080
 EXPOSE 29914
-
-WORKDIR ${Z_HOME}

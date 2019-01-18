@@ -17,7 +17,9 @@ package org.apache.zeppelin.submarine.utils;
 import com.google.common.io.Resources;
 import com.hubspot.jinjava.Jinjava;
 import org.apache.commons.exec.CommandLine;
+import org.apache.commons.exec.DefaultExecuteResultHandler;
 import org.apache.commons.exec.DefaultExecutor;
+import org.apache.commons.exec.ExecuteException;
 import org.apache.commons.exec.ExecuteWatchdog;
 import org.apache.commons.exec.LogOutputStream;
 import org.apache.commons.exec.PumpStreamHandler;
@@ -38,6 +40,7 @@ import org.squirrelframework.foundation.fsm.StateMachineConfiguration;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -239,6 +242,7 @@ public class SubmarineJob {
           submarineCommand(SubmarineCommand.JOB_SHOW);
         } catch (Exception e) {
           setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
+          LOGGER.error(e.getMessage(), e);
           submarineUI.outputLog("Exception", e.getMessage());
         } finally {
 
@@ -267,6 +271,7 @@ public class SubmarineJob {
           submarineCommand(SubmarineCommand.JOB_SHOW);
         } catch (Exception e) {
           setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
+          LOGGER.error(e.getMessage(), e);
           submarineUI.outputLog("Exception", e.getMessage());
         } finally {
 
@@ -300,27 +305,27 @@ public class SubmarineJob {
           }
           showJobProgressBar(0.1f);
 
-          HashMap jinjaParams = SubmarineUtils.propertiesToJinjaParams(properties, submarineUI,
-              hdfsUtils, noteId, true);
+          HashMap jinjaParams = SubmarineUtils.propertiesToJinjaParams(
+              properties, submarineUI, hdfsUtils, noteId, true);
 
           URL urlTemplate = Resources.getResource(SUBMARINE_JOBRUN_TF_JINJA);
           String template = Resources.toString(urlTemplate, Charsets.UTF_8);
           Jinjava jinjava = new Jinjava();
           String submarineCmd = jinjava.render(template, jinjaParams);
 
-          LOGGER.info("Execute : " + submarineCmd);
-
           String jobName = SubmarineUtils.getJobName(noteId);
-          StringBuffer sbLogs = new StringBuffer();
-          sbLogs.append("Submarine submit job : " + jobName);
-          sbLogs.append(submarineCmd);
+          StringBuffer sbLogs = new StringBuffer(submarineCmd);
           submarineUI.outputLog("Submarine submit command", sbLogs.toString());
 
           showJobProgressBar(1);
 
+          long timeout = Long.valueOf(properties.getProperty(TIMEOUT_PROPERTY,
+              defaultTimeout));
           CommandLine cmdLine = CommandLine.parse(shell);
           cmdLine.addArgument(submarineCmd, false);
           DefaultExecutor executor = new DefaultExecutor();
+          ExecuteWatchdog watchDog = new ExecuteWatchdog(timeout);
+          executor.setWatchdog(watchDog);
           StringBuffer sbLogOutput = new StringBuffer();
           executor.setStreamHandler(new PumpStreamHandler(new LogOutputStream() {
             @Override
@@ -332,18 +337,52 @@ public class SubmarineJob {
               }
             }
           }));
-          long timeout = Long.valueOf(properties.getProperty(TIMEOUT_PROPERTY,
-              defaultTimeout));
 
-          executor.setWatchdog(new ExecuteWatchdog(timeout));
           if (Boolean.valueOf(properties.getProperty(DIRECTORY_USER_HOME))) {
             executor.setWorkingDirectory(new File(System.getProperty("user.home")));
           }
 
-          int exitVal = executor.execute(cmdLine);
-          LOGGER.info("jobName {} return with exit value: {}", jobName, exitVal);
-          submarineUI.outputLog(SubmarineCommand.JOB_RUN.getCommand(), sbLogOutput.toString());
-          setCurrentJobState(EXECUTE_SUBMARINE_FINISHED);
+          Map<String, String> env = new HashMap<>();
+          String launchMode = (String) jinjaParams.get(SubmarineConstants.INTERPRETER_LAUNCH_MODE);
+          String javaHome = "";
+          String hadoopConfDir = "";
+          if (StringUtils.equals(launchMode, "yarn")) {
+            javaHome = (String) jinjaParams.get(SubmarineConstants.DOCKER_JAVA_HOME);
+            hadoopConfDir = (String) jinjaParams.get(SubmarineConstants.SUBMARINE_HADOOP_CONF_DIR);
+            env.put("JAVA_HOME", javaHome);
+            env.put("HADOOP_CONF_DIR", hadoopConfDir);
+          }
+
+          LOGGER.info("Execute EVN: {}, Command: {} ", env.toString(), submarineCmd);
+
+          AtomicBoolean running = new AtomicBoolean(true);
+          executor.execute(cmdLine, env, new DefaultExecuteResultHandler() {
+            @Override
+            public void onProcessComplete(int exitValue) {
+              LOGGER.info("jobName {} ProcessComplete exit value is : {}", jobName, exitValue);
+              running.set(false);
+              setCurrentJobState(EXECUTE_SUBMARINE_FINISHED);
+            }
+            @Override
+            public void onProcessFailed(ExecuteException e) {
+              LOGGER.error("jobName {} ProcessFailed exit value is : {}, exception is : {}",
+                  jobName, e.getExitValue(), e.getMessage());
+              running.set(false);
+              setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
+            }
+          });
+          Date nowDate = new Date();
+          Date checkDate = new Date();
+          while (((checkDate.getTime() - nowDate.getTime()) < timeout) && running.get()) {
+            Thread.sleep(1000);
+          }
+          if (watchDog.isWatching()) {
+            watchDog.destroyProcess();
+            Thread.sleep(1000);
+          }
+          if (watchDog.isWatching()) {
+            watchDog.killedProcess();
+          }
 
           int loop = 100;
           while (loop-- > 0) {
@@ -353,6 +392,7 @@ public class SubmarineJob {
           }
         } catch (Exception e) {
           e.printStackTrace();
+          LOGGER.error(e.getMessage(), e);
           setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
           submarineUI.outputLog("Exception", e.getMessage());
         } finally {
@@ -545,6 +585,7 @@ public class SubmarineJob {
     } catch (IOException e) {
       setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
       e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
       submarineUI.outputLog("Exception", e.getMessage());
     }
   }
