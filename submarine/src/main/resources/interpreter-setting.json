@@ -26,6 +26,20 @@
         "description": "Submarine executive full path, ex) ../hadoop/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0.jar",
         "type": "string"
       },
+      "DOCKER_HADOOP_HDFS_HOME": {
+        "envName": "DOCKER_HADOOP_HDFS_HOME",
+        "propertyName": "DOCKER_HADOOP_HDFS_HOME",
+        "defaultValue": "",
+        "description": "hadoop home in docker container",
+        "type": "string"
+      },
+      "DOCKER_JAVA_HOME": {
+        "envName": "DOCKER_JAVA_HOME",
+        "propertyName": "DOCKER_JAVA_HOME",
+        "defaultValue": "",
+        "description": "java home in docker container",
+        "type": "string"
+      },
       "SUBMARINE_INTERPRETER_DOCKER_IMAGE": {
         "envName": "SUBMARINE_INTERPRETER_DOCKER_IMAGE",
         "propertyName": "SUBMARINE_INTERPRETER_DOCKER_IMAGE",
