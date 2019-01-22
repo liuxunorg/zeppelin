@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.submarine.utils;
+package org.apache.zeppelin.submarine.componts;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -54,8 +54,8 @@ import java.util.regex.Pattern;
 /**
  * Hadoop FileSystem wrapper. Support both secure and no-secure mode
  */
-public class HDFSUtils {
-  private static Logger LOGGER = LoggerFactory.getLogger(HDFSUtils.class);
+public class HdfsClient {
+  private static Logger LOGGER = LoggerFactory.getLogger(HdfsClient.class);
 
   private ZeppelinConfiguration zConf = ZeppelinConfiguration.create();
   private Configuration hadoopConf;
@@ -71,7 +71,7 @@ public class HDFSUtils {
       = "org.apache.zeppelin.notebook.repo.FileSystemNotebookRepo";
   private String noteStorageClassName = "";
 
-  public HDFSUtils(Properties properties) {
+  public HdfsClient(Properties properties) {
     String krb5conf = properties.getProperty(SubmarineConstants.SUBMARINE_HADOOP_KRB5_CONF, "");
     if (!StringUtils.isEmpty(krb5conf)) {
       System.setProperty("java.security.krb5.conf", krb5conf);

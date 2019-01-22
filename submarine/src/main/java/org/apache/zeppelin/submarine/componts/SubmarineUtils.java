@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.submarine.utils;
+package org.apache.zeppelin.submarine.componts;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
@@ -27,6 +27,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class SubmarineUtils {
   private static Logger LOGGER = LoggerFactory.getLogger(SubmarineUI.class);
@@ -36,12 +38,41 @@ public class SubmarineUtils {
     return key;
   }
 
+  // 1. yarn application match the pattern [a-z][a-z0-9-]*
+  // 2. yarn limit appName can not be greater than 30 characters
+  public static String getJobName(String userName, String noteId)
+      throws RuntimeException {
+    userName = userName.toLowerCase();
+    userName = userName.replace("_", "-");
+    userName = userName.replace(".", "-");
+
+    noteId = noteId.toLowerCase();
+    noteId = noteId.replace("_", "-");
+    noteId = noteId.replace(".", "-");
+
+    String jobName = userName + "-" + noteId;
+
+    String yarnAppPatternString = "[a-z][a-z0-9-]*";
+    Pattern pattern = Pattern.compile(yarnAppPatternString);
+    Matcher matcher = pattern.matcher(jobName);
+    boolean matches = matcher.matches();
+    if (false == matches) {
+      throw new RuntimeException("Job Name(`noteName`-`noteId`) " +
+          "does not matcher the `[a-z][a-z0-9-]*` Pattern!");
+    }
+
+    if (jobName.length() > 30) {
+      throw new RuntimeException("Job Name can not be greater than 30 characters");
+    }
+
+    return jobName;
+  }
   // yarn application match the pattern [a-z][a-z0-9-]*
-  public static String getJobName(String noteId) {
-    return "submarine-" + noteId.toLowerCase();
+  public static String getTensorboardName(String user) {
+    return user.toLowerCase() + "-tensorboard";
   }
 
-  public static String getAngularObjectValue(InterpreterContext context, String name) {
+  public static String getAgulObjValue(InterpreterContext context, String name) {
     String value = "";
     AngularObject angularObject = context.getAngularObjectRegistry()
         .get(name, context.getNoteId(), context.getParagraphId());
@@ -51,30 +82,35 @@ public class SubmarineUtils {
     return value;
   }
 
-  public static void setAngularObjectValue(InterpreterContext context, String name, Object value) {
+  public static void setAgulObjValue(InterpreterContext context, String name, Object value) {
     AngularObject angularObject = context.getAngularObjectRegistry()
         .add(name, value, context.getNoteId(), context.getParagraphId(), true);
   }
 
-  public static void removeAngularObjectValue(InterpreterContext context, String name) {
+  public static void removeAgulObjValue(InterpreterContext context, String name) {
     context.getAngularObjectRegistry().remove(name, context.getNoteId(),
-        context.getParagraphId(), false);
+        context.getParagraphId(), true);
   }
 
   // Convert properties to Map and check that the variable cannot be empty
-  public static HashMap propertiesToJinjaParams(Properties properties, SubmarineUI submarineUI,
-                                                HDFSUtils hdfsUtils, String noteId,
+  public static HashMap propertiesToJinjaParams(Properties properties, SubmarineJob submarineJob,
                                                 boolean outputLog)
       throws IOException {
     StringBuffer sbMessage = new StringBuffer();
+    String noteId = submarineJob.getNoteId();
 
     // Check user-set job variables
+    String machinelearingDistributed = getProperty(
+        properties, SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE, outputLog, sbMessage);
     String inputPath = getProperty(
         properties, SubmarineConstants.INPUT_PATH, outputLog, sbMessage);
     String checkPointPath = getProperty(
         properties, SubmarineConstants.CHECKPOINT_PATH, outputLog, sbMessage);
-    String psLaunchCmd = getProperty(
-        properties, SubmarineConstants.PS_LAUNCH_CMD, outputLog, sbMessage);
+    String psLaunchCmd = "";
+    if (StringUtils.equals(machinelearingDistributed, "true")) {
+      psLaunchCmd = getProperty(
+          properties, SubmarineConstants.PS_LAUNCH_CMD, outputLog, sbMessage);
+    }
 
     String workerLaunchCmd = getProperty(
         properties, SubmarineConstants.WORKER_LAUNCH_CMD, outputLog, sbMessage);
@@ -129,11 +165,6 @@ public class SubmarineUtils {
     }
     String submarineHadoopPrincipal = getProperty(
         properties, SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL, outputLog, sbMessage);
-    String machinelearingDistributed = getProperty(
-        properties, SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE, outputLog, sbMessage);
-    if (StringUtils.isEmpty(machinelearingDistributed)) {
-      machinelearingDistributed = "false"; // default
-    }
     String dockerHadoopHdfsHome = getProperty(
         properties, SubmarineConstants.DOCKER_HADOOP_HDFS_HOME, outputLog, sbMessage);
     String dockerJavaHome = getProperty(
@@ -143,12 +174,31 @@ public class SubmarineUtils {
     if (StringUtils.isEmpty(intpLaunchMode)) {
       intpLaunchMode = "local"; // default
     }
-    String sumbarineHadoopConfDir = getProperty(
-        properties, SubmarineConstants.SUBMARINE_HADOOP_CONF_DIR, outputLog, sbMessage);
+    String tensorboardEnable = getProperty(
+        properties, SubmarineConstants.TF_TENSORBOARD_ENABLE, outputLog, sbMessage);
+    if (StringUtils.isEmpty(tensorboardEnable)) {
+      tensorboardEnable = "false"; // default
+    }
+
+    // check
+    String tensorboardCheckpoint = getProperty(
+        properties, SubmarineConstants.TF_CHECKPOINT_PATH, outputLog, sbMessage);
+    if (StringUtils.equals(tensorboardEnable, "true")
+        && StringUtils.isEmpty(tensorboardCheckpoint)) {
+      sbMessage.append("Tensorboard checkpoint path cannot be empty!\n");
+    }
+    String userTensorboardCheckpoint = submarineJob.getUserTensorboardPath();
+    Path chkpntPath = new Path(userTensorboardCheckpoint);
+    if (chkpntPath.depth() <= 3) {
+      sbMessage.append("Checkpoint path depth must be greater than 3!\n");
+    }
+
+    String sumbarineHadoopConfDir = getProperty(properties,
+        SubmarineConstants.SUBMARINE_HADOOP_CONF_DIR, outputLog, sbMessage);
 
     String notePath = algorithmUploadPath + File.separator + noteId;
     List<String> arrayHdfsFiles = new ArrayList<>();
-    List<Path> hdfsFiles = hdfsUtils.list(new Path(notePath + "/*"));
+    List<Path> hdfsFiles = submarineJob.getHdfsClient().list(new Path(notePath + "/*"));
     if (hdfsFiles.size() == 0) {
       sbMessage.append("EXECUTE_SUBMARINE_ERROR: The " + notePath
           + " file directory was is empty in HDFS!\n");
@@ -162,7 +212,7 @@ public class SubmarineUtils {
           arrayHdfsFiles.add(filePath);
           sbCommitFiles.append("INFO: [" + hdfsFiles.get(i).getName() + "] -> " + filePath + "\n");
         }
-        submarineUI.outputLog("Execution information",
+        submarineJob.getSubmarineUI().outputLog("Execution information",
             sbCommitFiles.toString());
       }
     }
@@ -173,7 +223,8 @@ public class SubmarineUtils {
     }
 
     // Save user-set variables and interpreter configuration parameters
-    String jobName = SubmarineUtils.getJobName(noteId);
+    String jobName = SubmarineUtils.getJobName(submarineJob.getUserName(),
+        submarineJob.getNoteId());
     HashMap<String, Object> mapParams = new HashMap();
     mapParams.put(unifyKey(SubmarineConstants.INTERPRETER_LAUNCH_MODE), intpLaunchMode);
     mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_HADOOP_HOME), submarineHadoopHome);
@@ -186,10 +237,8 @@ public class SubmarineUtils {
     mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_HADOOP_KEYTAB), submarineHadoopKeytab);
     mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL),
         submarineHadoopPrincipal);
-    if (machinelearingDistributed.equals("true")) {
-      mapParams.put(unifyKey(SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE),
-          machinelearingDistributed);
-    }
+    mapParams.put(unifyKey(SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE),
+        machinelearingDistributed);
     mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH), notePath);
     mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_FILES), arrayHdfsFiles);
     mapParams.put(unifyKey(SubmarineConstants.INPUT_PATH), inputPath);
@@ -209,6 +258,8 @@ public class SubmarineUtils {
     mapParams.put(unifyKey(SubmarineConstants.TF_WORKER_SERVICES_GPU), workerServicesGpu);
     mapParams.put(unifyKey(SubmarineConstants.TF_WORKER_SERVICES_CPU), workerServicesCpu);
     mapParams.put(unifyKey(SubmarineConstants.TF_WORKER_SERVICES_MEMORY), workerServicesMemory);
+    mapParams.put(unifyKey(SubmarineConstants.TF_TENSORBOARD_ENABLE), tensorboardEnable);
+    mapParams.put(unifyKey(SubmarineConstants.TF_CHECKPOINT_PATH), userTensorboardCheckpoint);
 
     return mapParams;
   }

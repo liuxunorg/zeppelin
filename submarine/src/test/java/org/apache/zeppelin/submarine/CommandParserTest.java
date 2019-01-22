@@ -14,8 +14,8 @@
 
 package org.apache.zeppelin.submarine;
 
-import org.apache.zeppelin.submarine.utils.CommandParser;
-import org.apache.zeppelin.submarine.utils.SubmarineConstants;
+import org.apache.zeppelin.submarine.componts.CommandParser;
+import org.apache.zeppelin.submarine.componts.SubmarineConstants;
 import org.junit.Test;
 
 import java.util.Scanner;

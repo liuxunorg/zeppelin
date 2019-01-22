@@ -71,22 +71,6 @@
       <artifactId>jinjava</artifactId>
       <version>${jinjava.version}</version>
     </dependency>
-    <dependency>
-      <groupId>org.squirrelframework</groupId>
-      <artifactId>squirrel-foundation</artifactId>
-      <version>${squirrel.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.google.guava</groupId>
-          <artifactId>guava</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>${guava.version}</version>
-    </dependency>
   </dependencies>
 
   <build>

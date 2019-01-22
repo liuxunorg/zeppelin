@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.submarine.utils;
+package org.apache.zeppelin.submarine.componts;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
@@ -34,7 +34,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import static org.apache.zeppelin.submarine.utils.SubmarineUtils.unifyKey;
+import static org.apache.zeppelin.submarine.componts.SubmarineUtils.unifyKey;
 
 public class SubmarineUI {
   private Logger LOGGER = LoggerFactory.getLogger(SubmarineUI.class);

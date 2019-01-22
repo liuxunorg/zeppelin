@@ -16,7 +16,7 @@ package org.apache.zeppelin.submarine;
 
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.interpreter.InterpreterContext;
-import org.apache.zeppelin.submarine.utils.SubmarineJob;
+import org.apache.zeppelin.submarine.componts.SubmarineJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,4 +1,5 @@
-{#
+#!/bin/bash
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -13,10 +14,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
--#}
-{%- if COMMAND_TYPE == "JOB_SHOW" -%}
-{{ SUBMARINE_HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} job show --name {{ JOB_NAME }}
-{%- endif -%}
-{%- if COMMAND_TYPE == "JOB_STOP" || COMMAND_TYPE == "TENSORBOARD_STOP" -%}
-{{ SUBMARINE_HADOOP_HOME }}/bin/yarn app -destroy {{ JOB_NAME }}
-{%- endif -%}
+#
+echo $CLASSPATH
+echo $EVN

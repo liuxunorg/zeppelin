@@ -1,0 +1,277 @@
+{
+  "app": {
+    "id": "application_1548553562037_0001",
+    "user": "hadoop",
+    "name": "submarine-tb-anonymous",
+    "queue": "default",
+    "state": "RUNNING",
+    "finalStatus": "UNDEFINED",
+    "progress": 100,
+    "trackingUI": "ApplicationMaster",
+    "trackingUrl": "http://ml2.jd.163.org:8088/proxy/application_1548553562037_0001/",
+    "diagnostics": "",
+    "clusterId": 1548553562037,
+    "applicationType": "yarn-service",
+    "applicationTags": "name: submarine-tb-anonymous",
+    "priority": 0,
+    "startedTime": 1548581413837,
+    "launchTime": 1548581414873,
+    "finishedTime": 0,
+    "elapsedTime": 67740387,
+    "amContainerLogs": "http://ml2.jd.163.org:8042/node/containerlogs/container_e323_1548553562037_0001_01_000001/hadoop",
+    "amHostHttpAddress": "ml2.jd.163.org:8042",
+    "amRPCAddress": "ml2.jd.163.org:32975",
+    "masterNodeId": "ml2.jd.163.org:36797",
+    "allocatedMB": 5120,
+    "allocatedVCores": 2,
+    "reservedMB": 0,
+    "reservedVCores": 0,
+    "runningContainers": 2,
+    "memorySeconds": 346773069,
+    "vcoreSeconds": 135463,
+    "queueUsagePercentage": 5,
+    "clusterUsagePercentage": 5,
+    "resourceSecondsMap": {
+      "entry": {
+        "key": "vcores",
+        "value": "135463"
+      }
+    },
+    "preemptedResourceMB": 0,
+    "preemptedResourceVCores": 0,
+    "numNonAMContainerPreempted": 0,
+    "numAMContainerPreempted": 0,
+    "preemptedMemorySeconds": 0,
+    "preemptedVcoreSeconds": 0,
+    "preemptedResourceSecondsMap": {},
+    "logAggregationStatus": "NOT_START",
+    "unmanagedApplication": false,
+    "amNodeLabelExpression": "",
+    "resourceInfo": {
+      "resourceUsagesByPartition": [
+        {
+          "partitionName": "",
+          "used": {
+            "memory": 5120,
+            "vCores": 2,
+            "resourceInformations": {
+              "resourceInformation": [
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "memory-mb",
+                  "resourceType": "COUNTABLE",
+                  "units": "Mi",
+                  "value": 5120
+                },
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "vcores",
+                  "resourceType": "COUNTABLE",
+                  "units": "",
+                  "value": 2
+                },
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "yarn.io/gpu",
+                  "resourceType": "COUNTABLE",
+                  "units": "",
+                  "value": 0
+                }
+              ]
+            }
+          },
+          "reserved": {
+            "memory": 0,
+            "vCores": 0,
+            "resourceInformations": {
+              "resourceInformation": [
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "memory-mb",
+                  "resourceType": "COUNTABLE",
+                  "units": "Mi",
+                  "value": 0
+                },
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "vcores",
+                  "resourceType": "COUNTABLE",
+                  "units": "",
+                  "value": 0
+                },
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "yarn.io/gpu",
+                  "resourceType": "COUNTABLE",
+                  "units": "",
+                  "value": 0
+                }
+              ]
+            }
+          },
+          "pending": {
+            "memory": 0,
+            "vCores": 0,
+            "resourceInformations": {
+              "resourceInformation": [
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "memory-mb",
+                  "resourceType": "COUNTABLE",
+                  "units": "Mi",
+                  "value": 0
+                },
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "vcores",
+                  "resourceType": "COUNTABLE",
+                  "units": "",
+                  "value": 0
+                },
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "yarn.io/gpu",
+                  "resourceType": "COUNTABLE",
+                  "units": "",
+                  "value": 0
+                }
+              ]
+            }
+          },
+          "amUsed": {
+            "memory": 1024,
+            "vCores": 1,
+            "resourceInformations": {
+              "resourceInformation": [
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "memory-mb",
+                  "resourceType": "COUNTABLE",
+                  "units": "Mi",
+                  "value": 1024
+                },
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "vcores",
+                  "resourceType": "COUNTABLE",
+                  "units": "",
+                  "value": 1
+                },
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "yarn.io/gpu",
+                  "resourceType": "COUNTABLE",
+                  "units": "",
+                  "value": 0
+                }
+              ]
+            }
+          },
+          "amLimit": {
+            "memory": 0,
+            "vCores": 0,
+            "resourceInformations": {
+              "resourceInformation": [
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "memory-mb",
+                  "resourceType": "COUNTABLE",
+                  "units": "Mi",
+                  "value": 0
+                },
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "vcores",
+                  "resourceType": "COUNTABLE",
+                  "units": "",
+                  "value": 0
+                },
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "yarn.io/gpu",
+                  "resourceType": "COUNTABLE",
+                  "units": "",
+                  "value": 0
+                }
+              ]
+            }
+          },
+          "userAmLimit": {
+            "memory": 0,
+            "vCores": 0,
+            "resourceInformations": {
+              "resourceInformation": [
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "memory-mb",
+                  "resourceType": "COUNTABLE",
+                  "units": "Mi",
+                  "value": 0
+                },
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "vcores",
+                  "resourceType": "COUNTABLE",
+                  "units": "",
+                  "value": 0
+                },
+                {
+                  "attributes": {},
+                  "maximumAllocation": 9223372036854776000,
+                  "minimumAllocation": 0,
+                  "name": "yarn.io/gpu",
+                  "resourceType": "COUNTABLE",
+                  "units": "",
+                  "value": 0
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "timeouts": {
+      "timeout": [
+        {
+          "type": "LIFETIME",
+          "expiryTime": "UNLIMITED",
+          "remainingTimeInSeconds": -1
+        }
+      ]
+    }
+  }
+}

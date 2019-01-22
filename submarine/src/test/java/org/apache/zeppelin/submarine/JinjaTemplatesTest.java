@@ -3,9 +3,9 @@ package org.apache.zeppelin.submarine;
 import com.google.common.io.Resources;
 import com.hubspot.jinjava.Jinjava;
 import org.apache.commons.io.Charsets;
-import org.apache.zeppelin.submarine.utils.SubmarineConstants;
-import org.apache.zeppelin.submarine.utils.SubmarineJob;
-import org.apache.zeppelin.submarine.utils.SubmarineUtils;
+import org.apache.zeppelin.submarine.componts.SubmarineConstants;
+import org.apache.zeppelin.submarine.componts.SubmarineJob;
+import org.apache.zeppelin.submarine.componts.SubmarineUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,12 +28,44 @@ public class JinjaTemplatesTest {
     jobRunJinjaTemplateTest(Boolean.FALSE, Boolean.FALSE);
     jobRunJinjaTemplateTest(null, Boolean.FALSE);
     jobRunJinjaTemplateTest(null, null);
+    tensorboardJinjaTemplateTest(Boolean.TRUE, Boolean.TRUE);
+    tensorboardJinjaTemplateTest(Boolean.TRUE, Boolean.FALSE);
   }
 
   public void jobRunJinjaTemplateTest(Boolean dist, Boolean launchMode) throws IOException {
     URL urlTemplate = Resources.getResource(SubmarineJob.SUBMARINE_JOBRUN_TF_JINJA);
     String template = Resources.toString(urlTemplate, Charsets.UTF_8);
     Jinjava jinjava = new Jinjava();
+    HashMap<String, Object> jinjaParams = initJinjaParams(dist, launchMode);
+
+    String submarineCmd = jinjava.render(template, jinjaParams);
+    int pos = submarineCmd.indexOf("\n");
+    if (pos == 0) {
+      submarineCmd = submarineCmd.replaceFirst("\n", "");
+    }
+
+    LOGGER.info("------------------------");
+    LOGGER.info(submarineCmd);
+    LOGGER.info("------------------------");
+  }
+
+  public void tensorboardJinjaTemplateTest(Boolean dist, Boolean launchMode) throws IOException {
+    URL urlTemplate = Resources.getResource(SubmarineJob.SUBMARINE_TENSORBOARD_JINJA);
+    String template = Resources.toString(urlTemplate, Charsets.UTF_8);
+    Jinjava jinjava = new Jinjava();
+    HashMap<String, Object> jinjaParams = initJinjaParams(dist, launchMode);
+
+    String submarineCmd = jinjava.render(template, jinjaParams);
+    int pos = submarineCmd.indexOf("\n");
+    if (pos == 0) {
+      submarineCmd = submarineCmd.replaceFirst("\n", "");
+    }
+    LOGGER.info("------------------------");
+    LOGGER.info(submarineCmd);
+    LOGGER.info("------------------------");
+  }
+
+  private HashMap<String, Object> initJinjaParams(Boolean dist, Boolean launchMode) {
     HashMap<String, Object> jinjaParams = new HashMap();
 
     if (launchMode == Boolean.TRUE) {
@@ -49,6 +81,9 @@ public class JinjaTemplatesTest {
       jinjaParams.put(SubmarineUtils.unifyKey(
           SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE), "false");
     }
+
+    jinjaParams.put(SubmarineUtils.unifyKey(
+        SubmarineConstants.TF_TENSORBOARD_ENABLE), "true");
 
     List<String> arrayHdfsFiles = new ArrayList<>();
     arrayHdfsFiles.add("hdfs://file1");
@@ -104,15 +139,15 @@ public class JinjaTemplatesTest {
     jinjaParams.put(SubmarineUtils.unifyKey(
         SubmarineConstants.WORKER_LAUNCH_CMD), "WORKER_LAUNCH_CMD_VALUE");
     jinjaParams.put(SubmarineUtils.unifyKey(
-        SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH), "SUBMARINE_ALGORITHM_HDFS_PATH_VALUE");
+        SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH),
+        "SUBMARINE_ALGORITHM_HDFS_PATH_VALUE");
+    jinjaParams.put(SubmarineUtils.unifyKey(
+        SubmarineConstants.SUBMARINE_HADOOP_CONF_DIR), "SUBMARINE_HADOOP_CONF_DIR_VALUE");
     jinjaParams.put(SubmarineUtils.unifyKey(
         SubmarineConstants.SUBMARINE_HADOOP_KEYTAB), "SUBMARINE_HADOOP_KEYTAB_VALUE");
     jinjaParams.put(SubmarineUtils.unifyKey(
         SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL), "SUBMARINE_HADOOP_PRINCIPAL_VALUE");
 
-    String submarineCmd = jinjava.render(template, jinjaParams);
-    LOGGER.info("------------------------");
-    LOGGER.info(submarineCmd);
-    LOGGER.info("------------------------");
+    return jinjaParams;
   }
 }
