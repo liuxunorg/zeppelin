@@ -15,11 +15,9 @@
 # limitations under the License.
 #}
 {%- if INTERPRETER_LAUNCH_MODE and INTERPRETER_LAUNCH_MODE == 'yarn' -%}
-  {{ DOCKER_HADOOP_HDFS_HOME }}/bin/yarn app -destroy {{ JOB_NAME }}; \
-  {{ DOCKER_HADOOP_HDFS_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
+{{ DOCKER_HADOOP_HDFS_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
 {%- else -%}
-  {{ SUBMARINE_HADOOP_HOME }}/bin/yarn app -destroy {{ JOB_NAME }}; \
-  {{ SUBMARINE_HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
+{{ SUBMARINE_HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
 {%- endif %}
   job run \
   --name {{ JOB_NAME }} \
@@ -34,17 +32,20 @@
   --ps_docker_image {{ TF_PARAMETER_SERVICES_DOCKER_IMAGE }} \
   --ps_resources memory={{ TF_PARAMETER_SERVICES_MEMORY }},vcores={{ TF_PARAMETER_SERVICES_CPU }},gpu={{ TF_PARAMETER_SERVICES_GPU }} \
   --ps_launch_cmd "{{ PS_LAUNCH_CMD }}" \
-  --worker_docker_image {{ TF_WORKER_SERVICES_DOCKER_IMAGE }} \
   --num_workers {{ TF_WORKER_SERVICES_NUM }} \
 {%- else -%}
-  --docker_image {{ TF_WORKER_SERVICES_DOCKER_IMAGE }} \
+  --num_workers 1 \
 {%- endif %}
+  --worker_docker_image {{ TF_WORKER_SERVICES_DOCKER_IMAGE }} \
   --worker_resources memory={{ TF_WORKER_SERVICES_MEMORY }},vcores={{ TF_WORKER_SERVICES_CPU }},gpu={{ TF_WORKER_SERVICES_GPU }} \
   --worker_launch_cmd "{{ WORKER_LAUNCH_CMD }}" \
 {%- for file in SUBMARINE_ALGORITHM_HDFS_FILES %}
   --localization "{{ file }}:." \
 {%- endfor %}
   --localization "{{ SUBMARINE_ALGORITHM_HDFS_PATH }}:./submarine_algorithm" \
+{%- if SUBMARINE_HADOOP_CONF_DIR %}
+  --localization "{{ SUBMARINE_HADOOP_CONF_DIR }}:{{ SUBMARINE_HADOOP_CONF_DIR }}" \
+{%- endif %}
   --keytab {{ SUBMARINE_HADOOP_KEYTAB }} \
   --principal {{ SUBMARINE_HADOOP_PRINCIPAL }} \
   --distribute_keytab \

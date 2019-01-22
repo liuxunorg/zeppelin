@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.submarine.statemachine;
+package org.apache.zeppelin.submarine.componts;
 
 public enum SubmarineJobStatus {
   UNKNOWN("UNKNOWN"),
@@ -27,6 +27,7 @@ public enum SubmarineJobStatus {
   YARN_RUNNING("YARN RUNNING"),
   YARN_FINISHED("YARN FINISHED"),
   YARN_FAILED("YARN FAILED"),
+  YARN_STOPPED("YARN STOPPED"),
   YARN_KILLED("YARN KILLED");
 
   private String status;

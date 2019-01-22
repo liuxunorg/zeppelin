@@ -193,6 +193,13 @@
         "defaultValue": true,
         "description": "Whether to enable tensorboard",
         "type": "checkbox"
+      },
+      "tf.checkpoint.path": {
+        "envName": "TF_CHECKPOINT_PATH",
+        "propertyName": "tf.checkpoint.path",
+        "defaultValue": "",
+        "description": "tensorflow checkpoint path",
+        "type": "string"
       }
     },
     "editor": {

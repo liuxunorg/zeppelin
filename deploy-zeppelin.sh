@@ -69,7 +69,7 @@ function scpJar() {
 #    scp -i ~/.ssh/hzliuxun -P 1046 /Users/liuxun/Github/zeppelin/zeppelin-interpreter/target/zeppelin-interpreter-0.9.0-SNAPSHOT.jar  hzliuxun@10.120.196.234:/tmp
 #    scp -i ~/.ssh/hzliuxun -P 1046 /Users/liuxun/Github/zeppelin/zeppelin-server/target/zeppelin-server-0.9.0-SNAPSHOT.jar  hzliuxun@10.120.196.234:/tmp
 #    scp -i ~/.ssh/hzliuxun -P 1046 /Users/liuxun/Github/zeppelin/zeppelin-zengine/target/zeppelin-zengine-0.9.0-SNAPSHOT.jar  hzliuxun@10.120.196.234:/tmp
-    scp -i ~/.ssh/hzliuxun -P 1046 /Users/liuxun/Github/zeppelin/submarine/target/zeppelin-submarine-0.9.0-SNAPSHOT.jar  hzliuxun@10.120.196.234:/tmp
+     scp -i ~/.ssh/hzliuxun -P 1046 /Users/liuxun/MachineLearning/zeppelin/interpreter/submarine/zeppelin-submarine-0.9.0-SNAPSHOT.jar hzliuxun@10.120.196.234:/tmp
 }
 
 #clean

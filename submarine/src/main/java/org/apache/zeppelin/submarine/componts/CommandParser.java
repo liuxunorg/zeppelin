@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.submarine.utils;
+package org.apache.zeppelin.submarine.componts;
 
 import javafx.util.Pair;
 

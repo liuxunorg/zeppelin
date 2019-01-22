@@ -1,4 +1,4 @@
-package org.apache.zeppelin.submarine.utils;
+package org.apache.zeppelin.submarine.componts;
 
 public enum SubmarineCommand {
   DASHBOARD("DASHBOARD"),
@@ -6,9 +6,11 @@ public enum SubmarineCommand {
   JOB_RUN("JOB_RUN"),
   JOB_SHOW("JOB_SHOW"),
   JOB_LIST("JOB_LIST"),
-  JOB_CANCEL("JOB_CANCEL"),
+  JOB_STOP("JOB_STOP"),
   CLEAN_RUNTIME_CACHE("CLEAN_RUNTIME_CACHE"),
   OLD_UI("OLD_UI"),
+  TENSORBOARD_RUN("TENSORBOARD_RUN"),
+  TENSORBOARD_STOP("TENSORBOARD_STOP"),
   UNKNOWN("Unknown");
 
   private String command;

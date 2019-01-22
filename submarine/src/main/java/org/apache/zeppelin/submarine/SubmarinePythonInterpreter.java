@@ -18,7 +18,7 @@ import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterException;
 import org.apache.zeppelin.interpreter.InterpreterResult;
 import org.apache.zeppelin.python.PythonInterpreter;
-import org.apache.zeppelin.submarine.utils.SubmarineJob;
+import org.apache.zeppelin.submarine.componts.SubmarineJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,8 +45,8 @@ public class SubmarinePythonInterpreter extends PythonInterpreter {
     }
 
     SubmarineJob submarineJob = submarineContext.getSubmarineJob(context.getNoteId());
-    if (null != submarineJob && null != submarineJob.getHdfsUtils()) {
-      submarineJob.getHdfsUtils().saveParagraphToFiles(context.getNoteId(),
+    if (null != submarineJob && null != submarineJob.getHdfsClient()) {
+      submarineJob.getHdfsClient().saveParagraphToFiles(context.getNoteId(),
           context.getNoteName(), getPythonWorkDir().getAbsolutePath(), properties);
     }
     return super.interpret(st, context);

@@ -13,10 +13,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
--#}
-{%- if COMMAND_TYPE == "JOB_SHOW" -%}
-{{ SUBMARINE_HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} job show --name {{ JOB_NAME }}
-{%- endif -%}
-{%- if COMMAND_TYPE == "JOB_STOP" || COMMAND_TYPE == "TENSORBOARD_STOP" -%}
-{{ SUBMARINE_HADOOP_HOME }}/bin/yarn app -destroy {{ JOB_NAME }}
-{%- endif -%}
+#}
+{%- if INTERPRETER_LAUNCH_MODE and INTERPRETER_LAUNCH_MODE == 'yarn' -%}
+{{ DOCKER_HADOOP_HDFS_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
+{%- else -%}
+{{ SUBMARINE_HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
+{%- endif %}
+  job run \
+  --name {{ JOB_NAME }} \
+  --env DOCKER_JAVA_HOME={{ DOCKER_JAVA_HOME }} \
+  --env DOCKER_HADOOP_HDFS_HOME={{ DOCKER_HADOOP_HDFS_HOME }} \
+  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=bridge \
+  --checkpoint_path {{ CHECKPOINT_PATH }} \
+  --num_workers 0 \
+  --tensorboard \
+  --tensorboard_docker_image {{ TF_PARAMETER_SERVICES_DOCKER_IMAGE }} \
+  --keytab {{ SUBMARINE_HADOOP_KEYTAB }} \
+  --principal {{ SUBMARINE_HADOOP_PRINCIPAL }} \
+  --distribute_keytab \
+  --verbose

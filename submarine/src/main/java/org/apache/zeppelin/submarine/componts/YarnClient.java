@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.submarine.utils;
+package org.apache.zeppelin.submarine.componts;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -36,6 +36,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
 import org.apache.commons.lang.StringUtils;
@@ -48,7 +49,9 @@ import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.Credentials;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.AuthSchemes;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.config.Lookup;
 import org.apache.http.config.RegistryBuilder;
@@ -65,8 +68,8 @@ import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
 
-public class YarnRestClient {
-  private Logger LOGGER = LoggerFactory.getLogger(YarnRestClient.class);
+public class YarnClient {
+  private Logger LOGGER = LoggerFactory.getLogger(YarnClient.class);
 
   private Configuration hadoopConf;
 
@@ -86,7 +89,9 @@ public class YarnRestClient {
   public static final String HOST_IP = "HOST_IP";
   public static final String HOST_PORT = "HOST_PORT";
 
-  public YarnRestClient(Properties properties) {
+  String SERVICE_PATH = "/services/{service_name}";
+
+  public YarnClient(Properties properties) {
     this.hadoopConf = new Configuration();
 
     yarnWebHttpAddr = properties.getProperty(SubmarineConstants.YARN_WEB_HTTP_ADDRESS, "");
@@ -126,20 +131,43 @@ public class YarnRestClient {
     }
   }
 
-  // http://yarn-web-http-address/app/v1/services/${appIdOrName}
-  public Map<String, Object> getAppState(String appIdOrName) {
+  // http://yarn-web-http-address/app/v1/services/{service_name}
+  public void deleteService(String serviceName) {
+    String appUrl = this.yarnWebHttpAddr + "/app/v1/services/" + serviceName
+        + "?_=" + System.currentTimeMillis();
+    try {
+      HttpResponse response = callRestUrl(appUrl, principal, HTTP.DELETE);
+      InputStream is = response.getEntity().getContent();
+      String result = new BufferedReader(new InputStreamReader(is))
+          .lines().collect(Collectors.joining(System.lineSeparator()));
+      if (response.getStatusLine().getStatusCode() != 200) {
+        LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
+        LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
+        LOGGER.info("result：\n" + result);
+      }
+
+      // parse app status json
+    } catch (Exception exp) {
+      exp.printStackTrace();
+    }
+  }
+
+  // http://yarn-web-http-address/app/v1/services/{appIdOrName}
+  public Map<String, Object> getAppServices(String appIdOrName) {
     Map<String, Object> mapStatus = new HashMap<>();
     String appUrl = this.yarnWebHttpAddr + "/app/v1/services/" + appIdOrName
         + "?_=" + System.currentTimeMillis();
 
     try {
-      HttpResponse response = callRestUrl(appUrl, principal);
+      HttpResponse response = callRestUrl(appUrl, principal, HTTP.GET);
       InputStream is = response.getEntity().getContent();
-      LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
-      LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
       String result = new BufferedReader(new InputStreamReader(is))
           .lines().collect(Collectors.joining(System.lineSeparator()));
-      LOGGER.info("string：\n" + result);
+      if (response.getStatusLine().getStatusCode() != 200) {
+        LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
+        LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
+        LOGGER.info("result：\n" + result);
+      }
 
       // parse app status json
       mapStatus = parseAppState(result);
@@ -150,20 +178,77 @@ public class YarnRestClient {
     return mapStatus;
   }
 
-  // http://yarn-web-http-address/ws/v1/cluster/apps/${appId}/appattempts
+  // http://yarn-web-http-address/ws/v1/cluster/apps/{appId}
+  public Map<String, Object> getClusterApps(String appId) {
+    Map<String, Object> appAttempts = new HashMap<>();
+    String appUrl = this.yarnWebHttpAddr + "/ws/v1/cluster/apps/" + appId
+        + "?_=" + System.currentTimeMillis();
+
+    try {
+      HttpResponse response = callRestUrl(appUrl, principal, HTTP.GET);
+      InputStream is = response.getEntity().getContent();
+      String result = new BufferedReader(new InputStreamReader(is))
+          .lines().collect(Collectors.joining(System.lineSeparator()));
+      if (response.getStatusLine().getStatusCode() != 200) {
+        LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
+        LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
+        LOGGER.info("result：\n" + result);
+      }
+      // parse app status json
+      appAttempts = parseClusterApps(result);
+
+      return appAttempts;
+    } catch (Exception exp) {
+      exp.printStackTrace();
+    }
+
+    return appAttempts;
+  }
+
+  // appJson format : submarine/src/test/resources/clusterApps.json
+  public Map<String, Object> parseClusterApps(String jsonContent) {
+    Map<String, Object> appAttempts = new HashMap<>();
+
+    try {
+      JsonParser jsonParser = new JsonParser();
+      JsonObject jsonObject = (JsonObject) jsonParser.parse(jsonContent);
+
+      JsonObject jsonAppAttempts = jsonObject.get("app").getAsJsonObject();
+      if (null == jsonAppAttempts) {
+        return appAttempts;
+      }
+      for (Map.Entry<String, JsonElement> entry : jsonAppAttempts.entrySet()) {
+        String key = entry.getKey();
+        if (null != entry.getValue() && entry.getValue() instanceof JsonPrimitive) {
+          Object value = entry.getValue().getAsString();
+          appAttempts.put(key, value);
+        }
+      }
+    } catch (JsonIOException e) {
+      e.printStackTrace();
+    } catch (JsonSyntaxException e) {
+      e.printStackTrace();
+    }
+
+    return appAttempts;
+  }
+
+  // http://yarn-web-http-address/ws/v1/cluster/apps/{appId}/appattempts
   public List<Map<String, Object>> getAppAttempts(String appId) {
     List<Map<String, Object>> appAttempts = new ArrayList<>();
     String appUrl = this.yarnWebHttpAddr + "/ws/v1/cluster/apps/" + appId
         + "/appattempts?_=" + System.currentTimeMillis();
 
     try {
-      HttpResponse response = callRestUrl(appUrl, principal);
+      HttpResponse response = callRestUrl(appUrl, principal, HTTP.GET);
       InputStream is = response.getEntity().getContent();
-      LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
-      LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
       String result = new BufferedReader(new InputStreamReader(is))
           .lines().collect(Collectors.joining(System.lineSeparator()));
-      LOGGER.info("string：\n" + result);
+      if (response.getStatusLine().getStatusCode() != 200) {
+        LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
+        LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
+        LOGGER.info("result：\n" + result);
+      }
 
       // parse app status json
       appAttempts = parseAppAttempts(result);
@@ -174,20 +259,22 @@ public class YarnRestClient {
     return appAttempts;
   }
 
-  // http://yarn-web-http-address/ws/v1/cluster/apps/${appId}/appattempts/${appAttemptId}/containers
+  // http://yarn-web-http-address/ws/v1/cluster/apps/{appId}/appattempts/{appAttemptId}/containers
   public List<Map<String, Object>> getAppAttemptsContainers(String appId, String appAttemptId) {
     List<Map<String, Object>> appAttemptsContainers = new ArrayList<>();
     String appUrl = this.yarnWebHttpAddr + "/ws/v1/cluster/apps/" + appId
         + "/appattempts/" + appAttemptId + "/containers?_=" + System.currentTimeMillis();
 
     try {
-      HttpResponse response = callRestUrl(appUrl, principal);
+      HttpResponse response = callRestUrl(appUrl, principal, HTTP.GET);
       InputStream is = response.getEntity().getContent();
-      LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
-      LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
       String result = new BufferedReader(new InputStreamReader(is))
           .lines().collect(Collectors.joining(System.lineSeparator()));
-      LOGGER.info("string：\n" + result);
+      if (response.getStatusLine().getStatusCode() != 200) {
+        LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
+        LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
+        LOGGER.debug("result：\n" + result);
+      }
 
       // parse app status json
       appAttemptsContainers = parseAppAttemptsContainers(result);
@@ -240,8 +327,8 @@ public class YarnRestClient {
     return httpClient;
   }
 
-  public HttpResponse callRestUrl(final String url, final String userId) {
-    LOGGER.debug(String.format("Calling YarnRestClient %s %s %s",
+  public HttpResponse callRestUrl(final String url, final String userId, HTTP operation) {
+    LOGGER.debug(String.format("Calling YarnClient %s %s %s",
         this.principal, this.keytab, url));
     javax.security.auth.login.Configuration config = new javax.security.auth.login.Configuration() {
       @SuppressWarnings("serial")
@@ -282,7 +369,18 @@ public class YarnRestClient {
         @Override
         public HttpResponse run() {
           try {
-            HttpUriRequest request = new HttpGet(url);
+            HttpUriRequest request = null;
+            switch (operation) {
+              case DELETE:
+                request = new HttpDelete(url);
+                break;
+              case POST:
+                request = new HttpPost(url);
+                break;
+              default:
+                request = new HttpGet(url);
+                break;
+            }
 
             HttpClient spnegoHttpClient = buildSpengoHttpClient();
             httpResponse = spnegoHttpClient.execute(request);
@@ -372,7 +470,6 @@ public class YarnRestClient {
     return appAttempts;
   }
 
-
   // appJson format : submarine/src/test/resources/appAttempts.json
   public List<Map<String, Object>> parseAppAttemptsContainers(String jsonContent) {
     List<Map<String, Object>> appContainers = new ArrayList<>();
@@ -427,5 +524,30 @@ public class YarnRestClient {
     }
 
     return appContainers;
+  }
+
+  public List<Map<String, Object>> getAppExportPorts(String name) {
+    // Query the IP and port of the submarine interpreter process through the yarn client
+    Map<String, Object> mapAppStatus = getAppServices(name);
+    if (mapAppStatus.containsKey(SubmarineConstants.YARN_APPLICATION_ID)
+        && mapAppStatus.containsKey(SubmarineConstants.YARN_APPLICATION_NAME)
+        && mapAppStatus.containsKey(SubmarineConstants.YARN_APPLICATION_STATUS)) {
+      String appId = mapAppStatus.get(SubmarineConstants.YARN_APPLICATION_ID).toString();
+      String appStatus = mapAppStatus.get(SubmarineConstants.YARN_APPLICATION_STATUS).toString();
+
+      // if (StringUtils.equals(appStatus, SubmarineJob.YarnApplicationState.RUNNING.toString())) {
+      List<Map<String, Object>> mapAppAttempts = getAppAttemptsContainersExportPorts(appId);
+      return mapAppAttempts;
+      //}
+    }
+
+    return new ArrayList<Map<String, Object>>() {
+    };
+  }
+
+  public enum HTTP {
+    GET,
+    POST,
+    DELETE;
   }
 }

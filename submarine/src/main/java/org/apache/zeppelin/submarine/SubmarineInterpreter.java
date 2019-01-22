@@ -30,10 +30,10 @@ import org.apache.zeppelin.interpreter.InterpreterResult;
 import org.apache.zeppelin.interpreter.thrift.InterpreterCompletion;
 import org.apache.zeppelin.scheduler.Scheduler;
 import org.apache.zeppelin.scheduler.SchedulerFactory;
-import org.apache.zeppelin.submarine.utils.SubmarineCommand;
-import org.apache.zeppelin.submarine.utils.SubmarineConstants;
-import org.apache.zeppelin.submarine.utils.SubmarineJob;
-import org.apache.zeppelin.submarine.utils.SubmarineUtils;
+import org.apache.zeppelin.submarine.componts.SubmarineCommand;
+import org.apache.zeppelin.submarine.componts.SubmarineConstants;
+import org.apache.zeppelin.submarine.componts.SubmarineJob;
+import org.apache.zeppelin.submarine.componts.SubmarineUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,8 +44,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
-import static org.apache.zeppelin.submarine.utils.SubmarineCommand.CLEAN_RUNTIME_CACHE;
-import static org.apache.zeppelin.submarine.utils.SubmarineUtils.unifyKey;
+import static org.apache.zeppelin.submarine.componts.SubmarineCommand.CLEAN_RUNTIME_CACHE;
+import static org.apache.zeppelin.submarine.componts.SubmarineUtils.unifyKey;
 
 /**
  * SubmarineInterpreter of Hadoop Submarine implementation.
@@ -71,7 +71,6 @@ public class SubmarineInterpreter extends Interpreter {
   private String currentReplName = "";
 
   SubmarineContext submarineContext = null;
-
 
   public SubmarineInterpreter(Properties properties) {
     super(properties);
@@ -147,31 +146,42 @@ public class SubmarineInterpreter extends Interpreter {
   @Override
   public InterpreterResult interpret(String script, InterpreterContext context) {
     try {
-
       SubmarineJob submarineJob = submarineContext.addOrGetSubmarineJob(properties, context);
 
       setParagraphConfig(context);
 
-      String command = "";
-      String inputPath = "", chkPntPath = "", psLaunchCmd = "", workerLaunchCmd = "";
-
       LOGGER.debug("Run shell command '" + script + "'");
+      String command = "", operation = "", cleanCheckpoint = "";
+      String inputPath = "", chkPntPath = "", psLaunchCmd = "", workerLaunchCmd = "";
       String noteId = context.getNoteId();
-      String paragraphId = context.getParagraphId();
+      String noteName = context.getNoteName();
 
       if (script.equalsIgnoreCase(SubmarineConstants.COMMAND_CLEAN)) {
         // Clean Registry Angular Object
         command = CLEAN_RUNTIME_CACHE.getCommand();
       } else {
-        command = SubmarineUtils.getAngularObjectValue(context, SubmarineConstants.COMMAND_TYPE);
+        operation = SubmarineUtils.getAgulObjValue(context, SubmarineConstants.OPERATION_TYPE);
+        if (!StringUtils.isEmpty(operation)) {
+          SubmarineUtils.removeAgulObjValue(context, SubmarineConstants.OPERATION_TYPE);
+          command = operation;
+        } else {
+          command = SubmarineUtils.getAgulObjValue(context, SubmarineConstants.COMMAND_TYPE);
+        }
       }
 
-      inputPath = SubmarineUtils.getAngularObjectValue(context, SubmarineConstants.INPUT_PATH);
-      chkPntPath = SubmarineUtils.getAngularObjectValue(context,
-          SubmarineConstants.CHECKPOINT_PATH);
-      psLaunchCmd = SubmarineUtils.getAngularObjectValue(context, SubmarineConstants.PS_LAUNCH_CMD);
-      workerLaunchCmd = SubmarineUtils.getAngularObjectValue(
-          context, SubmarineConstants.WORKER_LAUNCH_CMD);
+      String distributed = this.properties.getProperty(
+          SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE, "false");
+      SubmarineUtils.setAgulObjValue(context,
+          unifyKey(SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE), distributed);
+
+      inputPath = SubmarineUtils.getAgulObjValue(context, SubmarineConstants.INPUT_PATH);
+      cleanCheckpoint = SubmarineUtils.getAgulObjValue(context,
+          SubmarineConstants.CLEAN_CHECKPOINT);
+      chkPntPath = submarineJob.getJobDefaultCheckpointPath();
+      SubmarineUtils.setAgulObjValue(context, SubmarineConstants.CHECKPOINT_PATH, chkPntPath);
+      psLaunchCmd = SubmarineUtils.getAgulObjValue(context, SubmarineConstants.PS_LAUNCH_CMD);
+      workerLaunchCmd = SubmarineUtils.getAgulObjValue(context,
+          SubmarineConstants.WORKER_LAUNCH_CMD);
       properties.put(SubmarineConstants.INPUT_PATH, inputPath != null ? inputPath : "");
       properties.put(SubmarineConstants.CHECKPOINT_PATH, chkPntPath != null ? chkPntPath : "");
       properties.put(SubmarineConstants.PS_LAUNCH_CMD, psLaunchCmd != null ? psLaunchCmd : "");
@@ -181,20 +191,34 @@ public class SubmarineInterpreter extends Interpreter {
       SubmarineCommand submarineCmd = SubmarineCommand.fromCommand(command);
       switch (submarineCmd) {
         case USAGE:
-          submarineJob.onShowUsage();
+          submarineJob.showUsage();
           break;
         case JOB_RUN:
-          submarineJob.onJobRun();
+          if (StringUtils.equals(cleanCheckpoint, "true")) {
+            submarineJob.cleanJobDefaultCheckpointPath();
+          }
+          submarineJob.runJob();
           break;
-        case JOB_SHOW:
-          submarineJob.onJobShow();
+        case JOB_STOP:
+          String jobName = SubmarineUtils.getJobName(userName, noteId);
+          submarineJob.deleteJob(jobName);
+          break;
+        case TENSORBOARD_RUN:
+          submarineJob.runTensorBoard();
+          break;
+        case TENSORBOARD_STOP:
+          String user = context.getAuthenticationInfo().getUser();
+          String tensorboardName = SubmarineUtils.getTensorboardName(user);
+          submarineJob.deleteJob(tensorboardName);
           break;
         case OLD_UI:
           createOldGUI(context);
           break;
         case CLEAN_RUNTIME_CACHE:
+          submarineJob.cleanRuntimeCache();
+          break;
         default:
-          submarineJob.onCleanRuntimeCache();
+          submarineJob.onDashboard();
           break;
       }
     } catch (Exception e) {
@@ -207,7 +231,11 @@ public class SubmarineInterpreter extends Interpreter {
 
   @Override
   public void cancel(InterpreterContext context) {
-    submarineCommand(SubmarineCommand.JOB_CANCEL, context.getNoteId(), context);
+    SubmarineJob submarineJob = submarineContext.addOrGetSubmarineJob(properties, context);
+    String userName = context.getAuthenticationInfo().getUser();
+    String noteId = context.getNoteId();
+    String jobName = SubmarineUtils.getJobName(userName, noteId);
+    submarineJob.deleteJob(jobName);
   }
 
   @Override
@@ -232,8 +260,8 @@ public class SubmarineInterpreter extends Interpreter {
   }
 
   @Override
-  public List<InterpreterCompletion> completion(
-      String buf, int cursor, InterpreterContext interpreterContext) {
+  public List<InterpreterCompletion> completion(String buf, int cursor,
+                                                InterpreterContext interpreterContext) {
     return null;
   }
 
@@ -244,17 +272,28 @@ public class SubmarineInterpreter extends Interpreter {
     }
   }
 
-  private InterpreterResult submarineCommand(
-      SubmarineCommand command, String noteId, InterpreterContext context) {
+  private void submarineCommand(SubmarineCommand command, InterpreterContext context) {
     SubmarineJob submarineJob = submarineContext.getSubmarineJob(context.getNoteId());
 
     HashMap jinjaParams = null;
     try {
       jinjaParams = SubmarineUtils.propertiesToJinjaParams(submarineJob.getProperties(),
-          submarineJob.getSubmarineUI(), submarineJob.getHdfsUtils(),
-          noteId, false);
-      String jobName = SubmarineUtils.getJobName(noteId);
-      jinjaParams.put(unifyKey(SubmarineConstants.JOB_NAME), jobName);
+          submarineJob, false);
+      String noteId = context.getNoteId();
+      String jobName = SubmarineUtils.getJobName(userName, noteId);
+      String tensorboardName = SubmarineUtils.getTensorboardName(userName);
+
+      switch (command) {
+        case JOB_STOP:
+          jinjaParams.put(unifyKey(SubmarineConstants.JOB_NAME), jobName);
+          break;
+        case TENSORBOARD_STOP:
+          jinjaParams.put(unifyKey(SubmarineConstants.JOB_NAME), tensorboardName);
+          break;
+        default:
+          LOGGER.error("Unsupported operation！");
+          break;
+      }
       jinjaParams.put(unifyKey(SubmarineConstants.COMMAND_TYPE), command.getCommand());
 
       URL urlTemplate = Resources.getResource(SubmarineJob.SUBMARINE_COMMAND_JINJA);
@@ -291,7 +330,5 @@ public class SubmarineInterpreter extends Interpreter {
     } catch (IOException e) {
       e.printStackTrace();
     }
-
-    return new InterpreterResult(InterpreterResult.Code.SUCCESS);
   }
 }
