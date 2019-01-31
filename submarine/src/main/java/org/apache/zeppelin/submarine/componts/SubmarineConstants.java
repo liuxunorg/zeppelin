@@ -29,6 +29,7 @@ public class SubmarineConstants {
   public static final String SUBMARINE_INTERPRETER_DOCKER_IMAGE
       = "SUBMARINE_INTERPRETER_DOCKER_IMAGE";
 
+  public static final String ZEPPELIN_SUBMARINE_AUTH_TYPE = "zeppelin.submarine.auth.type";
   public static final String SUBMARINE_HADOOP_CONF_DIR  = "SUBMARINE_HADOOP_CONF_DIR";
   public static final String SUBMARINE_HADOOP_KEYTAB    = "SUBMARINE_HADOOP_KEYTAB";
   public static final String SUBMARINE_HADOOP_PRINCIPAL = "SUBMARINE_HADOOP_PRINCIPAL";

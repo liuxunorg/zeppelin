@@ -5,6 +5,13 @@
     "className": "org.apache.zeppelin.submarine.SubmarineInterpreter",
     "defaultInterpreter": true,
     "properties": {
+      "zeppelin.submarine.auth.type": {
+        "envName": "ZEPPELIN_SUBMARINE_AUTH_TYPE",
+        "propertyName": "zeppelin.submarine.auth.type",
+        "defaultValue": "kerberos",
+        "description": "simple or kerberos",
+        "type": "string"
+      },
       "yarn.webapp.http.address": {
         "envName": "YARN_WEBAPP_HTTP_ADDRESS",
         "propertyName": "yarn.webapp.http.address",
@@ -251,6 +258,32 @@
       "language": "python",
       "editOnDblClick": false,
       "completionSupport": true
+    }
+  },
+  {
+    "group": "submarine",
+    "name": "sh",
+    "className": "org.apache.zeppelin.submarine.SubmarineShellInterpreter",
+    "properties": {
+      "shell.command.timeout.millisecs": {
+        "envName": "SHELL_COMMAND_TIMEOUT",
+        "propertyName": "shell.command.timeout.millisecs",
+        "defaultValue": "60000",
+        "description": "Shell command time out in millisecs. Default = 60000",
+        "type": "number"
+      },
+      "submarine.shell.interpolation": {
+        "envName": null,
+        "propertyName": "submarine.shell.interpolation",
+        "defaultValue": false,
+        "description": "Enable ZeppelinContext variable interpolation into paragraph text",
+        "type": "checkbox"
+      }
+    },
+    "editor": {
+      "language": "sh",
+      "editOnDblClick": false,
+      "completionSupport": false
     }
   }
 ]
