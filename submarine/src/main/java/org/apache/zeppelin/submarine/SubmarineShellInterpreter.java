@@ -23,6 +23,7 @@ import org.apache.commons.exec.ExecuteException;
 import org.apache.commons.exec.ExecuteWatchdog;
 import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.zeppelin.interpreter.BaseZeppelinContext;
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterException;
 import org.apache.zeppelin.interpreter.InterpreterResult;
@@ -84,9 +85,9 @@ public class SubmarineShellInterpreter extends KerberosInterpreter {
   }
 
   @Override
-  public InterpreterResult interpret(String originalCmd, InterpreterContext contextInterpreter) {
+  public InterpreterResult internalInterpret(String originalCmd, InterpreterContext intpContext) {
     String cmd = Boolean.parseBoolean(getProperty("zeppelin.shell.interpolation")) ?
-            interpolate(originalCmd, contextInterpreter.getResourcePool()) : originalCmd;
+            interpolate(originalCmd, intpContext.getResourcePool()) : originalCmd;
     LOGGER.debug("Run shell command '" + cmd + "'");
     OutputStream outStream = new ByteArrayOutputStream();
     
@@ -102,17 +103,17 @@ public class SubmarineShellInterpreter extends KerberosInterpreter {
     try {
       DefaultExecutor executor = new DefaultExecutor();
       executor.setStreamHandler(new PumpStreamHandler(
-          contextInterpreter.out, contextInterpreter.out));
+          intpContext.out, intpContext.out));
 
       executor.setWatchdog(new ExecuteWatchdog(
           Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty))));
-      executors.put(contextInterpreter.getParagraphId(), executor);
+      executors.put(intpContext.getParagraphId(), executor);
       if (Boolean.valueOf(getProperty(DIRECTORY_USER_HOME))) {
         executor.setWorkingDirectory(new File(System.getProperty("user.home")));
       }
 
       int exitVal = executor.execute(cmdLine);
-      LOGGER.info("Paragraph " + contextInterpreter.getParagraphId() 
+      LOGGER.info("Paragraph " + intpContext.getParagraphId()
           + " return with exit value: " + exitVal);
       return new InterpreterResult(Code.SUCCESS, outStream.toString());
     } catch (ExecuteException e) {
@@ -123,7 +124,7 @@ public class SubmarineShellInterpreter extends KerberosInterpreter {
       if (exitValue == 143) {
         code = Code.INCOMPLETE;
         message += "Paragraph received a SIGTERM\n";
-        LOGGER.info("The paragraph " + contextInterpreter.getParagraphId()
+        LOGGER.info("The paragraph " + intpContext.getParagraphId()
             + " stopped executing: " + message);
       }
       message += "ExitValue: " + exitValue;
@@ -132,8 +133,18 @@ public class SubmarineShellInterpreter extends KerberosInterpreter {
       LOGGER.error("Can not run " + cmd, e);
       return new InterpreterResult(Code.ERROR, e.getMessage());
     } finally {
-      executors.remove(contextInterpreter.getParagraphId());
+      executors.remove(intpContext.getParagraphId());
     }
+  }
+
+  @Override
+  protected boolean isInterpolate() {
+    return Boolean.parseBoolean(getProperty("zeppelin.shell.interpolation", "false"));
+  }
+
+  @Override
+  public BaseZeppelinContext getZeppelinContext() {
+    return null;
   }
 
   @Override
