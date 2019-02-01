@@ -420,7 +420,10 @@ public class SubmarineJob extends Thread {
       SubmarineUtils.removeAgulObjValue(intpContext, SubmarineConstants.YARN_APP_LAUNCH_TIME);
       SubmarineUtils.removeAgulObjValue(intpContext, SubmarineConstants.YARN_APP_FINISHED_TIME);
       SubmarineUtils.removeAgulObjValue(intpContext, SubmarineConstants.YARN_APP_ELAPSED_TIME);
-      SubmarineUtils.removeAgulObjValue(intpContext, SubmarineConstants.JOB_STATUS);
+      if (jobRunWaitTime.get() <= 0) {
+        // Not wait job run
+        SubmarineUtils.removeAgulObjValue(intpContext, SubmarineConstants.JOB_STATUS);
+      }
     }
 
     return mapStatus;

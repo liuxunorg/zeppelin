@@ -133,6 +133,7 @@
     <i ng-switch-when='ACCEPT'|'YARN NEW'|'YARN NEW SAVING'|'YARN ACCEPTED'"
       ng-style="{'color':'green'}" class="fa fa-circle-o"">  {%raw%}{{JOB_STATUS}}{%endraw%}</i>
     <i ng-switch-when='YARN FAILED'|'YARN KILLED'" ng-style="{'color':'red'}" class="fa fa-circle"">  {%raw%}{{JOB_STATUS}}{%endraw%}</i>
+    <i ng-switch-when='YARN RUNNING'" ng-style="{'color':'blue'}" class="fa fa-spinner"">  {%raw%}{{JOB_STATUS}}{%endraw%}</i>
     <i ng-switch-default ng-style="{'color':'green'}" class="fa fa-circle"">  {%raw%}{{JOB_STATUS}}{%endraw%}</i>
 
     <span ng-if="YARN_APP_STARTED_TIME!=undefined" class="ng-binding ng-scope" style="background: rgba(255,255,255,0.85); color: #999; font-size:12px; margin-left: 10px;">Started at: {%raw%}{{YARN_APP_STARTED_TIME}}{%endraw%}</span>

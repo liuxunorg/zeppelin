@@ -56,7 +56,6 @@ import static org.apache.zeppelin.submarine.componts.SubmarineUtils.unifyKey;
 public class SubmarineInterpreter extends Interpreter {
   private Logger LOGGER = LoggerFactory.getLogger(SubmarineInterpreter.class);
 
-
   // Number of submarines executed in parallel for each interpreter instance
   protected int concurrentExecutedMax = 1;
 

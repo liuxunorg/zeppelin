@@ -30,7 +30,7 @@
         "envName": "HADOOP_YARN_SUBMARINE_JAR",
         "propertyName": "hadoop.yarn.submarine.jar",
         "defaultValue": "",
-        "description": "Submarine executive full path, ex) ../hadoop/share/hadoop/yarn/hadoop-yarn-submarine-3.2.0.jar",
+        "description": "Submarine executive full path, ex) ../hadoop/share/hadoop/yarn/hadoop-yarn-submarine-x.x.x.jar",
         "type": "string"
       },
       "DOCKER_HADOOP_HDFS_HOME": {
@@ -224,7 +224,7 @@
   {
     "group": "submarine",
     "name": "python",
-    "className": "org.apache.zeppelin.submarine.SubmarinePythonInterpreter",
+    "className": "org.apache.zeppelin.submarine.PySubmarineInterpreter",
     "properties": {
       "zeppelin.python": {
         "envName": null,
@@ -242,7 +242,7 @@
       },
       "zeppelin.python.useIPython": {
         "propertyName": "zeppelin.python.useIPython",
-        "defaultValue": true,
+        "defaultValue": false,
         "description": "whether use IPython when it is available",
         "type": "checkbox"
       },
@@ -257,6 +257,31 @@
     "editor": {
       "language": "python",
       "editOnDblClick": false,
+      "completionSupport": true
+    }
+  },
+  {
+    "group": "python",
+    "name": "ipython",
+    "className": "org.apache.zeppelin.python.IPySubmarineInterpreter",
+    "properties": {
+      "zeppelin.ipython.launch.timeout": {
+        "propertyName": "zeppelin.ipython.launch.timeout",
+        "defaultValue": "30000",
+        "description": "time out for ipython launch",
+        "type": "number"
+      },
+      "zeppelin.ipython.grpc.message_size": {
+        "propertyName": "zeppelin.ipython.grpc.message_size",
+        "defaultValue": "33554432",
+        "description": "grpc message size, default is 32M",
+        "type": "number"
+      }
+    },
+    "editor": {
+      "language": "python",
+      "editOnDblClick": false,
+      "completionKey": "TAB",
       "completionSupport": true
     }
   },

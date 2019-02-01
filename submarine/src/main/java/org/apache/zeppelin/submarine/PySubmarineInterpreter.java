@@ -17,6 +17,7 @@ package org.apache.zeppelin.submarine;
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterException;
 import org.apache.zeppelin.interpreter.InterpreterResult;
+import org.apache.zeppelin.python.IPythonInterpreter;
 import org.apache.zeppelin.python.PythonInterpreter;
 import org.apache.zeppelin.submarine.componts.SubmarineJob;
 import org.slf4j.Logger;
@@ -24,15 +25,16 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
 
-public class SubmarinePythonInterpreter extends PythonInterpreter {
-  private static final Logger LOG = LoggerFactory.getLogger(SubmarinePythonInterpreter.class);
+public class PySubmarineInterpreter extends PythonInterpreter {
+  private static final Logger LOG = LoggerFactory.getLogger(PySubmarineInterpreter.class);
 
   public final String REPL_NAME = "sumbarine.python";
   private SubmarineInterpreter submarineInterpreter = null;
   private SubmarineContext submarineContext = null;
 
-  public SubmarinePythonInterpreter(Properties property) {
+  public PySubmarineInterpreter(Properties property) {
     super(property);
+    submarineContext = SubmarineContext.getInstance();
   }
 
   @Override
@@ -44,11 +46,16 @@ public class SubmarinePythonInterpreter extends PythonInterpreter {
       submarineInterpreter.setPythonWorkDir(context.getNoteId(), getPythonWorkDir());
     }
 
-    SubmarineJob submarineJob = submarineContext.getSubmarineJob(context.getNoteId());
+    SubmarineJob submarineJob = submarineContext.addOrGetSubmarineJob(this.properties, context);
     if (null != submarineJob && null != submarineJob.getHdfsClient()) {
       submarineJob.getHdfsClient().saveParagraphToFiles(context.getNoteId(),
           context.getNoteName(), getPythonWorkDir().getAbsolutePath(), properties);
     }
     return super.interpret(st, context);
+  }
+
+  @Override
+  protected IPythonInterpreter getIPythonInterpreter() throws InterpreterException {
+    return getInterpreterInTheSameSessionByClassName(IPySubmarineInterpreter.class, false);
   }
 }
