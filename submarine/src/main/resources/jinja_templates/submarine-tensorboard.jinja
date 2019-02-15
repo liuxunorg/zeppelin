@@ -25,6 +25,7 @@
   --env DOCKER_HADOOP_HDFS_HOME={{ DOCKER_HADOOP_HDFS_HOME }} \
   --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=bridge \
   --checkpoint_path {{ CHECKPOINT_PATH }} \
+  --queue {{ SUBMARINE_YARN_QUEUE }} \
   --num_workers 0 \
   --tensorboard \
   --tensorboard_docker_image {{ TF_PARAMETER_SERVICES_DOCKER_IMAGE }} \

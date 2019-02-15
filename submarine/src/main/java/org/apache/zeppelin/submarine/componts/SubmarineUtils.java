@@ -132,6 +132,8 @@ public class SubmarineUtils {
       sbMessage.append(SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR + ":"
           + submarineJar + " is not a valid file path!\n");
     }
+    String submarineYarnQueue = getProperty(
+        properties, SubmarineConstants.SUBMARINE_YARN_QUEUE, outputLog, sbMessage);
     String containerNetwork = getProperty(
         properties, SubmarineConstants.DOCKER_CONTAINER_NETWORK, outputLog, sbMessage);
     String parameterServicesImage = getProperty(
@@ -234,6 +236,7 @@ public class SubmarineUtils {
     mapParams.put(unifyKey(SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR), submarineJar);
     mapParams.put(unifyKey(SubmarineConstants.JOB_NAME), jobName);
     mapParams.put(unifyKey(SubmarineConstants.DOCKER_CONTAINER_NETWORK), containerNetwork);
+    mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_YARN_QUEUE), submarineYarnQueue);
     mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_HADOOP_KEYTAB), submarineHadoopKeytab);
     mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL),
         submarineHadoopPrincipal);

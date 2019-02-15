@@ -30,14 +30,14 @@
     </parent>
 
     <groupId>org.apache.zeppelin</groupId>
-    <artifactId>launcher-submarine</artifactId>
+    <artifactId>launcher-yarn</artifactId>
     <packaging>jar</packaging>
     <version>0.9.0-SNAPSHOT</version>
-    <name>Zeppelin: Plugin SubmarineInterpreterLauncher</name>
-    <description>Submarine Launcher implementation based on shell script interpreter.sh</description>
+    <name>Zeppelin: Plugin YarnInterpreterLauncher</name>
+    <description>Yarn Launcher implementation based on shell script interpreter.sh</description>
 
     <properties>
-        <plugin.name>Launcher/SubmarineInterpreterLauncher</plugin.name>
+        <plugin.name>Launcher/YarnInterpreterLauncher</plugin.name>
     </properties>
 
     <dependencies>

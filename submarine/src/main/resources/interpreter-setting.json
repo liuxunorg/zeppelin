@@ -187,13 +187,6 @@
         "description": "Memory number of worker services",
         "type": "string"
       },
-      "submarine.concurrent.max": {
-        "envName": "SUBMARINE_CONCURRENT_MAX",
-        "propertyName": "submarine.concurrent.max",
-        "defaultValue": "1",
-        "description": "Number of submarines executed in parallel for each interpreter instance",
-        "type": "number"
-      },
       "tf.tensorboard.enable": {
         "envName": "TF_TENSORBOARD_ENABLE",
         "propertyName": "tf.tensorboard.enable",
@@ -296,13 +289,6 @@
         "defaultValue": "60000",
         "description": "Shell command time out in millisecs. Default = 60000",
         "type": "number"
-      },
-      "submarine.shell.interpolation": {
-        "envName": null,
-        "propertyName": "submarine.shell.interpolation",
-        "defaultValue": false,
-        "description": "Enable ZeppelinContext variable interpolation into paragraph text",
-        "type": "checkbox"
       }
     },
     "editor": {

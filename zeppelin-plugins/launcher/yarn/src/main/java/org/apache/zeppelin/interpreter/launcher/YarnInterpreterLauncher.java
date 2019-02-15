@@ -40,17 +40,18 @@ import java.util.Map;
 import java.util.Properties;
 
 /**
- * Submarine specific launcher.
+ * Yarn specific launcher.
  */
-public class SubmarineInterpreterLauncher extends StandardInterpreterLauncher {
-  private static final Logger LOGGER = LoggerFactory.getLogger(SubmarineInterpreterLauncher.class);
+public class YarnInterpreterLauncher extends StandardInterpreterLauncher {
+  private static final Logger LOGGER = LoggerFactory.getLogger(YarnInterpreterLauncher.class);
 
   private YarnClient yarnClient = null;
 
-  // interpreter.sh
+  // Zeppelin home path in Docker container
+  // Environment variable `SUBMARINE_ZEPPELIN_CONF_DIR_EVN` in /bin/interpreter.sh
   public static final String CONTAINER_ZEPPELIN_HOME = "/submarine/zeppelin";
 
-  public SubmarineInterpreterLauncher(ZeppelinConfiguration zConf, RecoveryStorage recoveryStorage) {
+  public YarnInterpreterLauncher(ZeppelinConfiguration zConf, RecoveryStorage recoveryStorage) {
     super(zConf, recoveryStorage);
   }
 
@@ -283,9 +284,9 @@ public class SubmarineInterpreterLauncher extends StandardInterpreterLauncher {
       zeppelinHome = zConf.getString(ZeppelinConfiguration.ConfVars.ZEPPELIN_HOME);
     }
     if (StringUtils.isEmpty(zeppelinHome)) {
-      // ${ZEPPELIN_HOME}/plugins/Launcher/SubmarineInterpreterLauncher
-      zeppelinHome = getClassPath(SubmarineInterpreterLauncher.class);
-      zeppelinHome = zeppelinHome.replace("/plugins/Launcher/SubmarineInterpreterLauncher", "");
+      // ${ZEPPELIN_HOME}/plugins/Launcher/YarnInterpreterLauncher
+      zeppelinHome = getClassPath(YarnInterpreterLauncher.class);
+      zeppelinHome = zeppelinHome.replace("/plugins/Launcher/YarnInterpreterLauncher", "");
     }
 
     // check zeppelinHome is exist

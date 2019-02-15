@@ -33,7 +33,7 @@ import java.util.Properties;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class SubmarineInterpreterLauncherTest {
+public class YarnInterpreterLauncherTest {
   @Before
   public void setUp() {
     for (final ZeppelinConfiguration.ConfVars confVar : ZeppelinConfiguration.ConfVars.values()) {

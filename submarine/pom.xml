@@ -31,7 +31,7 @@
   <artifactId>zeppelin-submarine</artifactId>
   <packaging>jar</packaging>
   <version>0.9.0-SNAPSHOT</version>
-  <name>Zeppelin: Hadoop Submarine interpreter</name>
+  <name>Zeppelin: Submarine interpreter</name>
 
   <properties>
     <!--library versions-->
