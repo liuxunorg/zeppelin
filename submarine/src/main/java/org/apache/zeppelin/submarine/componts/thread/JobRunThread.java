@@ -63,7 +63,7 @@ public class JobRunThread extends Thread {
       String noteId = intpContext.getNoteId();
       String noteName = intpContext.getNoteName();
       String userName = intpContext.getAuthenticationInfo().getUser();
-      String outputMsg = hdfsClient.saveParagraphToFiles(noteId, intpContext.getNoteName(),
+      String outputMsg = hdfsClient.saveParagraphToFiles(noteId, noteName,
           pythonWorkDir == null ? "" : pythonWorkDir.getAbsolutePath(), properties);
       if (!StringUtils.isEmpty(outputMsg)) {
         submarineUI.outputLog("Save algorithm file", outputMsg);
@@ -157,8 +157,8 @@ public class JobRunThread extends Thread {
       if (watchDog.isWatching()) {
         watchDog.killedProcess();
       }
+      submarineJob.setTensorboardRunWaitTime(SubmarineJob.SUBMARIN_RUN_WAIT_TIME);
     } catch (Exception e) {
-      e.printStackTrace();
       LOGGER.error(e.getMessage(), e);
       submarineJob.setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
       submarineUI.outputLog("Exception", e.getMessage());

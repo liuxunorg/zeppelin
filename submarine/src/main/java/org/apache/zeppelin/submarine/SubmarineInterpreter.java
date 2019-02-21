@@ -145,6 +145,20 @@ public class SubmarineInterpreter extends Interpreter {
   @Override
   public InterpreterResult interpret(String script, InterpreterContext context) {
     try {
+      // algorithm & checkpoint path support replaces ${username} with real user name
+      String algorithmPath = properties.getProperty(
+          SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH, "");
+      if (algorithmPath.contains(SubmarineConstants.USERNAME_SYMBOL)) {
+        algorithmPath = algorithmPath.replace(SubmarineConstants.USERNAME_SYMBOL, userName);
+        properties.setProperty(SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH, algorithmPath);
+      }
+      String checkpointPath = properties.getProperty(
+          SubmarineConstants.TF_CHECKPOINT_PATH, "");
+      if (checkpointPath.contains(SubmarineConstants.USERNAME_SYMBOL)) {
+        checkpointPath = checkpointPath.replace(SubmarineConstants.USERNAME_SYMBOL, userName);
+        properties.setProperty(SubmarineConstants.TF_CHECKPOINT_PATH, checkpointPath);
+      }
+
       SubmarineJob submarineJob = submarineContext.addOrGetSubmarineJob(properties, context);
 
       setParagraphConfig(context);
@@ -327,7 +341,7 @@ public class SubmarineInterpreter extends Interpreter {
       LOGGER.info("jobName {} return with exit value: {}", jobName, exitVal);
       submarineJob.getSubmarineUI().outputLog(command.getCommand(), sbLogOutput.toString());
     } catch (IOException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     }
   }
 }

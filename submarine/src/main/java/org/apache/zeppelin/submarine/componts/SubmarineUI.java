@@ -69,7 +69,7 @@ public class SubmarineUI {
       // The second is Execution information.
       intpContext.out.setType(InterpreterResult.Type.ANGULAR);
     } catch (IOException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     }
   }
 
@@ -217,7 +217,7 @@ public class SubmarineUI {
       output.write(formatMsg.toString());
       output.flush();
     } catch (IOException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     }
   }
 

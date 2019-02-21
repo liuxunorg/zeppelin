@@ -135,8 +135,8 @@ public class TensorboardRunThread extends Thread {
       if (watchDog.isWatching()) {
         watchDog.killedProcess();
       }
+      submarineJob.setTensorboardRunWaitTime(SubmarineJob.SUBMARIN_RUN_WAIT_TIME);
     } catch (Exception e) {
-      e.printStackTrace();
       LOGGER.error(e.getMessage(), e);
       submarineJob.setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
       submarineUI.outputLog("Exception", e.getMessage());

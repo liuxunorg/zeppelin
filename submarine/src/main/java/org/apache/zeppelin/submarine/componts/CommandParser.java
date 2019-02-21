@@ -15,6 +15,8 @@
 package org.apache.zeppelin.submarine.componts;
 
 import javafx.util.Pair;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -28,6 +30,8 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 public class CommandParser {
+  private Logger LOGGER = LoggerFactory.getLogger(CommandParser.class);
+
   private Map<String, String> configValues = new HashMap<>();
 
   /**
@@ -87,9 +91,9 @@ public class CommandParser {
       populate(br);
       br.close();
     } catch (FileNotFoundException e) {
-      System.err.println("Config file " + f.toString() + " not found!");
+      LOGGER.error(e.getMessage(), e);
     } catch (IOException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     }
   }
 

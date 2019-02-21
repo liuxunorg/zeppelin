@@ -111,16 +111,16 @@ public class HdfsClient {
         throw new RuntimeException("Fail to login via keytab:" + keytab +
         ", principal:" + principal, e);
       } catch (Exception e) {
-        e.printStackTrace();
+        LOGGER.error(e.getMessage(), e);
       }
     }
 
     try {
       this.fs = FileSystem.get(new URI("/"), this.hadoopConf);
     } catch (IOException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     } catch (URISyntaxException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     }
   }
 
@@ -268,7 +268,7 @@ public class HdfsClient {
   }
 
   public String saveParagraphToFiles(String noteId, String noteName,
-                                     String dirName, Properties properties) {
+                                     String dirName, Properties properties) throws Exception {
     StringBuffer outputMsg = new StringBuffer();
 
     // zeppelin 0.9 version note name format
@@ -316,7 +316,8 @@ public class HdfsClient {
           tryMkDir(hdfsPath);
         }
       } catch (IOException e) {
-        e.printStackTrace();
+        LOGGER.error(e.getMessage(), e);
+        throw new Exception(e);
       }
     }
 
@@ -346,7 +347,8 @@ public class HdfsClient {
           writeFile(fileContext, filePath);
         }
       } catch (IOException e) {
-        e.printStackTrace();
+        LOGGER.error(e.getMessage(), e);
+        throw new Exception(e);
       }
     }
 
@@ -399,7 +401,7 @@ public class HdfsClient {
             DEFAULT_STORAGE, HDFS_STORAGE);
       }
     } catch (Exception e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     }
 
     return parseNote(noteContext);
@@ -430,9 +432,9 @@ public class HdfsClient {
         paragraphs.add(paragraph);
       }
     } catch (JsonIOException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     } catch (JsonSyntaxException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     }
 
     return paragraphs;

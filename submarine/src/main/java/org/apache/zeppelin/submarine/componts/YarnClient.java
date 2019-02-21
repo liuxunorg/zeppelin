@@ -49,6 +49,8 @@ import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.Credentials;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.AuthSchemes;
+import org.apache.http.client.config.CookieSpecs;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -140,10 +142,10 @@ public class YarnClient {
       InputStream is = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(is))
           .lines().collect(Collectors.joining(System.lineSeparator()));
-      if (response.getStatusLine().getStatusCode() != 200) {
-        LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
-        LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
-        LOGGER.info("result：\n" + result);
+      if (response.getStatusLine().getStatusCode() != 200 /*success*/) {
+        LOGGER.warn("Status code " + response.getStatusLine().getStatusCode());
+        LOGGER.warn("message is :" + Arrays.deepToString(response.getAllHeaders()));
+        LOGGER.warn("result：\n" + result);
       }
 
       // parse app status json
@@ -163,10 +165,11 @@ public class YarnClient {
       InputStream is = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(is))
           .lines().collect(Collectors.joining(System.lineSeparator()));
-      if (response.getStatusLine().getStatusCode() != 200) {
-        LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
-        LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
-        LOGGER.info("result：\n" + result);
+      if (response.getStatusLine().getStatusCode() != 200 /*success*/
+          && response.getStatusLine().getStatusCode() != 404 /*Not found*/) {
+        LOGGER.warn("Status code " + response.getStatusLine().getStatusCode());
+        LOGGER.warn("message is :" + Arrays.deepToString(response.getAllHeaders()));
+        LOGGER.warn("result：\n" + result);
       }
 
       // parse app status json
@@ -189,10 +192,10 @@ public class YarnClient {
       InputStream is = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(is))
           .lines().collect(Collectors.joining(System.lineSeparator()));
-      if (response.getStatusLine().getStatusCode() != 200) {
-        LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
-        LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
-        LOGGER.info("result：\n" + result);
+      if (response.getStatusLine().getStatusCode() != 200 /*success*/) {
+        LOGGER.warn("Status code " + response.getStatusLine().getStatusCode());
+        LOGGER.warn("message is :" + Arrays.deepToString(response.getAllHeaders()));
+        LOGGER.warn("result：\n" + result);
       }
       // parse app status json
       appAttempts = parseClusterApps(result);
@@ -225,9 +228,9 @@ public class YarnClient {
         }
       }
     } catch (JsonIOException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     } catch (JsonSyntaxException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     }
 
     return appAttempts;
@@ -244,10 +247,10 @@ public class YarnClient {
       InputStream is = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(is))
           .lines().collect(Collectors.joining(System.lineSeparator()));
-      if (response.getStatusLine().getStatusCode() != 200) {
-        LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
-        LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
-        LOGGER.info("result：\n" + result);
+      if (response.getStatusLine().getStatusCode() != 200 /*success*/) {
+        LOGGER.warn("Status code " + response.getStatusLine().getStatusCode());
+        LOGGER.warn("message is :" + Arrays.deepToString(response.getAllHeaders()));
+        LOGGER.warn("result：\n" + result);
       }
 
       // parse app status json
@@ -270,10 +273,10 @@ public class YarnClient {
       InputStream is = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(is))
           .lines().collect(Collectors.joining(System.lineSeparator()));
-      if (response.getStatusLine().getStatusCode() != 200) {
-        LOGGER.info("Status code " + response.getStatusLine().getStatusCode());
-        LOGGER.info("message is :" + Arrays.deepToString(response.getAllHeaders()));
-        LOGGER.debug("result：\n" + result);
+      if (response.getStatusLine().getStatusCode() != 200 /*success*/) {
+        LOGGER.warn("Status code " + response.getStatusLine().getStatusCode());
+        LOGGER.warn("message is :" + Arrays.deepToString(response.getAllHeaders()));
+        LOGGER.warn("result：\n" + result);
       }
 
       // parse app status json
@@ -323,13 +326,22 @@ public class YarnClient {
       }
     });
     builder.setDefaultCredentialsProvider(credentialsProvider);
+
+    // Avoid output WARN: Cookie rejected
+    RequestConfig globalConfig = RequestConfig.custom().setCookieSpec(CookieSpecs.IGNORE_COOKIES)
+        .build();
+    builder.setDefaultRequestConfig(globalConfig);
+
     CloseableHttpClient httpClient = builder.build();
+
     return httpClient;
   }
 
   public HttpResponse callRestUrl(final String url, final String userId, HTTP operation) {
-    LOGGER.debug(String.format("Calling YarnClient %s %s %s",
-        this.principal, this.keytab, url));
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug(String.format("Calling YarnClient %s %s %s",
+          this.principal, this.keytab, url));
+    }
     javax.security.auth.login.Configuration config = new javax.security.auth.login.Configuration() {
       @SuppressWarnings("serial")
       @Override
@@ -349,7 +361,9 @@ public class YarnClient {
                 put("storeKey", "true");
                 put("doNotPrompt", "true");
                 put("isInitiator", "true");
-                put("debug", "true");
+                if (LOGGER.isDebugEnabled()) {
+                  put("debug", "true");
+                }
               }
             })};
       }
@@ -382,17 +396,17 @@ public class YarnClient {
                 break;
             }
 
-            HttpClient spnegoHttpClient = buildSpengoHttpClient();
-            httpResponse = spnegoHttpClient.execute(request);
+            HttpClient spengoClient = buildSpengoHttpClient();
+            httpResponse = spengoClient.execute(request);
             return httpResponse;
-          } catch (IOException ioe) {
-            ioe.printStackTrace();
+          } catch (IOException e) {
+            LOGGER.error(e.getMessage(), e);
           }
           return httpResponse;
         }
       });
-    } catch (Exception le) {
-      le.printStackTrace();
+    } catch (Exception e) {
+      LOGGER.error(e.getMessage(), e);
     }
     return null;
   }
@@ -422,9 +436,9 @@ public class YarnClient {
         mapStatus.put(SubmarineConstants.YARN_APPLICATION_STATUS, appState);
       }
     } catch (JsonIOException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     } catch (JsonSyntaxException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     }
 
     return mapStatus;
@@ -462,9 +476,9 @@ public class YarnClient {
         appAttempts.add(mapAppAttempt);
       }
     } catch (JsonIOException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     } catch (JsonSyntaxException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     }
 
     return appAttempts;
@@ -518,9 +532,9 @@ public class YarnClient {
         }
       }
     } catch (JsonIOException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     } catch (JsonSyntaxException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     }
 
     return appContainers;

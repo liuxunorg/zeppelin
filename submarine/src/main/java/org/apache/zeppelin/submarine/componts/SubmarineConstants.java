@@ -106,4 +106,7 @@ public class SubmarineConstants {
 
   public static final String JOB_STATUS   = "JOB_STATUS";
   public static final String JOB_PROGRESS = "JOB_PROGRESS";
+
+  // submarine.algorithm.hdfs.path support for replacing ${username} with real user name
+  public static final String USERNAME_SYMBOL = "${username}";
 }

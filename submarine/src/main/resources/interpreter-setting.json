@@ -114,7 +114,7 @@
         "envName": "SUBMARINE_ALGORITHM_HDFS_PATH",
         "propertyName": "submarine.algorithm.hdfs.path",
         "defaultValue": "hdfs://...",
-        "description": "Algorithm file upload HDFS path, Must be `hdfs://` prefix",
+        "description": "Algorithm file upload HDFS path, Support ${username} variable symbol, For example: hdfs:///usr/${username}",
         "type": "string"
       },
       "tf.parameter.services.num": {
@@ -256,7 +256,7 @@
   {
     "group": "python",
     "name": "ipython",
-    "className": "org.apache.zeppelin.python.IPySubmarineInterpreter",
+    "className": "org.apache.zeppelin.submarine.IPySubmarineInterpreter",
     "properties": {
       "zeppelin.ipython.launch.timeout": {
         "propertyName": "zeppelin.ipython.launch.timeout",

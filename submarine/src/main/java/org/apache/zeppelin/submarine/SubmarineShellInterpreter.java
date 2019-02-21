@@ -86,6 +86,20 @@ public class SubmarineShellInterpreter extends KerberosInterpreter {
 
   @Override
   public InterpreterResult internalInterpret(String originalCmd, InterpreterContext intpContext) {
+    // algorithm & checkpoint path support replaces ${username} with real user name
+    String algorithmPath = properties.getProperty(
+        SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH, "");
+    if (algorithmPath.contains(SubmarineConstants.USERNAME_SYMBOL)) {
+      algorithmPath = algorithmPath.replace(SubmarineConstants.USERNAME_SYMBOL, userName);
+      properties.setProperty(SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH, algorithmPath);
+    }
+    String checkpointPath = properties.getProperty(
+        SubmarineConstants.TF_CHECKPOINT_PATH, "");
+    if (checkpointPath.contains(SubmarineConstants.USERNAME_SYMBOL)) {
+      checkpointPath = checkpointPath.replace(SubmarineConstants.USERNAME_SYMBOL, userName);
+      properties.setProperty(SubmarineConstants.TF_CHECKPOINT_PATH, checkpointPath);
+    }
+
     String cmd = Boolean.parseBoolean(getProperty("zeppelin.shell.interpolation")) ?
             interpolate(originalCmd, intpContext.getResourcePool()) : originalCmd;
     LOGGER.debug("Run shell command '" + cmd + "'");

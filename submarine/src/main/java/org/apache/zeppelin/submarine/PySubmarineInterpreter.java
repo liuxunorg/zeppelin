@@ -19,6 +19,7 @@ import org.apache.zeppelin.interpreter.InterpreterException;
 import org.apache.zeppelin.interpreter.InterpreterResult;
 import org.apache.zeppelin.python.IPythonInterpreter;
 import org.apache.zeppelin.python.PythonInterpreter;
+import org.apache.zeppelin.submarine.componts.SubmarineConstants;
 import org.apache.zeppelin.submarine.componts.SubmarineJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Properties;
 
 public class PySubmarineInterpreter extends PythonInterpreter {
-  private static final Logger LOG = LoggerFactory.getLogger(PySubmarineInterpreter.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(PySubmarineInterpreter.class);
 
   public final String REPL_NAME = "sumbarine.python";
   private SubmarineInterpreter submarineInterpreter = null;
@@ -40,6 +41,20 @@ public class PySubmarineInterpreter extends PythonInterpreter {
   @Override
   public InterpreterResult interpret(String st, InterpreterContext context)
       throws InterpreterException {
+    // algorithm & checkpoint path support replaces ${username} with real user name
+    String algorithmPath = properties.getProperty(
+        SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH, "");
+    if (algorithmPath.contains(SubmarineConstants.USERNAME_SYMBOL)) {
+      algorithmPath = algorithmPath.replace(SubmarineConstants.USERNAME_SYMBOL, userName);
+      properties.setProperty(SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH, algorithmPath);
+    }
+    String checkpointPath = properties.getProperty(
+        SubmarineConstants.TF_CHECKPOINT_PATH, "");
+    if (checkpointPath.contains(SubmarineConstants.USERNAME_SYMBOL)) {
+      checkpointPath = checkpointPath.replace(SubmarineConstants.USERNAME_SYMBOL, userName);
+      properties.setProperty(SubmarineConstants.TF_CHECKPOINT_PATH, checkpointPath);
+    }
+
     if (null == submarineInterpreter) {
       submarineInterpreter = getInterpreterInTheSameSessionByClassName(
           SubmarineInterpreter.class);
@@ -48,8 +63,13 @@ public class PySubmarineInterpreter extends PythonInterpreter {
 
     SubmarineJob submarineJob = submarineContext.addOrGetSubmarineJob(this.properties, context);
     if (null != submarineJob && null != submarineJob.getHdfsClient()) {
-      submarineJob.getHdfsClient().saveParagraphToFiles(context.getNoteId(),
-          context.getNoteName(), getPythonWorkDir().getAbsolutePath(), properties);
+      try {
+        submarineJob.getHdfsClient().saveParagraphToFiles(
+            context.getNoteId(), context.getNoteName(),
+            getPythonWorkDir().getAbsolutePath(), properties);
+      } catch (Exception e) {
+        LOGGER.error(e.getMessage(), e);
+      }
     }
     return super.interpret(st, context);
   }

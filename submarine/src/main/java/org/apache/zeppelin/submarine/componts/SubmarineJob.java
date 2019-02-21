@@ -61,8 +61,9 @@ public class SubmarineJob extends Thread {
   private AtomicBoolean running = new AtomicBoolean(true);
 
   private static final long SYNC_SUBMARINE_RUNTIME_CYCLE = 3000;
+
   // Avoid repeated calls by users
-  private static final long SUBMARIN_RUN_WAIT_TIME = 20;
+  public static final long SUBMARIN_RUN_WAIT_TIME = 10;
   private AtomicLong jobRunWaitTime = new AtomicLong(0);
   private AtomicLong tensorboardRunWaitTime = new AtomicLong(0);
 
@@ -137,7 +138,7 @@ public class SubmarineJob extends Thread {
       try {
         Thread.sleep(SYNC_SUBMARINE_RUNTIME_CYCLE);
       } catch (InterruptedException e) {
-        e.printStackTrace();
+        LOGGER.error(e.getMessage(), e);
       }
     }
   }
@@ -164,7 +165,7 @@ public class SubmarineJob extends Thread {
       submarineUI.outputLog("", message);
       hdfsClient.delete(notePath);
     } catch (IOException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     }
   }
 
@@ -196,6 +197,14 @@ public class SubmarineJob extends Thread {
     submarineUI.createSubmarineUI(SubmarineCommand.DASHBOARD);
   }
 
+  public void setTensorboardRunWaitTime(long time) {
+    tensorboardRunWaitTime.set(time);
+  }
+
+  public void setJobRunWaitTime(long time) {
+    jobRunWaitTime.set(time);
+  }
+
   public void runJob() {
     // Need to display the UI when the page is reloaded, don't create it in the thread
     submarineUI.createSubmarineUI(SubmarineCommand.JOB_RUN);
@@ -206,14 +215,13 @@ public class SubmarineJob extends Thread {
     Map<String, Object> mapYarnAppStatus = getJobStateByYarn(jobName);
     if (mapYarnAppStatus.size() == 0) {
       if (jobRunWaitTime.get() > 0) {
-        String message = "Avoid repeated calls run Job by the userName, " +
-            "please execute it after " +
+        String message = "Avoid repeated calls run Job by the " + userName +
+            ", please execute it after " +
             SYNC_SUBMARINE_RUNTIME_CYCLE * jobRunWaitTime.get() + " seconds.";
         LOGGER.info(message);
         submarineUI.outputLog("Warn", message);
         return;
       }
-      jobRunWaitTime.set(SUBMARIN_RUN_WAIT_TIME);
 
       JobRunThread jobRunThread = new JobRunThread(this);
       jobRunThread.start();
@@ -241,7 +249,6 @@ public class SubmarineJob extends Thread {
         submarineUI.outputLog("Warn", message);
         return;
       }
-      tensorboardRunWaitTime.set(SUBMARIN_RUN_WAIT_TIME);
 
       TensorboardRunThread tensorboardRunThread = new TensorboardRunThread(this);
       tensorboardRunThread.start();
