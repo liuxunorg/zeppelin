@@ -74,11 +74,9 @@ public class YarnClient {
   private Logger LOGGER = LoggerFactory.getLogger(YarnClient.class);
 
   private Configuration hadoopConf;
-
+  private String yarnWebHttpAddr;
   private String principal;
   private String keytab;
-
-  private String yarnWebHttpAddr;
 
   public static final String YARN_REST_APPATTEMPTS = "appAttempts";
   public static final String YARN_REST_CONTAINER = "container";
