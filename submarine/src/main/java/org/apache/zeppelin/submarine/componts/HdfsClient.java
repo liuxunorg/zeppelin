@@ -267,17 +267,15 @@ public class HdfsClient {
     }
   }
 
-  public String saveParagraphToFiles(String noteId, String noteName,
-                                     String dirName, Properties properties) throws Exception {
+  public String saveParagraphToFiles(String noteId, String noteJson,
+                                     String dirName, Properties properties)
+      throws Exception {
     StringBuffer outputMsg = new StringBuffer();
-
-    // zeppelin 0.9 version note name format
-    String noteFileName = noteName + "_" + noteId + ".zpln";
 
     String hdfsUploadPath = properties.getProperty(
         SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH, "");
 
-    ArrayList<SubmarineParagraph> paragraphs = getNoteParagraphs(noteFileName);
+    ArrayList<SubmarineParagraph> paragraphs = parseNote(noteJson);
     HashMap<String, StringBuffer> mapParagraph = new HashMap<>();
     for (int i = 0; i < paragraphs.size(); i++) {
       SubmarineParagraph paragraph = paragraphs.get(i);
@@ -297,7 +295,7 @@ public class HdfsClient {
       mergeScript.append(paragraph.getParagraphScript() + "\n\n");
     }
 
-    // Clear all files in the local noteid directory
+    // Clear all files in the local noteId directory
     if (!org.apache.commons.lang3.StringUtils.isEmpty(dirName)) {
       String noteDir = dirName + "/" + noteId;
       File fileNoteDir = new File(noteDir);

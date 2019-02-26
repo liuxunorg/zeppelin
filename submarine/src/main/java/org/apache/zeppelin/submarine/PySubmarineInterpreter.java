@@ -64,9 +64,11 @@ public class PySubmarineInterpreter extends PythonInterpreter {
     SubmarineJob submarineJob = submarineContext.addOrGetSubmarineJob(this.properties, context);
     if (null != submarineJob && null != submarineJob.getHdfsClient()) {
       try {
+        String noteId = context.getNoteId();
+        String noteJson = context.getIntpEventClient()
+            .getNoteFromServer(noteId, context.getAuthenticationInfo(), true);
         submarineJob.getHdfsClient().saveParagraphToFiles(
-            context.getNoteId(), context.getNoteName(),
-            getPythonWorkDir().getAbsolutePath(), properties);
+            noteId, noteJson, getPythonWorkDir().getAbsolutePath(), properties);
       } catch (Exception e) {
         LOGGER.error(e.getMessage(), e);
       }

@@ -60,10 +60,15 @@ public class JobRunThread extends Thread {
         return;
       }
 
+
       String noteId = intpContext.getNoteId();
       String noteName = intpContext.getNoteName();
       String userName = intpContext.getAuthenticationInfo().getUser();
-      String outputMsg = hdfsClient.saveParagraphToFiles(noteId, noteName,
+
+      String noteJson = intpContext.getIntpEventClient().getNoteFromServer(
+          noteId, intpContext.getAuthenticationInfo(), true);
+
+      String outputMsg = hdfsClient.saveParagraphToFiles(noteId, noteJson,
           pythonWorkDir == null ? "" : pythonWorkDir.getAbsolutePath(), properties);
       if (!StringUtils.isEmpty(outputMsg)) {
         submarineUI.outputLog("Save algorithm file", outputMsg);
