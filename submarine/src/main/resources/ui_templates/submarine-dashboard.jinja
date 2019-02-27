@@ -28,11 +28,11 @@
         You can execute the selected command by entering the parameters in the interface below.
         <button ng-if="YARN_TENSORBOARD_URL==undefined || YARN_TENSORBOARD_URL==''" class="btn btn-default btn-xs" style="margin-left:20px;"
           ng-click="z.angularBind('COMMAND_TYPE','TENSORBOARD_RUN','{{ PARAGRAPH_ID }}');z.runParagraph('{{ PARAGRAPH_ID }}');"
-          tooltip-placement="top" uib-tooltip="Create Tensorboard"> <span class="icon-control-play shortcut-icon"></span>  Tensorboard
+          tooltip-placement="top" uib-tooltip="Create Tensorboard"> <span class="icon-control-play shortcut-icon"></span>  Create Tensorboard
         </button>
         <a ng-if="YARN_TENSORBOARD_URL!=undefined" class="btn btn-default btn-xs" style="margin-left:20px;"
           ng-href="{%raw%}{{YARN_TENSORBOARD_URL}}{%endraw%}" target="_blank" tooltip-placement="top" uib-tooltip="View training in Tensorboard">
-          <span class="icon-share-alt shortcut-icon" style="font-size:12px;"></span> Tensorboard
+          <span class="icon-share-alt shortcut-icon" style="font-size:12px;"></span> Open Tensorboard
         </a>
         <a ng-if="YARN_APPLICATION_URL!=undefined" class="btn btn-default btn-xs" style="margin-left:4px;"
           ng-href="{%raw%}{{YARN_APPLICATION_URL}}{%endraw%}" target="_blank" tooltip-placement="top" uib-tooltip="View application in YARN WEB">
@@ -96,7 +96,7 @@
 
   <form class="form-inline" style="margin-top: 10px;">
     <div class="form-group" style="width: 100%;">
-      <label style="width:150px;text-align:right;margin-right:4px;">Data Path: </label>
+      <label style="width:150px;text-align:right;margin-right:4px;">Input Path: </label>
       <input type="text" style="width:calc(100% - 160px)" class="form-control" id="inputPath"
         placeholder="Please input data path (eg. hdfs://cluster1/... )" ng-value="INPUT_PATH"
         ng-change="z.angularBind('INPUT_PATH',inputPath,'{{ PARAGRAPH_ID }}')" ng-model="inputPath"></input>

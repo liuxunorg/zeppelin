@@ -56,7 +56,7 @@ public class YarnInterpreterLauncher extends StandardInterpreterLauncher {
   }
 
   private InterpreterClient launchOnYarn(InterpreterLaunchContext context) throws IOException {
-    // Because need to modify the Properties, make a clone
+    // Because need to modify the properties, make a clone
     this.properties = (Properties) context.getProperties().clone();
     yarnClient = new YarnClient(properties);
 

@@ -67,9 +67,12 @@ public class SubmarineUtils {
 
     return jobName;
   }
-  // yarn application match the pattern [a-z][a-z0-9-]*
+
+  // 1. Yarn application match the pattern [a-z][a-z0-9-]*
+  // 2. Yarn registry dns Hostname can not be greater than 64 characters,
+  //    The name needs to be short.
   public static String getTensorboardName(String user) {
-    return user.toLowerCase() + "-tensorboard";
+    return user.toLowerCase() + "-tb";
   }
 
   public static String getAgulObjValue(InterpreterContext context, String name) {

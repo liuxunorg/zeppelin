@@ -138,14 +138,20 @@ public class JobRunThread extends Thread {
       executor.execute(cmdLine, env, new DefaultExecuteResultHandler() {
         @Override
         public void onProcessComplete(int exitValue) {
-          LOGGER.info("jobName {} ProcessComplete exit value is : {}", jobName, exitValue);
+          String message = String.format(
+              "jobName %s ProcessComplete exit value is : %d", jobName, exitValue);
+          LOGGER.info(message);
+          submarineUI.outputLog("JOR RUN COMPLETE", message);
           running.set(false);
           submarineJob.setCurrentJobState(EXECUTE_SUBMARINE_FINISHED);
         }
         @Override
         public void onProcessFailed(ExecuteException e) {
-          LOGGER.error("jobName {} ProcessFailed exit value is : {}, exception is : {}",
+          String message = String.format(
+              "jobName %s ProcessFailed exit value is : %d, exception is : %s",
               jobName, e.getExitValue(), e.getMessage());
+          LOGGER.error(message);
+          submarineUI.outputLog("JOR RUN FAILED", message);
           running.set(false);
           submarineJob.setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
         }

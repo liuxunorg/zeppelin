@@ -111,14 +111,20 @@ public class TensorboardRunThread extends Thread {
       executor.execute(cmdLine, env, new DefaultExecuteResultHandler() {
         @Override
         public void onProcessComplete(int exitValue) {
-          LOGGER.info("jobName {} ProcessComplete exit value:{}", tensorboardName, exitValue);
+          String message = String.format(
+              "jobName %s ProcessComplete exit value is : %d", tensorboardName, exitValue);
+          LOGGER.info(message);
+          submarineUI.outputLog("TENSORBOARD RUN COMPLETE", message);
           running.set(false);
           submarineJob.setCurrentJobState(EXECUTE_SUBMARINE_FINISHED);
         }
         @Override
         public void onProcessFailed(ExecuteException e) {
-          LOGGER.error("jobName {} ProcessFailed exit value is : {}, exception is : {}",
+          String message = String.format(
+              "jobName %s ProcessFailed exit value is : %d, exception is : %s",
               tensorboardName, e.getExitValue(), e.getMessage());
+          LOGGER.error(message);
+          submarineUI.outputLog("TENSORBOARD RUN FAILED", message);
           running.set(false);
           submarineJob.setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
         }

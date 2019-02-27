@@ -145,12 +145,12 @@ public class SubmarineJob extends Thread {
 
   public String getUserTensorboardPath() {
     String tfCheckpointPath = properties.getProperty(SubmarineConstants.TF_CHECKPOINT_PATH, "");
-    return tfCheckpointPath + "/" + userName;
+    return tfCheckpointPath;
   }
 
   public String getJobDefaultCheckpointPath() {
-    String userTbPath = getUserTensorboardPath();
-    return userTbPath + "/" + noteId;
+    String userTensorboardPath = getUserTensorboardPath();
+    return userTensorboardPath + "/" + noteId;
   }
 
   public void cleanJobDefaultCheckpointPath() {
@@ -311,34 +311,6 @@ public class SubmarineJob extends Thread {
 
   // from state to state
   public void setCurrentJobState(SubmarineJobStatus toStatus) {
-    switch (toStatus) {
-      case EXECUTE_SUBMARINE:
-        showJobProgressBar(0);
-        break;
-      case EXECUTE_SUBMARINE_FINISHED:
-        break;
-      case EXECUTE_SUBMARINE_ERROR:
-      case YARN_STOPPED:
-      case YARN_FINISHED:
-        showJobProgressBar(0);
-        break;
-      default:
-        LOGGER.error("unknown SubmarineJobStatus:" + currentJobStatus);
-        break;
-    }
-
-    switch (currentJobStatus) {
-      case EXECUTE_SUBMARINE:
-        break;
-      case EXECUTE_SUBMARINE_FINISHED:
-        break;
-      case EXECUTE_SUBMARINE_ERROR:
-        break;
-      default:
-        LOGGER.error("unknown SubmarineJobStatus:" + currentJobStatus);
-        break;
-    }
-
     SubmarineUtils.setAgulObjValue(intpContext, SubmarineConstants.JOB_STATUS,
         toStatus.getStatus());
     currentJobStatus = toStatus;
