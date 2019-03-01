@@ -110,6 +110,20 @@
         "description": "Network name in the docker container",
         "type": "string"
       },
+      "DOCKER_CONTAINER_TIME_ZONE": {
+        "envName": "DOCKER_CONTAINER_TIME_ZONE",
+        "propertyName": "docker.container.time.zone",
+        "defaultValue": "Etc/UTC",
+        "description": "docker container time zone",
+        "type": "string"
+      },
+      "zeppelin.interpreter.connect.timeout": {
+        "envName": "ZEPPELIN_INTERPRETER_CONNECT_TIMEOUT",
+        "propertyName": "zeppelin.interpreter.connect.timeout",
+        "defaultValue": "100000",
+        "description": "zeppelin interpreter connect timeout",
+        "type": "number"
+      },
       "submarine.algorithm.hdfs.path": {
         "envName": "SUBMARINE_ALGORITHM_HDFS_PATH",
         "propertyName": "submarine.algorithm.hdfs.path",

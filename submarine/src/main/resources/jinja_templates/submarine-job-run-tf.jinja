@@ -25,6 +25,8 @@
   --env DOCKER_HADOOP_HDFS_HOME={{ DOCKER_HADOOP_HDFS_HOME }} \
   --env PYTHONPATH="./submarine_algorithm:$PYTHONPATH" \
   --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK={{ DOCKER_CONTAINER_NETWORK }} \
+  --env HADOOP_LOG_DIR=/tmp \
+  --env TZ="{{ DOCKER_CONTAINER_TIME_ZONE }}" \
   --input_path {{ INPUT_PATH }} \
   --checkpoint_path {{ CHECKPOINT_PATH }} \
   --queue {{ SUBMARINE_YARN_QUEUE }} \

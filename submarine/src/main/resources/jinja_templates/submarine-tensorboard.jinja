@@ -15,15 +15,16 @@
 # limitations under the License.
 #}
 {%- if INTERPRETER_LAUNCH_MODE and INTERPRETER_LAUNCH_MODE == 'yarn' -%}
-{{ DOCKER_HADOOP_HDFS_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
+{{ DOCKER_HADOOP_HDFS_HOME }}/bin/yarn jar \
 {%- else -%}
-{{ SUBMARINE_HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} \
+{{ SUBMARINE_HADOOP_HOME }}/bin/yarn jar \
 {%- endif %}
-  job run \
+  {{ HADOOP_YARN_SUBMARINE_JAR }} job run \
   --name {{ JOB_NAME }} \
   --env DOCKER_JAVA_HOME={{ DOCKER_JAVA_HOME }} \
   --env DOCKER_HADOOP_HDFS_HOME={{ DOCKER_HADOOP_HDFS_HOME }} \
   --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=bridge \
+  --env TZ="{{ DOCKER_CONTAINER_TIME_ZONE }}" \
   --checkpoint_path {{ CHECKPOINT_PATH }} \
   --queue {{ SUBMARINE_YARN_QUEUE }} \
   --num_workers 0 \

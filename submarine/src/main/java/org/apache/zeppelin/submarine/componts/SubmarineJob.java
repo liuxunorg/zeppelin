@@ -214,10 +214,10 @@ public class SubmarineJob extends Thread {
     String jobName = SubmarineUtils.getJobName(userName, noteId);
     Map<String, Object> mapYarnAppStatus = getJobStateByYarn(jobName);
     if (mapYarnAppStatus.size() == 0) {
-      if (jobRunWaitTime.get() > 0) {
+      long waitTime = jobRunWaitTime.get();
+      if (waitTime > 0) {
         String message = "Avoid repeated calls run Job by the " + userName +
-            ", please execute it after " +
-            SYNC_SUBMARINE_RUNTIME_CYCLE * jobRunWaitTime.get() + " seconds.";
+            "please wait " + SYNC_SUBMARINE_RUNTIME_CYCLE * waitTime + " seconds.";
         LOGGER.info(message);
         submarineUI.outputLog("Warn", message);
         return;
@@ -241,10 +241,10 @@ public class SubmarineJob extends Thread {
 
     boolean tensorboardExist = getTensorboardStatus();
     if (false == tensorboardExist) {
-      if (tensorboardRunWaitTime.get() > 0) {
-        String message = "Avoid repeated calls run Tensorboard by the userName, " +
-            "please execute it after " +
-            SYNC_SUBMARINE_RUNTIME_CYCLE * tensorboardRunWaitTime.get() + " seconds.";
+      long waitTime = tensorboardRunWaitTime.get();
+      if (waitTime > 0) {
+        String message = "Avoid repeated calls run Tensorboard by the " + userName + ", " +
+            "please wait " + SYNC_SUBMARINE_RUNTIME_CYCLE * waitTime + " seconds.";
         LOGGER.info(message);
         submarineUI.outputLog("Warn", message);
         return;

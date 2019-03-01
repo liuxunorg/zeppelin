@@ -18,9 +18,11 @@ package org.apache.zeppelin.submarine.componts;
  * NOTE: use lowercase + "_" for the option name
  */
 public class SubmarineConstants {
-  // hadoop home in docker container at `submarine-job-run-tf.jinja`
+  // Docker container Environmental variable at `submarine-job-run-tf.jinja`
+  // and `/bin/interpreter.sh`
   public static final String DOCKER_HADOOP_HDFS_HOME = "DOCKER_HADOOP_HDFS_HOME";
   public static final String DOCKER_JAVA_HOME        = "DOCKER_JAVA_HOME";
+  public static final String DOCKER_CONTAINER_TIME_ZONE = "DOCKER_CONTAINER_TIME_ZONE";
   public static final String INTERPRETER_LAUNCH_MODE = "INTERPRETER_LAUNCH_MODE";
 
   // interpreter.sh Environmental variable

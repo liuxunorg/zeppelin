@@ -201,6 +201,9 @@ public class SubmarineUtils {
     String sumbarineHadoopConfDir = getProperty(properties,
         SubmarineConstants.SUBMARINE_HADOOP_CONF_DIR, outputLog, sbMessage);
 
+    String dockerContainerTimezone = getProperty(properties,
+        SubmarineConstants.DOCKER_CONTAINER_TIME_ZONE, outputLog, sbMessage);
+
     String notePath = algorithmUploadPath + File.separator + noteId;
     List<String> arrayHdfsFiles = new ArrayList<>();
     List<Path> hdfsFiles = submarineJob.getHdfsClient().list(new Path(notePath + "/*"));
@@ -236,6 +239,7 @@ public class SubmarineUtils {
     mapParams.put(unifyKey(SubmarineConstants.SUBMARINE_HADOOP_CONF_DIR), sumbarineHadoopConfDir);
     mapParams.put(unifyKey(SubmarineConstants.DOCKER_HADOOP_HDFS_HOME), dockerHadoopHdfsHome);
     mapParams.put(unifyKey(SubmarineConstants.DOCKER_JAVA_HOME), dockerJavaHome);
+    mapParams.put(unifyKey(SubmarineConstants.DOCKER_CONTAINER_TIME_ZONE), dockerContainerTimezone);
     mapParams.put(unifyKey(SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR), submarineJar);
     mapParams.put(unifyKey(SubmarineConstants.JOB_NAME), jobName);
     mapParams.put(unifyKey(SubmarineConstants.DOCKER_CONTAINER_NETWORK), containerNetwork);

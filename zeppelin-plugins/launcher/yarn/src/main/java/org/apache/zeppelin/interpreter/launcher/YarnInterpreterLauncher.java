@@ -48,8 +48,8 @@ public class YarnInterpreterLauncher extends StandardInterpreterLauncher {
   private YarnClient yarnClient = null;
 
   // Zeppelin home path in Docker container
-  // Environment variable `SUBMARINE_ZEPPELIN_CONF_DIR_EVN` in /bin/interpreter.sh
-  public static final String CONTAINER_ZEPPELIN_HOME = "/submarine/zeppelin";
+  // Environment variable `SUBMARINE_ZEPPELIN_CONF_DIR_ENV` in /bin/interpreter.sh
+  public static final String CONTAINER_ZEPPELIN_HOME = "/zeppelin";
 
   public YarnInterpreterLauncher(ZeppelinConfiguration zConf, RecoveryStorage recoveryStorage) {
     super(zConf, recoveryStorage);
@@ -87,7 +87,8 @@ public class YarnInterpreterLauncher extends StandardInterpreterLauncher {
     // keytab file & zeppelin-site.xml & krb5.conf & hadoop-yarn-submarine-X.X.X-SNAPSHOT.jar
     // The submarine configures the mount file into the container through `localization`
     StringBuffer sbLocalization = new StringBuffer();
-    // zeppelin-site.xml is uploaded to a specific `${CONTAINER_ZEPPELIN_HOME}` directory in the container
+
+    // 1) zeppelin-site.xml is uploaded to `${CONTAINER_ZEPPELIN_HOME}` directory in the container
     String zconfFile = zConf.getDocument().getDocumentURI();
     if (zconfFile.startsWith("file:")) {
       zconfFile = zconfFile.replace("file:", "");
@@ -98,8 +99,8 @@ public class YarnInterpreterLauncher extends StandardInterpreterLauncher {
       sbLocalization.append(" ");
     }
 
-    // ${ZEPPELIN_HOME}/interpreter/submarine is uploaded to a specific `${CONTAINER_ZEPPELIN_HOME}`
-    // directory in the container
+    // 2) ${ZEPPELIN_HOME}/interpreter/submarine is uploaded to `${CONTAINER_ZEPPELIN_HOME}`
+    //    directory in the container
     String zeppelinHome = getZeppelinHome();
     String intpSubmarinePath = "/interpreter/submarine";
     String zeplIntpSubmarinePath = getPathByHome(zeppelinHome, intpSubmarinePath);
@@ -107,40 +108,42 @@ public class YarnInterpreterLauncher extends StandardInterpreterLauncher {
     sbLocalization.append(zeplIntpSubmarinePath + ":" + CONTAINER_ZEPPELIN_HOME + intpSubmarinePath + ":rw\"");
     sbLocalization.append(" ");
 
-    // ${ZEPPELIN_HOME}/lib/interpreter is uploaded to a specific `${CONTAINER_ZEPPELIN_HOME}`
-    // directory in the container
+    // 3) ${ZEPPELIN_HOME}/lib/interpreter is uploaded to `${CONTAINER_ZEPPELIN_HOME}`
+    //    directory in the container
     String libIntpPath = "/lib/interpreter";
     String zeplLibIntpPath = getPathByHome(zeppelinHome, libIntpPath);
     sbLocalization.append("--localization \"");
     sbLocalization.append(zeplLibIntpPath + ":" + CONTAINER_ZEPPELIN_HOME + libIntpPath + ":rw\"");
     sbLocalization.append(" ");
 
-    // ${ZEPPELIN_HOME}/conf/log4j.properties
+    // 4) ${ZEPPELIN_HOME}/conf/log4j.properties
     String log4jPath = "/conf/log4j.properties";
     String zeplLog4jPath = getPathByHome(zeppelinHome, log4jPath);
     sbLocalization.append("--localization \"");
     sbLocalization.append(zeplLog4jPath + ":" + CONTAINER_ZEPPELIN_HOME + log4jPath + ":rw\"");
     sbLocalization.append(" ");
 
-    // Keytab file upload container, Keep the same directory as local
+    // 5) Keytab file upload container, Keep the same directory as local host
     String keytab = properties.getProperty(SubmarineConstants.SUBMARINE_HADOOP_KEYTAB, "");
     keytab = getPathByHome(null, keytab);
     sbLocalization.append("--localization \"");
     sbLocalization.append(keytab + ":" + keytab + ":rw\"").append(" ");
 
-    // krb5.conf file upload container, Keep the same directory as local
+    // 6) krb5.conf file upload container, Keep the same directory as local
     String krb5File = properties.getProperty(SubmarineConstants.SUBMARINE_HADOOP_KRB5_CONF, "");
-    krb5File = getPathByHome(null, krb5File);
-    sbLocalization.append("--localization \"");
-    sbLocalization.append(krb5File + ":" + krb5File + ":rw\"").append(" ");
+    if (!StringUtils.isEmpty(krb5File)) {
+      krb5File = getPathByHome(null, krb5File);
+      sbLocalization.append("--localization \"");
+      sbLocalization.append(krb5File + ":" + krb5File + ":rw\"").append(" ");
+    }
 
-    // hadoop-yarn-submarine-X.X.X-SNAPSHOT.jar file upload container, Keep the same directory as local
+    // 7) hadoop-yarn-submarine-X.X.X-SNAPSHOT.jar file upload container, Keep the same directory as local
     String submarineJar = properties.getProperty(SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR, "");
     submarineJar = getPathByHome(null, submarineJar);
     sbLocalization.append("--localization \"");
     sbLocalization.append(submarineJar + ":" + submarineJar + ":rw\"").append(" ");
 
-    // hadoop conf directory upload container, Keep the same directory as local
+    // 8) hadoop conf directory upload container, Keep the same directory as local
     String hadoopConfDir = properties.getProperty(SubmarineConstants.SUBMARINE_HADOOP_CONF_DIR, "");
     hadoopConfDir = getPathByHome(null, hadoopConfDir);
     sbLocalization.append("--localization \"");
@@ -150,8 +153,10 @@ public class YarnInterpreterLauncher extends StandardInterpreterLauncher {
     LOGGER.info("SUBMARINE_LOCALIZATION=" + sbLocalization.toString());
 
     // Set the zepplin configuration file path environment variable in `interpreter.sh`
-    properties.put("SUBMARINE_ZEPPELIN_CONF_DIR_EVN", "--env ZEPPELIN_CONF_DIR=" + CONTAINER_ZEPPELIN_HOME);
+    properties.put("SUBMARINE_ZEPPELIN_CONF_DIR_ENV", "--env ZEPPELIN_CONF_DIR=" + CONTAINER_ZEPPELIN_HOME);
 
+    // The submarine interpreter already exists in the connection yarn
+    // Or create a submarine interpreter
     // 1. Query the IP and port of the submarine interpreter process through the yarn client
     List<Map<String, Object>> listExportPorts = yarnClient.getAppExportPorts(submarineIntpAppName);
 
@@ -192,6 +197,15 @@ public class YarnInterpreterLauncher extends StandardInterpreterLauncher {
       }
 
       // 2. Create a submarine interpreter process with hadoop submarine
+      // First delete the submarine interpreter that may already exist in YARN
+      yarnClient.deleteService(submarineIntpAppName);
+      try {
+        // wait for delete submarine interpreter service
+        Thread.sleep(3000);
+      } catch (InterruptedException e) {
+        LOGGER.error(e.getMessage(), e);
+      }
+
       String localRepoPath = zConf.getInterpreterLocalRepoPath() + "/"
           + context.getInterpreterSettingId();
       RemoteInterpreterManagedProcess remoteInterpreterManagedProcess = new RemoteInterpreterManagedProcess(
@@ -209,7 +223,7 @@ public class YarnInterpreterLauncher extends StandardInterpreterLauncher {
       // 3. Connect to the interpreter process created by YARN
       Date beginDate = new Date();
       Date checkDate = new Date();
-      while (checkDate.getTime() - beginDate.getTime() < connectTimeout * 1000) {
+      while (checkDate.getTime() - beginDate.getTime() < connectTimeout) {
         listExportPorts.clear();
         listExportPorts = yarnClient.getAppExportPorts(submarineIntpAppName);
 
@@ -230,9 +244,9 @@ public class YarnInterpreterLauncher extends StandardInterpreterLauncher {
 
         if (false == findExistIntpContainer) {
           try {
-            Thread.sleep(1000);
+            Thread.sleep(3000);
           } catch (InterruptedException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
           }
         } else {
           LOGGER.info("Detection Submarine interpreter Container hostIp:{}, hostPort:{}, containerPort:{}.",

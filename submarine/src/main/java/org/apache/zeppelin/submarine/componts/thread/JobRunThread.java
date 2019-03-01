@@ -144,6 +144,7 @@ public class JobRunThread extends Thread {
           submarineUI.outputLog("JOR RUN COMPLETE", message);
           running.set(false);
           submarineJob.setCurrentJobState(EXECUTE_SUBMARINE_FINISHED);
+          submarineJob.setJobRunWaitTime(SubmarineJob.SUBMARIN_RUN_WAIT_TIME);
         }
         @Override
         public void onProcessFailed(ExecuteException e) {
@@ -154,6 +155,7 @@ public class JobRunThread extends Thread {
           submarineUI.outputLog("JOR RUN FAILED", message);
           running.set(false);
           submarineJob.setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
+          submarineJob.setJobRunWaitTime(0);
         }
       });
       Date nowDate = new Date();
@@ -168,11 +170,11 @@ public class JobRunThread extends Thread {
       if (watchDog.isWatching()) {
         watchDog.killedProcess();
       }
-      submarineJob.setTensorboardRunWaitTime(SubmarineJob.SUBMARIN_RUN_WAIT_TIME);
     } catch (Exception e) {
       LOGGER.error(e.getMessage(), e);
       submarineJob.setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
       submarineUI.outputLog("Exception", e.getMessage());
+      submarineJob.setJobRunWaitTime(0);
     }
   }
 }
