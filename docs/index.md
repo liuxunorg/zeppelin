@@ -157,7 +157,8 @@ limitations under the License.
   * [Scio](./interpreter/scio.html)
   * [Shell](./interpreter/shell.html)
   * [Spark](./interpreter/spark.html)
-  
+  * [Submarine](./interpreter/submarine.html)
+
 #### External Resources
   * [Mailing List](https://zeppelin.apache.org/community.html)
   * [Apache Zeppelin Wiki](https://cwiki.apache.org/confluence/display/ZEPPELIN/Zeppelin+Home)

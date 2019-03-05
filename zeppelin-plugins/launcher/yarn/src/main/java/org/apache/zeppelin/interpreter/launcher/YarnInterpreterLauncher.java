@@ -27,7 +27,7 @@ import org.apache.zeppelin.interpreter.remote.RemoteInterpreterManagedProcess;
 import org.apache.zeppelin.interpreter.remote.RemoteInterpreterRunningProcess;
 import org.apache.zeppelin.interpreter.remote.RemoteInterpreterUtils;
 import org.apache.zeppelin.submarine.componts.SubmarineConstants;
-import org.apache.zeppelin.submarine.componts.YarnClient;
+import org.apache.zeppelin.submarine.hadoop.YarnClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
