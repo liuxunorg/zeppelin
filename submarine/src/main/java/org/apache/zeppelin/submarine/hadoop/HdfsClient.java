@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.submarine.componts;
+package org.apache.zeppelin.submarine.hadoop;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
+import org.apache.zeppelin.submarine.componts.SubmarineConstants;
+import org.apache.zeppelin.submarine.componts.SubmarineParagraph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

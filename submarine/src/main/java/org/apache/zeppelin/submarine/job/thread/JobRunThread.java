@@ -1,4 +1,4 @@
-package org.apache.zeppelin.submarine.componts.thread;
+package org.apache.zeppelin.submarine.job.thread;
 
 import com.google.common.io.Resources;
 import com.hubspot.jinjava.Jinjava;
@@ -12,49 +12,79 @@ import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.zeppelin.interpreter.InterpreterContext;
-import org.apache.zeppelin.submarine.componts.HdfsClient;
+import org.apache.zeppelin.submarine.hadoop.HdfsClient;
 import org.apache.zeppelin.submarine.componts.SubmarineConstants;
-import org.apache.zeppelin.submarine.componts.SubmarineJob;
 import org.apache.zeppelin.submarine.componts.SubmarineUI;
 import org.apache.zeppelin.submarine.componts.SubmarineUtils;
+import org.apache.zeppelin.submarine.job.SubmarineJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URL;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.apache.zeppelin.submarine.componts.SubmarineJobStatus.EXECUTE_SUBMARINE_ERROR;
-import static org.apache.zeppelin.submarine.componts.SubmarineJobStatus.EXECUTE_SUBMARINE_FINISHED;
+import static org.apache.zeppelin.submarine.job.SubmarineJobStatus.EXECUTE_SUBMARINE;
+import static org.apache.zeppelin.submarine.job.SubmarineJobStatus.EXECUTE_SUBMARINE_ERROR;
+import static org.apache.zeppelin.submarine.job.SubmarineJobStatus.EXECUTE_SUBMARINE_FINISHED;
 
-public class TensorboardRunThread extends Thread {
-  private Logger LOGGER = LoggerFactory.getLogger(TensorboardRunThread.class);
+public class JobRunThread extends Thread {
+  private Logger LOGGER = LoggerFactory.getLogger(JobRunThread.class);
 
   private SubmarineJob submarineJob;
 
-  public TensorboardRunThread(SubmarineJob submarineJob) {
+  private AtomicBoolean running = new AtomicBoolean(false);
+
+  public JobRunThread(SubmarineJob submarineJob) {
     this.submarineJob = submarineJob;
   }
 
   public void run() {
     SubmarineUI submarineUI = submarineJob.getSubmarineUI();
-    Properties properties = submarineJob.getProperties();
     InterpreterContext intpContext = submarineJob.getIntpContext();
+    String noteId = intpContext.getNoteId();
+    String userName = intpContext.getAuthenticationInfo().getUser();
+    String jobName = SubmarineUtils.getJobName(userName, noteId);
+
+    if (true == running.get()) {
+      String message = String.format("Job %s already running.", jobName);
+      submarineUI.outputLog("WARN", message);
+      LOGGER.warn(message);
+      return;
+    }
+    running.set(true);
+
+    Properties properties = submarineJob.getProperties();
     HdfsClient hdfsClient = submarineJob.getHdfsClient();
     File pythonWorkDir = submarineJob.getPythonWorkDir();
 
     try {
-      HashMap jinjaParams = SubmarineUtils.propertiesToJinjaParams(
-          properties, submarineJob, false);
-      // update jobName -> tensorboardName
-      String tensorboardName = SubmarineUtils.getTensorboardName(submarineJob.getUserName());
-      jinjaParams.put(SubmarineConstants.JOB_NAME, tensorboardName);
+      submarineJob.setCurrentJobState(EXECUTE_SUBMARINE);
 
-      URL urlTemplate = Resources.getResource(SubmarineJob.SUBMARINE_TENSORBOARD_JINJA);
+      String algorithmPath = properties.getProperty(
+          SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH);
+      if (!algorithmPath.startsWith("hdfs://")) {
+        String message = "Algorithm file upload HDFS path, " +
+            "Must be `hdfs://` prefix. now setting " + algorithmPath;
+        submarineUI.outputLog("Configuration error", message);
+        return;
+      }
+
+      String noteJson = intpContext.getIntpEventClient().getNoteFromServer(
+          noteId, intpContext.getAuthenticationInfo(), true);
+      String outputMsg = hdfsClient.saveParagraphToFiles(noteId, noteJson,
+          pythonWorkDir == null ? "" : pythonWorkDir.getAbsolutePath(), properties);
+      if (!StringUtils.isEmpty(outputMsg)) {
+        submarineUI.outputLog("Save algorithm file", outputMsg);
+      }
+
+      HashMap jinjaParams = SubmarineUtils.propertiesToJinjaParams(
+          properties, submarineJob, true);
+
+      URL urlTemplate = Resources.getResource(SubmarineJob.SUBMARINE_JOBRUN_TF_JINJA);
       String template = Resources.toString(urlTemplate, Charsets.UTF_8);
       Jinjava jinjava = new Jinjava();
       String submarineCmd = jinjava.render(template, jinjaParams);
@@ -63,6 +93,7 @@ public class TensorboardRunThread extends Thread {
       if (firstLineIsNewline == 0) {
         submarineCmd = submarineCmd.replaceFirst("\n", "");
       }
+
       StringBuffer sbLogs = new StringBuffer(submarineCmd);
       submarineUI.outputLog("Submarine submit command", sbLogs.toString());
 
@@ -80,7 +111,6 @@ public class TensorboardRunThread extends Thread {
           line = line.trim();
           if (!StringUtils.isEmpty(line)) {
             sbLogOutput.append(line + "\n");
-            submarineJob.showJobProgressBar(0.1f);
           }
         }
       }));
@@ -106,34 +136,30 @@ public class TensorboardRunThread extends Thread {
       }
 
       LOGGER.info("Execute EVN: {}, Command: {} ", env.toString(), submarineCmd);
-
-      AtomicBoolean running = new AtomicBoolean(true);
+      AtomicBoolean cmdLineRunning = new AtomicBoolean(true);
       executor.execute(cmdLine, env, new DefaultExecuteResultHandler() {
         @Override
         public void onProcessComplete(int exitValue) {
           String message = String.format(
-              "jobName %s ProcessComplete exit value is : %d", tensorboardName, exitValue);
+              "jobName %s ProcessComplete exit value is : %d", jobName, exitValue);
           LOGGER.info(message);
-          submarineUI.outputLog("TENSORBOARD RUN COMPLETE", message);
-          running.set(false);
+          submarineUI.outputLog("JOR RUN COMPLETE", message);
+          cmdLineRunning.set(false);
           submarineJob.setCurrentJobState(EXECUTE_SUBMARINE_FINISHED);
-          submarineJob.setTensorboardRunWaitTime(SubmarineJob.SUBMARIN_RUN_WAIT_TIME);
         }
         @Override
         public void onProcessFailed(ExecuteException e) {
           String message = String.format(
               "jobName %s ProcessFailed exit value is : %d, exception is : %s",
-              tensorboardName, e.getExitValue(), e.getMessage());
+              jobName, e.getExitValue(), e.getMessage());
           LOGGER.error(message);
-          submarineUI.outputLog("TENSORBOARD RUN FAILED", message);
-          running.set(false);
+          submarineUI.outputLog("JOR RUN FAILED", message);
+          cmdLineRunning.set(false);
           submarineJob.setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
-          submarineJob.setTensorboardRunWaitTime(0);
         }
       });
-      Date nowDate = new Date();
-      Date checkDate = new Date();
-      while (((checkDate.getTime() - nowDate.getTime()) < timeout) && running.get()) {
+      int loopCount = 100;
+      while ((loopCount-- > 0) && cmdLineRunning.get()) {
         Thread.sleep(1000);
       }
       if (watchDog.isWatching()) {
@@ -143,13 +169,27 @@ public class TensorboardRunThread extends Thread {
       if (watchDog.isWatching()) {
         watchDog.killedProcess();
       }
+
+      // Check if it has been submitted to YARN
+      Map<String, Object> jobState = submarineJob.getJobStateByYarn(jobName);
+      loopCount = 50;
+      while ((loopCount-- > 0) && !jobState.containsKey("state")) {
+        Thread.sleep(3000);
+        jobState = submarineJob.getJobStateByYarn(jobName);
+      }
+
+      if (!jobState.containsKey("state")) {
+        String message = String.format("JOB %s was not submitted to YARN!", jobName);
+        LOGGER.error(message);
+        submarineUI.outputLog("JOR RUN FAILED", message);
+        submarineJob.setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
+      }
     } catch (Exception e) {
       LOGGER.error(e.getMessage(), e);
       submarineJob.setCurrentJobState(EXECUTE_SUBMARINE_ERROR);
       submarineUI.outputLog("Exception", e.getMessage());
-      submarineJob.setTensorboardRunWaitTime(0);
     } finally {
-
+      running.set(false);
     }
   }
 }

@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.submarine.componts;
+package org.apache.zeppelin.submarine.job;
 
 public enum SubmarineJobStatus {
   UNKNOWN("UNKNOWN"),

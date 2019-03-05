@@ -18,6 +18,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.zeppelin.display.AngularObject;
 import org.apache.zeppelin.interpreter.InterpreterContext;
+import org.apache.zeppelin.submarine.job.SubmarineJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

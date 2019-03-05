@@ -20,7 +20,7 @@ import org.apache.zeppelin.interpreter.InterpreterResult;
 import org.apache.zeppelin.python.IPythonInterpreter;
 import org.apache.zeppelin.python.PythonInterpreter;
 import org.apache.zeppelin.submarine.componts.SubmarineConstants;
-import org.apache.zeppelin.submarine.componts.SubmarineJob;
+import org.apache.zeppelin.submarine.job.SubmarineJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

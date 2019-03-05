@@ -32,7 +32,7 @@ import org.apache.zeppelin.scheduler.Scheduler;
 import org.apache.zeppelin.scheduler.SchedulerFactory;
 import org.apache.zeppelin.submarine.componts.SubmarineCommand;
 import org.apache.zeppelin.submarine.componts.SubmarineConstants;
-import org.apache.zeppelin.submarine.componts.SubmarineJob;
+import org.apache.zeppelin.submarine.job.SubmarineJob;
 import org.apache.zeppelin.submarine.componts.SubmarineUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -235,7 +235,7 @@ public class SubmarineInterpreter extends Interpreter {
           break;
       }
     } catch (Exception e) {
-      LOGGER.error(e.getMessage());
+      LOGGER.error(e.getMessage(), e);
       return new InterpreterResult(InterpreterResult.Code.ERROR, e.getMessage());
     }
 

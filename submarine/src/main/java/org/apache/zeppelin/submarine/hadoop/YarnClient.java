@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.submarine.componts;
+package org.apache.zeppelin.submarine.hadoop;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -62,6 +62,7 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
+import org.apache.zeppelin.submarine.componts.SubmarineConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -153,6 +154,7 @@ public class YarnClient {
   }
 
   // http://yarn-web-http-address/app/v1/services/{appIdOrName}
+  // test/resources/app-v1-services-app_name.json
   public Map<String, Object> getAppServices(String appIdOrName) {
     Map<String, Object> mapStatus = new HashMap<>();
     String appUrl = this.yarnWebHttpAddr + "/app/v1/services/" + appIdOrName
@@ -171,7 +173,7 @@ public class YarnClient {
       }
 
       // parse app status json
-      mapStatus = parseAppState(result);
+      mapStatus = parseAppServices(result);
     } catch (Exception exp) {
       exp.printStackTrace();
     }
@@ -180,6 +182,9 @@ public class YarnClient {
   }
 
   // http://yarn-web-http-address/ws/v1/cluster/apps/{appId}
+  // test/resources/ws-v1-cluster-apps-application_id-failed.json
+  // test/resources/ws-v1-cluster-apps-application_id-finished.json
+  // test/resources/ws-v1-cluster-apps-application_id-running.json
   public Map<String, Object> getClusterApps(String appId) {
     Map<String, Object> appAttempts = new HashMap<>();
     String appUrl = this.yarnWebHttpAddr + "/ws/v1/cluster/apps/" + appId
@@ -206,7 +211,6 @@ public class YarnClient {
     return appAttempts;
   }
 
-  // appJson format : submarine/src/test/resources/clusterApps.json
   public Map<String, Object> parseClusterApps(String jsonContent) {
     Map<String, Object> appAttempts = new HashMap<>();
 
@@ -235,6 +239,7 @@ public class YarnClient {
   }
 
   // http://yarn-web-http-address/ws/v1/cluster/apps/{appId}/appattempts
+  // test/resources/ws-v1-cluster-apps-application_id-appattempts.json
   public List<Map<String, Object>> getAppAttempts(String appId) {
     List<Map<String, Object>> appAttempts = new ArrayList<>();
     String appUrl = this.yarnWebHttpAddr + "/ws/v1/cluster/apps/" + appId
@@ -261,6 +266,7 @@ public class YarnClient {
   }
 
   // http://yarn-web-http-address/ws/v1/cluster/apps/{appId}/appattempts/{appAttemptId}/containers
+  // test/resources/ws-v1-cluster-apps-application_id-appattempts-appattempt_id-containers.json
   public List<Map<String, Object>> getAppAttemptsContainers(String appId, String appAttemptId) {
     List<Map<String, Object>> appAttemptsContainers = new ArrayList<>();
     String appUrl = this.yarnWebHttpAddr + "/ws/v1/cluster/apps/" + appId
@@ -409,7 +415,7 @@ public class YarnClient {
     return null;
   }
 
-  private Map<String, Object> parseAppState(String appJson) {
+  private Map<String, Object> parseAppServices(String appJson) {
     Map<String, Object> mapStatus = new HashMap<>();
 
     try {

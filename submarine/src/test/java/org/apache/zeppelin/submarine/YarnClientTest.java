@@ -3,7 +3,7 @@ package org.apache.zeppelin.submarine;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
-import org.apache.zeppelin.submarine.componts.YarnClient;
+import org.apache.zeppelin.submarine.hadoop.YarnClient;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -29,7 +29,7 @@ public class YarnClientTest {
 
   @Test
   public void testParseAppAttempts() throws IOException {
-    String jsonFile = "appAttempts.json";
+    String jsonFile = "ws-v1-cluster-apps-application_id-appattempts.json";
     URL urlJson = Resources.getResource(jsonFile);
     String jsonContent = Resources.toString(urlJson, Charsets.UTF_8);
 
@@ -40,7 +40,7 @@ public class YarnClientTest {
 
   @Test
   public void testParseAppAttemptsContainers() throws IOException {
-    String jsonFile = "appattempts-containers.json";
+    String jsonFile = "ws-v1-cluster-apps-application_id-appattempts-appattempt_id-containers.json";
     URL urlJson = Resources.getResource(jsonFile);
     String jsonContent = Resources.toString(urlJson, Charsets.UTF_8);
 
@@ -55,7 +55,7 @@ public class YarnClientTest {
 
   @Test
   public void testParseClusterApps() throws IOException {
-    String jsonFile = "clusterApps.json";
+    String jsonFile = "ws-v1-cluster-apps-application_id.json";
     URL urlJson = Resources.getResource(jsonFile);
     String jsonContent = Resources.toString(urlJson, Charsets.UTF_8);
 

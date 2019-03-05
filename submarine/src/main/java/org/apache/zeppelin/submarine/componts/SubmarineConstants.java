@@ -92,14 +92,19 @@ public class SubmarineConstants {
 
   public static final String YARN_APPLICATION_ID     = "YARN_APPLICATION_ID";
   public static final String YARN_APPLICATION_NAME   = "YARN_APPLICATION_NAME";
-  public static final String YARN_APPLICATION_STATUS = "YARN_APPLICATION_STATUS";
   public static final String YARN_APPLICATION_URL    = "YARN_APPLICATION_URL";
-  public static final String YARN_TENSORBOARD_URL    = "YARN_TENSORBOARD_URL";
+  public static final String YARN_APPLICATION_STATUS = "YARN_APPLICATION_STATUS";
+  public static final String YARN_APPLICATION_FINAL_STATUS = "YARN_APPLICATION_FINAL_STATUS";
+  public static final String YARN_TENSORBOARD_URL = "YARN_TENSORBOARD_URL";
+  public static final String TENSORBOARD_URL         = "TENSORBOARD_URL";
   public static final String YARN_APP_STARTED_TIME   = "YARN_APP_STARTED_TIME";
   public static final String YARN_APP_LAUNCH_TIME    = "YARN_APP_LAUNCH_TIME";
   public static final String YARN_APP_FINISHED_TIME  = "YARN_APP_FINISHED_TIME";
   public static final String YARN_APP_ELAPSED_TIME   = "YARN_APP_ELAPSED_TIME";
-  public static final String YARN_APPLICATION_FINAL_STATUS = "YARN_APPLICATION_FINAL_STATUS";
+  public static final String YARN_APP_STATE_NAME        = "state";
+  public static final String YARN_APP_FINAL_STATUS_NAME = "finalStatus";
+  public static final String YARN_APP_STARTEDTIME_NAME  = "startedTime";
+  public static final String YARN_APP_LAUNCHTIME_NAME   = "launchTime";
 
   public static final String YARN_APPLICATION_STATUS_ACCEPT    = "ACCEPT";
   public static final String YARN_APPLICATION_STATUS_RUNNING   = "RUNNING";
@@ -107,7 +112,7 @@ public class SubmarineConstants {
   public static final String YARN_APPLICATION_STATUS_FAILED    = "FAILED";
 
   public static final String JOB_STATUS   = "JOB_STATUS";
-  public static final String JOB_PROGRESS = "JOB_PROGRESS";
+
 
   // submarine.algorithm.hdfs.path support for replacing ${username} with real user name
   public static final String USERNAME_SYMBOL = "${username}";

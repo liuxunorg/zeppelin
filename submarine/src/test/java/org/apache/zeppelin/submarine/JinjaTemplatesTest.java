@@ -4,7 +4,7 @@ import com.google.common.io.Resources;
 import com.hubspot.jinjava.Jinjava;
 import org.apache.commons.io.Charsets;
 import org.apache.zeppelin.submarine.componts.SubmarineConstants;
-import org.apache.zeppelin.submarine.componts.SubmarineJob;
+import org.apache.zeppelin.submarine.job.SubmarineJob;
 import org.apache.zeppelin.submarine.componts.SubmarineUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
