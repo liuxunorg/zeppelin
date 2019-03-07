@@ -14,14 +14,6 @@
 
 package org.apache.zeppelin.submarine;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Resources;
-import com.hubspot.jinjava.Jinjava;
-import org.apache.commons.exec.DefaultExecutor;
-import org.apache.commons.exec.CommandLine;
-import org.apache.commons.exec.ExecuteWatchdog;
-import org.apache.commons.exec.LogOutputStream;
-import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.lang.StringUtils;
 import org.apache.zeppelin.display.ui.OptionInput.ParamOption;
 import org.apache.zeppelin.interpreter.Interpreter;
@@ -38,9 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
@@ -59,13 +48,6 @@ public class SubmarineInterpreter extends Interpreter {
   // Number of submarines executed in parallel for each interpreter instance
   protected int concurrentExecutedMax = 1;
 
-  private static final String DIRECTORY_USER_HOME = "shell.working.directory.user.home";
-  private final boolean isWindows = System.getProperty("os.name").startsWith("Windows");
-  private final String shell = isWindows ? "cmd /c" : "bash -c";
-
-  private static final String TIMEOUT_PROPERTY = "submarine.command.timeout.millisecond";
-  private String defaultTimeoutProperty = "60000";
-
   private boolean needUpdateConfig = true;
   private String currentReplName = "";
 
@@ -82,46 +64,12 @@ public class SubmarineInterpreter extends Interpreter {
 
   @Override
   public void open() {
-    LOGGER.info("Command timeout property: {}", getProperty(TIMEOUT_PROPERTY));
+    LOGGER.info("SubmarineInterpreter open()");
   }
 
   @Override
   public void close() {
-  }
-
-  private String createOldGUI(InterpreterContext context) {
-    // submarine command - Format
-    ParamOption[] commandOptions = new ParamOption[4];
-    commandOptions[0] = new ParamOption(SubmarineConstants.COMMAND_JOB_RUN,
-        SubmarineConstants.COMMAND_JOB_RUN);
-    commandOptions[1] = new ParamOption(SubmarineConstants.COMMAND_JOB_SHOW,
-        SubmarineConstants.COMMAND_JOB_SHOW);
-    commandOptions[2] = new ParamOption(SubmarineConstants.COMMAND_USAGE,
-        SubmarineConstants.COMMAND_USAGE);
-    String command = (String) context.getGui().
-        select("Submarine Command", "", commandOptions);
-
-    String distributed = this.properties.getProperty(
-        SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE, "false");
-
-    if (command.equals(SubmarineConstants.COMMAND_JOB_RUN)) {
-      String inputPath = (String) context.getGui().textbox("Input Path(input_path)");
-      String checkpoinkPath = (String) context.getGui().textbox("Checkpoint Path(checkpoint_path)");
-      if (distributed.equals("true")) {
-        String psLaunchCmd = (String) context.getGui().textbox("PS Launch Command");
-      }
-      String workerLaunchCmd = (String) context.getGui().textbox("Worker Launch Command");
-    }
-
-    /* Active
-    ParamOption[] auditOptions = new ParamOption[1];
-    auditOptions[0] = new ParamOption("Active", "Active command");
-    List<Object> flags = intpContext.getGui().checkbox("Active", Arrays.asList(""), auditOptions);
-    boolean activeChecked = flags.contains("Active");
-    intpContext.getResourcePool().put(intpContext.getNoteId(),
-        intpContext.getParagraphId(), "Active", activeChecked);*/
-
-    return command;
+    submarineContext.stopAllSubmarineJob();
   }
 
   private void setParagraphConfig(InterpreterContext context) {
@@ -273,8 +221,8 @@ public class SubmarineInterpreter extends Interpreter {
   }
 
   @Override
-  public List<InterpreterCompletion> completion(String buf, int cursor,
-                                                InterpreterContext interpreterContext) {
+  public List<InterpreterCompletion> completion(
+      String buf, int cursor, InterpreterContext intpContext) {
     return null;
   }
 
@@ -285,63 +233,38 @@ public class SubmarineInterpreter extends Interpreter {
     }
   }
 
-  private void submarineCommand(SubmarineCommand command, InterpreterContext context) {
-    SubmarineJob submarineJob = submarineContext.getSubmarineJob(context.getNoteId());
+  private String createOldGUI(InterpreterContext context) {
+    // submarine command - Format
+    ParamOption[] commandOptions = new ParamOption[4];
+    commandOptions[0] = new ParamOption(SubmarineConstants.COMMAND_JOB_RUN,
+        SubmarineConstants.COMMAND_JOB_RUN);
+    commandOptions[1] = new ParamOption(SubmarineConstants.COMMAND_JOB_SHOW,
+        SubmarineConstants.COMMAND_JOB_SHOW);
+    commandOptions[2] = new ParamOption(SubmarineConstants.COMMAND_USAGE,
+        SubmarineConstants.COMMAND_USAGE);
+    String command = (String) context.getGui().
+        select("Submarine Command", "", commandOptions);
 
-    HashMap jinjaParams = null;
-    try {
-      jinjaParams = SubmarineUtils.propertiesToJinjaParams(submarineJob.getProperties(),
-          submarineJob, false);
-      String noteId = context.getNoteId();
-      String jobName = SubmarineUtils.getJobName(userName, noteId);
-      String tensorboardName = SubmarineUtils.getTensorboardName(userName);
+    String distributed = this.properties.getProperty(
+        SubmarineConstants.MACHINELEARING_DISTRIBUTED_ENABLE, "false");
 
-      switch (command) {
-        case JOB_STOP:
-          jinjaParams.put(unifyKey(SubmarineConstants.JOB_NAME), jobName);
-          break;
-        case TENSORBOARD_STOP:
-          jinjaParams.put(unifyKey(SubmarineConstants.JOB_NAME), tensorboardName);
-          break;
-        default:
-          LOGGER.error("Unsupported operation！");
-          break;
+    if (command.equals(SubmarineConstants.COMMAND_JOB_RUN)) {
+      String inputPath = (String) context.getGui().textbox("Input Path(input_path)");
+      String checkpoinkPath = (String) context.getGui().textbox("Checkpoint Path(checkpoint_path)");
+      if (distributed.equals("true")) {
+        String psLaunchCmd = (String) context.getGui().textbox("PS Launch Command");
       }
-      jinjaParams.put(unifyKey(SubmarineConstants.COMMAND_TYPE), command.getCommand());
-
-      URL urlTemplate = Resources.getResource(SubmarineJob.SUBMARINE_COMMAND_JINJA);
-      String template = Resources.toString(urlTemplate, Charsets.UTF_8);
-      Jinjava jinjava = new Jinjava();
-      String submarineCmd = jinjava.render(template, jinjaParams);
-
-      LOGGER.info("Execute : " + submarineCmd);
-      submarineJob.getSubmarineUI().outputLog("Submarine submit command", submarineCmd);
-      CommandLine cmdLine = CommandLine.parse(shell);
-      cmdLine.addArgument(submarineCmd, false);
-
-      DefaultExecutor executor = new DefaultExecutor();
-
-      StringBuffer sbLogOutput = new StringBuffer();
-      executor.setStreamHandler(new PumpStreamHandler(new LogOutputStream() {
-        @Override
-        protected void processLine(String line, int level) {
-          sbLogOutput.append(line);
-        }
-      }));
-
-      // executor.setStreamHandler(new PumpStreamHandler(interpreterOutput, interpreterOutput));
-      long timeout = Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty));
-
-      executor.setWatchdog(new ExecuteWatchdog(timeout));
-      if (Boolean.valueOf(getProperty(DIRECTORY_USER_HOME))) {
-        executor.setWorkingDirectory(new File(System.getProperty("user.home")));
-      }
-
-      int exitVal = executor.execute(cmdLine);
-      LOGGER.info("jobName {} return with exit value: {}", jobName, exitVal);
-      submarineJob.getSubmarineUI().outputLog(command.getCommand(), sbLogOutput.toString());
-    } catch (IOException e) {
-      LOGGER.error(e.getMessage(), e);
+      String workerLaunchCmd = (String) context.getGui().textbox("Worker Launch Command");
     }
+
+    /* Active
+    ParamOption[] auditOptions = new ParamOption[1];
+    auditOptions[0] = new ParamOption("Active", "Active command");
+    List<Object> flags = intpContext.getGui().checkbox("Active", Arrays.asList(""), auditOptions);
+    boolean activeChecked = flags.contains("Active");
+    intpContext.getResourcePool().put(intpContext.getNoteId(),
+        intpContext.getParagraphId(), "Active", activeChecked);*/
+
+    return command;
   }
 }

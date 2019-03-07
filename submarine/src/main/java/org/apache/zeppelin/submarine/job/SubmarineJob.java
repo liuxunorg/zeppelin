@@ -137,6 +137,21 @@ public class SubmarineJob extends Thread {
     }
   }
 
+  // Stop SubmarineJob
+  public void stopRunning() {
+    running.set(false);
+
+    // stop JobRunThread
+    if (null != jobRunThread && jobRunThread.isAlive()) {
+      jobRunThread.stopRunning();
+    }
+
+    // stop TensorboardRunThread
+    if (null != tensorboardRunThread && tensorboardRunThread.isAlive()) {
+      tensorboardRunThread.stopRunning();
+    }
+  }
+
   public String getUserTensorboardPath() {
     String tfCheckpointPath = properties.getProperty(SubmarineConstants.TF_CHECKPOINT_PATH, "");
     return tfCheckpointPath;
@@ -181,10 +196,6 @@ public class SubmarineJob extends Thread {
 
   public File getPythonWorkDir() {
     return this.pythonWorkDir;
-  }
-
-  public String getNoteName() {
-    return noteName;
   }
 
   public void onDashboard() {

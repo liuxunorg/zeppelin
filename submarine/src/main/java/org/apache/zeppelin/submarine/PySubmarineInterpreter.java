@@ -17,6 +17,7 @@ package org.apache.zeppelin.submarine;
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterException;
 import org.apache.zeppelin.interpreter.InterpreterResult;
+import org.apache.zeppelin.interpreter.thrift.ParagraphInfo;
 import org.apache.zeppelin.python.IPythonInterpreter;
 import org.apache.zeppelin.python.PythonInterpreter;
 import org.apache.zeppelin.submarine.componts.SubmarineConstants;
@@ -24,12 +25,12 @@ import org.apache.zeppelin.submarine.job.SubmarineJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Properties;
 
 public class PySubmarineInterpreter extends PythonInterpreter {
   private static final Logger LOGGER = LoggerFactory.getLogger(PySubmarineInterpreter.class);
 
-  public final String REPL_NAME = "sumbarine.python";
   private SubmarineInterpreter submarineInterpreter = null;
   private SubmarineContext submarineContext = null;
 
@@ -65,10 +66,10 @@ public class PySubmarineInterpreter extends PythonInterpreter {
     if (null != submarineJob && null != submarineJob.getHdfsClient()) {
       try {
         String noteId = context.getNoteId();
-        String noteJson = context.getIntpEventClient()
-            .getNoteFromServer(noteId, context.getAuthenticationInfo(), true);
+        List<ParagraphInfo> paragraphInfos = context.getIntpEventClient()
+            .getParagraphList(userName, noteId);
         submarineJob.getHdfsClient().saveParagraphToFiles(
-            noteId, noteJson, getPythonWorkDir().getAbsolutePath(), properties);
+            noteId, paragraphInfos, getPythonWorkDir().getAbsolutePath(), properties);
       } catch (Exception e) {
         LOGGER.error(e.getMessage(), e);
       }

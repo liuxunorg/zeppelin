@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
+import org.apache.zeppelin.interpreter.thrift.ParagraphInfo;
 import org.apache.zeppelin.submarine.componts.SubmarineConstants;
 import org.apache.zeppelin.submarine.componts.SubmarineParagraph;
 import org.slf4j.Logger;
@@ -269,7 +270,7 @@ public class HdfsClient {
     }
   }
 
-  public String saveParagraphToFiles(String noteId, String noteJson,
+  public String saveParagraphToFiles(String noteId, List<ParagraphInfo> paragraphInfos,
                                      String dirName, Properties properties)
       throws Exception {
     StringBuffer outputMsg = new StringBuffer();
@@ -277,10 +278,9 @@ public class HdfsClient {
     String hdfsUploadPath = properties.getProperty(
         SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH, "");
 
-    ArrayList<SubmarineParagraph> paragraphs = parseNote(noteJson);
     HashMap<String, StringBuffer> mapParagraph = new HashMap<>();
-    for (int i = 0; i < paragraphs.size(); i++) {
-      SubmarineParagraph paragraph = paragraphs.get(i);
+    for (int i = 0; i < paragraphInfos.size(); i++) {
+      ParagraphInfo paragraph = paragraphInfos.get(i);
       String paragraphTitle = paragraph.getParagraphTitle();
       if (org.apache.commons.lang.StringUtils.isEmpty(paragraphTitle)) {
         String message = "WARN: The title of the [" + i
@@ -294,7 +294,7 @@ public class HdfsClient {
         mapParagraph.put(paragraphTitle, mergeScript);
       }
       StringBuffer mergeScript = mapParagraph.get(paragraphTitle);
-      mergeScript.append(paragraph.getParagraphScript() + "\n\n");
+      mergeScript.append(paragraph.getParagraphText() + "\n\n");
     }
 
     // Clear all files in the local noteId directory

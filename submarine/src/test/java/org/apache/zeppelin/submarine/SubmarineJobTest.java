@@ -58,7 +58,7 @@ public class SubmarineJobTest {
       @Override
       protected void processLine(String line, int level) {
         //LOGGER.info(line);
-        sbLogOutput.append(line);
+        sbLogOutput.append(line + "\n");
       }
     }));
 

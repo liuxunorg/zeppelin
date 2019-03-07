@@ -14,32 +14,20 @@
 
 package org.apache.zeppelin.submarine;
 
-import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.submarine.job.SubmarineJob;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
-import java.util.regex.Pattern;
 
 public class SubmarineContext {
   private Logger LOGGER = LoggerFactory.getLogger(SubmarineContext.class);
 
   private static SubmarineContext instance = null;
-
-  private static ZeppelinConfiguration zConf = ZeppelinConfiguration.create();
-
-  public static final String DEFAULT_STORAGE
-      = "org.apache.zeppelin.notebook.repo.GitNotebookRepo";
-  public static final String HDFS_STORAGE
-      = "org.apache.zeppelin.notebook.repo.FileSystemNotebookRepo";
-  private String noteStorageClassName = "";
-
-  private static Pattern REPL_PATTERN =
-      Pattern.compile("(\\s*)%([\\w\\.]+)(\\(.*?\\))?.*", Pattern.DOTALL);
 
   // noteId -> SubmarineJob
   private Map<String, SubmarineJob> mapSubmarineJob = new HashMap<>();
@@ -74,5 +62,15 @@ public class SubmarineContext {
     }
 
     return mapSubmarineJob.get(nodeId);
+  }
+
+  public void stopAllSubmarineJob() {
+    Iterator<Map.Entry<String, SubmarineJob>> iterator = mapSubmarineJob.entrySet().iterator();
+
+    while (iterator.hasNext()) {
+      Map.Entry<String, SubmarineJob> entry = iterator.next();
+
+      entry.getValue().stopRunning();
+    }
   }
 }

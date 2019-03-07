@@ -26,6 +26,7 @@ import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
 import org.apache.zeppelin.interpreter.InterpreterContext;
+import org.apache.zeppelin.interpreter.thrift.ParagraphInfo;
 import org.apache.zeppelin.submarine.hadoop.HdfsClient;
 import org.apache.zeppelin.submarine.componts.SubmarineConstants;
 import org.apache.zeppelin.submarine.componts.SubmarineUI;
@@ -37,9 +38,12 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.apache.zeppelin.submarine.job.SubmarineJobStatus.EXECUTE_SUBMARINE;
 import static org.apache.zeppelin.submarine.job.SubmarineJobStatus.EXECUTE_SUBMARINE_ERROR;
@@ -52,30 +56,38 @@ public class JobRunThread extends Thread {
 
   private AtomicBoolean running = new AtomicBoolean(false);
 
+  private Lock lockRunning = new ReentrantLock();
+
   public JobRunThread(SubmarineJob submarineJob) {
     this.submarineJob = submarineJob;
   }
 
   public void run() {
-    SubmarineUI submarineUI = submarineJob.getSubmarineUI();
-    InterpreterContext intpContext = submarineJob.getIntpContext();
-    String noteId = intpContext.getNoteId();
-    String userName = intpContext.getAuthenticationInfo().getUser();
-    String jobName = SubmarineUtils.getJobName(userName, noteId);
-
-    if (true == running.get()) {
-      String message = String.format("Job %s already running.", jobName);
-      submarineUI.outputLog("WARN", message);
-      LOGGER.warn(message);
+    boolean tryLock = lockRunning.tryLock();
+    if (false == tryLock) {
+      LOGGER.warn("Can not get JobRunThread lockRunning!");
       return;
     }
-    running.set(true);
 
-    Properties properties = submarineJob.getProperties();
-    HdfsClient hdfsClient = submarineJob.getHdfsClient();
-    File pythonWorkDir = submarineJob.getPythonWorkDir();
-
+    SubmarineUI submarineUI = submarineJob.getSubmarineUI();
     try {
+      InterpreterContext intpContext = submarineJob.getIntpContext();
+      String noteId = intpContext.getNoteId();
+      String userName = intpContext.getAuthenticationInfo().getUser();
+      String jobName = SubmarineUtils.getJobName(userName, noteId);
+
+      if (true == running.get()) {
+        String message = String.format("Job %s already running.", jobName);
+        submarineUI.outputLog("WARN", message);
+        LOGGER.warn(message);
+        return;
+      }
+      running.set(true);
+
+      Properties properties = submarineJob.getProperties();
+      HdfsClient hdfsClient = submarineJob.getHdfsClient();
+      File pythonWorkDir = submarineJob.getPythonWorkDir();
+
       submarineJob.setCurrentJobState(EXECUTE_SUBMARINE);
 
       String algorithmPath = properties.getProperty(
@@ -87,9 +99,9 @@ public class JobRunThread extends Thread {
         return;
       }
 
-      String noteJson = intpContext.getIntpEventClient().getNoteFromServer(
-          noteId, intpContext.getAuthenticationInfo(), true);
-      String outputMsg = hdfsClient.saveParagraphToFiles(noteId, noteJson,
+      List<ParagraphInfo> paragraphInfos = intpContext.getIntpEventClient()
+          .getParagraphList(userName, noteId);
+      String outputMsg = hdfsClient.saveParagraphToFiles(noteId, paragraphInfos,
           pythonWorkDir == null ? "" : pythonWorkDir.getAbsolutePath(), properties);
       if (!StringUtils.isEmpty(outputMsg)) {
         submarineUI.outputLog("Save algorithm file", outputMsg);
@@ -136,7 +148,7 @@ public class JobRunThread extends Thread {
       Map<String, String> env = new HashMap<>();
       String launchMode = (String) jinjaParams.get(SubmarineConstants.INTERPRETER_LAUNCH_MODE);
       if (StringUtils.equals(launchMode, "yarn")) {
-        // Set environment variables in the container
+        // Set environment variables in the submarine interpreter container run on yarn
         String javaHome, hadoopHome, hadoopConf;
         javaHome = (String) jinjaParams.get(SubmarineConstants.DOCKER_JAVA_HOME);
         hadoopHome = (String) jinjaParams.get(SubmarineConstants.DOCKER_HADOOP_HDFS_HOME);
@@ -147,6 +159,7 @@ public class JobRunThread extends Thread {
         env.put("HADOOP_CONF_DIR", hadoopConf);
         env.put("YARN_CONF_DIR", hadoopConf);
         env.put("CLASSPATH", "`$HADOOP_HDFS_HOME/bin/hadoop classpath --glob`");
+        env.put("ZEPPELIN_FORCE_STOP", "true");
       }
 
       LOGGER.info("Execute EVN: {}, Command: {} ", env.toString(), submarineCmd);
@@ -173,7 +186,7 @@ public class JobRunThread extends Thread {
         }
       });
       int loopCount = 100;
-      while ((loopCount-- > 0) && cmdLineRunning.get()) {
+      while ((loopCount-- > 0) && cmdLineRunning.get() && running.get()) {
         Thread.sleep(1000);
       }
       if (watchDog.isWatching()) {
@@ -187,7 +200,7 @@ public class JobRunThread extends Thread {
       // Check if it has been submitted to YARN
       Map<String, Object> jobState = submarineJob.getJobStateByYarn(jobName);
       loopCount = 50;
-      while ((loopCount-- > 0) && !jobState.containsKey("state")) {
+      while ((loopCount-- > 0) && !jobState.containsKey("state") && running.get()) {
         Thread.sleep(3000);
         jobState = submarineJob.getJobStateByYarn(jobName);
       }
@@ -204,6 +217,26 @@ public class JobRunThread extends Thread {
       submarineUI.outputLog("Exception", e.getMessage());
     } finally {
       running.set(false);
+      lockRunning.unlock();
+    }
+  }
+
+  public void stopRunning() {
+    try {
+      running.set(false);
+
+      // If can not get the lockRunning, the thread is executed.
+      boolean tryLock = lockRunning.tryLock();
+      int loop = 0;
+      while (false == tryLock && loop++ < 100) {
+        LOGGER.warn("Can not get the JobRunThread lockRunning [{}] !", loop);
+        Thread.sleep(500);
+        tryLock = lockRunning.tryLock();
+      }
+    } catch (Exception e) {
+      LOGGER.error(e.getMessage(), e);
+    } finally {
+      lockRunning.unlock();
     }
   }
 }

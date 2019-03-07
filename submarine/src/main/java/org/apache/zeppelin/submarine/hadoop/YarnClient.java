@@ -119,8 +119,8 @@ public class YarnClient {
             ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_PRINCIPAL);
       }
       if (StringUtils.isBlank(keytab) || StringUtils.isBlank(principal)) {
-        throw new RuntimeException("keytab and principal can not be empty, keytab: " + keytab
-            + ", principal: " + principal);
+        throw new RuntimeException("keytab and principal can not be empty, keytab: "
+            + keytab + ", principal: " + principal);
       }
 
       this.principal = principal;

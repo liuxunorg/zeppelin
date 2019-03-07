@@ -38,6 +38,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class TensorboardRunThread extends Thread {
   private Logger LOGGER = LoggerFactory.getLogger(TensorboardRunThread.class);
@@ -46,23 +48,28 @@ public class TensorboardRunThread extends Thread {
 
   private AtomicBoolean running = new AtomicBoolean(false);
 
+  private Lock lockRunning = new ReentrantLock();
+
   public TensorboardRunThread(SubmarineJob submarineJob) {
     this.submarineJob = submarineJob;
   }
 
   public void run() {
     SubmarineUI submarineUI = submarineJob.getSubmarineUI();
-    Properties properties = submarineJob.getProperties();
-    String tensorboardName = SubmarineUtils.getTensorboardName(submarineJob.getUserName());
-    if (true == running.get()) {
-      String message = String.format("tensorboard %s already running.", tensorboardName);
-      submarineUI.outputLog("WARN", message);
-      LOGGER.warn(message);
-      return;
-    }
-    running.set(true);
+
+    boolean tryLock = lockRunning.tryLock();
 
     try {
+      Properties properties = submarineJob.getProperties();
+      String tensorboardName = SubmarineUtils.getTensorboardName(submarineJob.getUserName());
+      if (true == running.get()) {
+        String message = String.format("tensorboard %s already running.", tensorboardName);
+        submarineUI.outputLog("WARN", message);
+        LOGGER.warn(message);
+        return;
+      }
+      running.set(true);
+
       HashMap jinjaParams = SubmarineUtils.propertiesToJinjaParams(
           properties, submarineJob, false);
       // update jobName -> tensorboardName
@@ -141,7 +148,7 @@ public class TensorboardRunThread extends Thread {
         }
       });
       int loopCount = 100;
-      while ((loopCount-- > 0) && cmdLineRunning.get()) {
+      while ((loopCount-- > 0) && cmdLineRunning.get() && running.get()) {
         Thread.sleep(1000);
       }
       if (watchDog.isWatching()) {
@@ -155,7 +162,7 @@ public class TensorboardRunThread extends Thread {
       // Check if it has been submitted to YARN
       Map<String, Object> jobState = submarineJob.getJobStateByYarn(tensorboardName);
       loopCount = 50;
-      while ((loopCount-- > 0) && !jobState.containsKey("state")) {
+      while ((loopCount-- > 0) && !jobState.containsKey("state") && running.get()) {
         Thread.sleep(3000);
         jobState = submarineJob.getJobStateByYarn(tensorboardName);
       }
@@ -171,6 +178,26 @@ public class TensorboardRunThread extends Thread {
       submarineUI.outputLog("Exception", e.getMessage());
     } finally {
       running.set(false);
+      lockRunning.unlock();
+    }
+  }
+
+  public void stopRunning() {
+    try {
+      running.set(false);
+
+      // If can not get the lock, the thread is executed.
+      boolean tryLock = lockRunning.tryLock();
+      int loop = 0;
+      while (false == tryLock && loop++ < 100) {
+        LOGGER.warn("Can not get the TensorboardRunThread lock [{}] !", loop);
+        Thread.sleep(500);
+        tryLock = lockRunning.tryLock();
+      }
+    } catch (Exception e) {
+      LOGGER.error(e.getMessage(), e);
+    } finally {
+      lockRunning.unlock();
     }
   }
 }
