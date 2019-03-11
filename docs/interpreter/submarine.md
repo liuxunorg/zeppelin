@@ -77,11 +77,28 @@ You can also install other development dependencies you need on top of the base 
 
    **Submarine Tensorflow Docker Image** There is Submarine that provides you with an image file that supports Tensorflow (CPU and GPU versions). And installed the algorithm library commonly used by Python. You can also install other development dependencies you need on top of the base image provided by Submarine.
 
-| Name              | Class                     | Description                   |
-| ----------------- | ------------------------- | ----------------------------- |
-| %submarine        | SubmarineInterpreter      | Provides dashboar             |
-| %submarine.sh     | SubmarineShellInterpreter | Provides a Shell environment  |
-| %submarine.python | PySubmarineInterpreter    | Provides a Python environment |
+<table class="table-configuration">
+  <tr>
+    <th>Name</th>
+    <th>Class</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>%submarine</td>
+    <td>SubmarineInterpreter</td>
+    <td>Provides interpreter for Apache Submarine dashboard</td>
+  </tr>
+  <tr>
+    <td>%submarine.sh</td>
+    <td>SubmarineShellInterpreter</td>
+    <td>Provides interpreter for Apache Submarine shell</td>
+  </tr>
+  <tr>
+    <td>%submarine.python</td>
+    <td>PySubmarineInterpreter</td>
+    <td>Provides interpreter for Apache Submarine python</td>
+  </tr>
+</table>
 
 ### Submarine shell
 
@@ -115,12 +132,29 @@ With Submarine Dashboard you can do all the operational control of Submarine, fo
 
    + **JOB RUN**：Selecting `JOB RUN` will display the parameter input interface for submitting JOB.
 
-     | Name              | Description                                                  |
-     | ----------------- | ------------------------------------------------------------ |
-     | Checkpoint Path   | Submarine sets up a separate Checkpoint path for each user's Note for Tensorflow training. Saved the training data for this Note history, Used to train the output of model data, Tensorboard uses the data in this path for model presentation. Users cannot modify it. For example: `hdfs://cluster1/...` , The environment variable name for Checkpoint Path is `%checkpoint_path%`, You can use `%checkpoint_path%` instead of the input value in Data Path in `PS Launch Cmd` and `Worker Launch Cmd`. |
-     | Input Path        | The user specifies the data data directory of the Tensorflow algorithm. Only HDFS-enabled directories are supported. The environment variable name for Data Path is `%input_path%`, You can use `%input_path%` instead of the input value in Data Path in `PS Launch Cmd` and `Worker Launch Cmd`. |
-     | PS Launch Cmd     | Tensorflow Parameter services launch command，例如：`python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0 ...` |
-     | Worker Launch Cmd | Tensorflow Worker services launch command，例如：`python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=1 ...` |
+
+<table class="table-configuration">
+  <tr>
+    <th>Name</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>Checkpoint Path/td>
+    <td>Submarine sets up a separate Checkpoint path for each user's Note for Tensorflow training. Saved the training data for this Note history, Used to train the output of model data, Tensorboard uses the data in this path for model presentation. Users cannot modify it. For example: `hdfs://cluster1/...` , The environment variable name for Checkpoint Path is `%checkpoint_path%`, You can use `%checkpoint_path%` instead of the input value in Data Path in `PS Launch Cmd` and `Worker Launch Cmd`.</td>
+  </tr>
+  <tr>
+    <td>Input Path</td>
+    <td>The user specifies the data data directory of the Tensorflow algorithm. Only HDFS-enabled directories are supported. The environment variable name for Data Path is `%input_path%`, You can use `%input_path%` instead of the input value in Data Path in `PS Launch Cmd` and `Worker Launch Cmd`.</td>
+  </tr>
+  <tr>
+    <td>PS Launch Cmd</td>
+    <td>Tensorflow Parameter services launch command，例如：`python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0 ...`</td>
+  </tr>
+  <tr>
+    <td>Worker Launch Cmd</td>
+    <td>Tensorflow Worker services launch command，例如：`python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=1 ...`</td>
+  </tr>
+</table>
 
    + **JOB STOP**
 
@@ -141,49 +175,233 @@ With Submarine Dashboard you can do all the operational control of Submarine, fo
 
 Zeppelin Submarine interpreter provides the following properties to customize the Submarine interpreter
 
-| Attribute name                     | Attribute value    | Description                                                  |
-| ---------------------------------- | ------------------ | ------------------------------------------------------------ |
-| DOCKER_CONTAINER_TIME_ZONE         | Etc/UTC            | Set the time zone in the container                           |
-| DOCKER_HADOOP_HDFS_HOME            | /hadoop-3.1-0      | Hadoop path in the following 3 images（SUBMARINE_INTERPRETER_DOCKER_IMAGE、tf.parameter.services.docker.image、tf.worker.services.docker.image） |
-| DOCKER_JAVA_HOME                   | /opt/java          | JAVA path in the following 3 images（SUBMARINE_INTERPRETER_DOCKER_IMAGE、tf.parameter.services.docker.image、tf.worker.services.docker.image） |
-| HADOOP_YARN_SUBMARINE_JAR          |                    | Path to the Submarine JAR package in the Hadoop-3.1+ release installed on the Zeppelin server |
-| INTERPRETER_LAUNCH_MODE            | local/yarn         | Run the Submarine interpreter instance in local or YARN local mainly for submarine interpreter development and debugging YARN mode for production environment |
-| SUBMARINE_HADOOP_CONF_DIR          |                    | Set the HADOOP-CONF path to support multiple Hadoop cluster environments |
-| SUBMARINE_HADOOP_HOME              |                    | Hadoop-3.1+ above path installed on the Zeppelin server      |
-| SUBMARINE_HADOOP_KEYTAB            |                    | Keytab file path for a hadoop cluster with kerberos authentication turned on |
-| SUBMARINE_HADOOP_PRINCIPAL         |                    | PRINCIPAL information for the keytab file of the hadoop cluster with kerberos authentication turned on |
-| SUBMARINE_INTERPRETER_DOCKER_IMAGE |                    | At INTERPRETER_LAUNCH_MODE=yarn, Submarine uses this image to create a Zeppelin Submarine interpreter container to create an algorithm development environment for the user. |
-| docker.container.network           |                    | YARN's Docker network name                                   |
-| machinelearing.distributed.enable  |                    | Whether to use the model training of the distributed mode JOB RUN submission |
-| shell.command.timeout.millisecs    | 60000              | Execute timeout settings for shell commands in the Submarine interpreter container |
-| submarine.algorithm.hdfs.path      |                    | Save machine-based algorithms developed using Submarine interpreter to HDFS as files |
-| submarine.yarn.queue               | root.default       | Submarine submits model training YARN queue name             |
-| tf.checkpoint.path                 |                    | Tensorflow checkpoint path, Each user will create a user's checkpoint secondary path using the username under this path. Each algorithm submitted by the user will create a checkpoint three-level path using the note id (the user's Tensorboard uses the checkpoint data in this path for visual display) |
-| tf.parameter.services.cpu          |                    | Number of CPU cores applied to Tensorflow parameter services when Submarine submits model distributed training |
-| tf.parameter.services.docker.image |                    | Submarine creates a mirror for Tensorflow parameter services when submitting model distributed training |
-| tf.parameter.services.gpu          |                    | GPU cores applied to Tensorflow parameter services when Submarine submits model distributed training |
-| tf.parameter.services.memory       | 2G                 | Memory resources requested by Tensorflow parameter services when Submarine submits model distributed training |
-| tf.parameter.services.num          |                    | Number of Tensorflow parameter services used by Submarine to submit model distributed training |
-| tf.tensorboard.enable              | true               | Create a separate Tensorboard for each user                  |
-| tf.worker.services.cpu             |                    | Submarine submits model resources for Tensorflow worker services when submitting model training |
-| tf.worker.services.docker.image    |                    | Submarine creates a mirror for Tensorflow worker services when submitting model distributed training |
-| tf.worker.services.gpu             |                    | Submarine submits GPU resources for Tensorflow worker services when submitting model training |
-| tf.worker.services.memory          |                    | Submarine submits model resources for Tensorflow worker services when submitting model training |
-| tf.worker.services.num             |                    | Number of Tensorflow worker services used by Submarine to submit model distributed training |
-| yarn.webapp.http.address           | http://hadoop:8088 | YARN web ui address                                          |
-| zeppelin.interpreter.rpc.portRange | 29914              | You need to export this port in the SUBMARINE_INTERPRETER_DOCKER_IMAGE configuration image. RPC communication for Zeppelin Server and Submarine interpreter containers |
-| zeppelin.ipython.grpc.message_size | 33554432           | Message size setting for IPython grpc in Submarine interpreter container |
-| zeppelin.ipython.launch.timeout    | 30000              | IPython execution timeout setting in Submarine interpreter container |
-| zeppelin.python                    | python             | Execution path of python in Submarine interpreter container  |
-| zeppelin.python.maxResult          | 10000              | The maximum number of python execution results returned from the Submarine interpreter container |
-| zeppelin.python.useIPython         | false              | IPython is currently not supported and must be false         |
-| zeppelin.submarine.auth.type       | simple/kerberos    | Has Hadoop turned on kerberos authentication?                |
+<table class="table-configuration">
+  <tr>
+    <th>Attribute name</th>
+    <th>Attribute value</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>DOCKER_CONTAINER_TIME_ZONE</td>
+    <td>Etc/UTC</td>
+    <td>Set the time zone in the container                           |
+  </tr>
+  <tr>
+    <td>DOCKER_HADOOP_HDFS_HOME</td>
+    <td>/hadoop-3.1-0</td>
+    <td>Hadoop path in the following 3 images（SUBMARINE_INTERPRETER_DOCKER_IMAGE、tf.parameter.services.docker.image、tf.worker.services.docker.image） |
+  </tr>
+  <tr>
+    <td>DOCKER_JAVA_HOME</td>
+    <td>/opt/java</td>
+    <td>JAVA path in the following 3 images（SUBMARINE_INTERPRETER_DOCKER_IMAGE、tf.parameter.services.docker.image、tf.worker.services.docker.image） |
+  </tr>
+  <tr>
+    <td>HADOOP_YARN_SUBMARINE_JAR</td>
+    <td></td>
+    <td>Path to the Submarine JAR package in the Hadoop-3.1+ release installed on the Zeppelin server |
+  </tr>
+  <tr>
+    <td>INTERPRETER_LAUNCH_MODE</td>
+    <td>local/yarn</td>
+    <td>Run the Submarine interpreter instance in local or YARN local mainly for submarine interpreter development and debugging YARN mode for production environment |
+  </tr>
+  <tr>
+    <td>SUBMARINE_HADOOP_CONF_DIR</td>
+    <td></td>
+    <td>Set the HADOOP-CONF path to support multiple Hadoop cluster environments</td>
+  </tr>
+  <tr>
+    <td>SUBMARINE_HADOOP_HOME</td>
+    <td></td>
+    <td>Hadoop-3.1+ above path installed on the Zeppelin server</td>
+  </tr>
+  <tr>
+    <td>SUBMARINE_HADOOP_KEYTAB</td>
+    <td></td>
+    <td>Keytab file path for a hadoop cluster with kerberos authentication turned on</td>
+  </tr>
+  <tr>
+    <td>SUBMARINE_HADOOP_PRINCIPAL</td>
+    <td></td>
+    <td>PRINCIPAL information for the keytab file of the hadoop cluster with kerberos authentication turned on</td>
+  </tr>
+  <tr>
+    <td>SUBMARINE_INTERPRETER_DOCKER_IMAGE</td>
+    <td></td>
+    <td>At INTERPRETER_LAUNCH_MODE=yarn, Submarine uses this image to create a Zeppelin Submarine interpreter container to create an algorithm development environment for the user. |
+  </tr>
+  <tr>
+    <td>docker.container.network</td>
+    <td></td>
+    <td>YARN's Docker network name</td>
+  </tr>
+  <tr>
+    <td>machinelearing.distributed.enable</td>
+    <td></td>
+    <td>Whether to use the model training of the distributed mode JOB RUN submission</td>
+  </tr>
+  <tr>
+    <td>shell.command.timeout.millisecs</td>
+    <td>60000</td>
+    <td>Execute timeout settings for shell commands in the Submarine interpreter container</td>
+  </tr>
+  <tr>
+    <td>submarine.algorithm.hdfs.path</td>
+    <td></td>
+    <td>Save machine-based algorithms developed using Submarine interpreter to HDFS as files</td>
+  </tr>
+  <tr>
+    <td>submarine.yarn.queue</td>
+    <td>root.default</td>
+    <td>Submarine submits model training YARN queue name</td>
+  </tr>
+  <tr>
+    <td>tf.checkpoint.path</td>
+    <td></td>
+    <td>Tensorflow checkpoint path, Each user will create a user's checkpoint secondary path using the username under this path. Each algorithm submitted by the user will create a checkpoint three-level path using the note id (the user's Tensorboard uses the checkpoint data in this path for visual display)</td>
+  </tr>
+  <tr>
+    <td>tf.parameter.services.cpu</td>
+    <td></td>
+    <td>Number of CPU cores applied to Tensorflow parameter services when Submarine submits model distributed training</td>
+  </tr>
+  <tr>
+    <td>tf.parameter.services.docker.image</td>
+    <td></td>
+    <td>Submarine creates a mirror for Tensorflow parameter services when submitting model distributed training</td>
+  </tr>
+  <tr>
+    <td>tf.parameter.services.gpu</td>
+    <td></td>
+    <td>GPU cores applied to Tensorflow parameter services when Submarine submits model distributed training</td>
+  </tr>
+  <tr>
+    <td>tf.parameter.services.memory</td>
+    <td>2G</td>
+    <td>Memory resources requested by Tensorflow parameter services when Submarine submits model distributed training</td>
+  </tr>
+  <tr>
+    <td>tf.parameter.services.num</td>
+    <td></td>
+    <td>Number of Tensorflow parameter services used by Submarine to submit model distributed training</td>
+  </tr>
+  <tr>
+    <td>tf.tensorboard.enable</td>
+    <td>true</td>
+    <td>Create a separate Tensorboard for each user</td>
+  </tr>
+  <tr>
+    <td>tf.worker.services.cpu</td>
+    <td></td>
+    <td>Submarine submits model resources for Tensorflow worker services when submitting model training</td>
+  </tr>
+  <tr>
+    <td>tf.worker.services.docker.image</td>
+    <td></td>
+    <td>Submarine creates a mirror for Tensorflow worker services when submitting model distributed training</td>
+  </tr>
+  <tr>
+    <td>tf.worker.services.gpu</td>
+    <td></td>
+    <td>Submarine submits GPU resources for Tensorflow worker services when submitting model training</td>
+  </tr>
+  <tr>
+    <td>tf.worker.services.memory</td>
+    <td></td>
+    <td>Submarine submits model resources for Tensorflow worker services when submitting model training</td>
+  </tr>
+  <tr>
+    <td>tf.worker.services.num</td>
+    <td></td>
+    <td>Number of Tensorflow worker services used by Submarine to submit model distributed training</td>
+  </tr>
+  <tr>
+    <td>yarn.webapp.http.address</td>
+    <td>http://hadoop:8088</td>
+    <td>YARN web ui address</td>
+  </tr>
+  <tr>
+    <td>zeppelin.interpreter.rpc.portRange</td>
+    <td>29914</td>
+    <td>You need to export this port in the SUBMARINE_INTERPRETER_DOCKER_IMAGE configuration image. RPC communication for Zeppelin Server and Submarine interpreter containers</td>
+  </tr>
+  <tr>
+    <td>zeppelin.ipython.grpc.message_size</td>
+    <td>33554432</td>
+    <td>Message size setting for IPython grpc in Submarine interpreter container</td>
+  </tr>
+  <tr>
+    <td>zeppelin.ipython.launch.timeout</td>
+    <td>30000</td>
+    <td>IPython execution timeout setting in Submarine interpreter container</td>
+  </tr>
+  <tr>
+    <td>zeppelin.python</td>
+    <td>python</td>
+    <td>Execution path of python in Submarine interpreter container</td>
+  </tr>
+  <tr>
+    <td>zeppelin.python.maxResult</td>
+    <td>10000</td>
+    <td>The maximum number of python execution results returned from the Submarine interpreter container</td>
+  </tr>
+  <tr>
+    <td>zeppelin.python.useIPython</td>
+    <td>false</td>
+    <td>IPython is currently not supported and must be false</td>
+  </tr>
+  <tr>
+    <td>zeppelin.submarine.auth.type</td>
+    <td>simple/kerberos</td>
+    <td>Has Hadoop turned on kerberos authentication?</td>
+  </tr>
+</table>
+
+### Docker images
+
+The docker images file is stored in the `zeppelin/scripts/docker/submarine` directory.
+
+1. submarine interpreter cpu version
+
+2. submarine interpreter gpu version
+
+3. tensorflow 1.10 & hadoop 3.1.2 cpu version
+
+4. tensorflow 1.10 & hadoop 3.1.2 gpu version
+
+
+## Change Log
+
+**0.1.0** _(Zeppelin 0.9.0)_ :
+
+* Support distributed or standolone tensorflow model training.
+* Support submarine interpreter running local.
+* Support submarine interpreter running YARN.
+* Support Docker on YARN-3.3.0, Plan compatible with lower versions of yarn.
+
+## Bugs & Contacts
+
++ **Submarine interpreter BUG**
+  If you encounter a bug for this interpreter, please create a sub **JIRA** ticket on [ZEPPELIN-3856](https://issues.apache.org/jira/browse/ZEPPELIN-3856).
++ **Submarine Running problem**
+  If you encounter a problem for Submarine runtime, please create a **ISSUE** on [hadoop-submarine-ecosystem](https://github.com/hadoopsubmarine/hadoop-submarine-ecosystem).
++ **YARN Submarine BUG**
+  If you encounter a bug for Yarn Submarine, please create a **JIRA** ticket on [SUBMARINE](https://issues.apache.org/jira/browse/SUBMARINE).
 
 ## Dependency
 
-1. YARN：Submarine currently need to run on Hadoop 3.1+，You can use our verified hadoop Submarine version https://github.com/hadoopsubmarine/hadoop/tree/submarine-0.1.0, Compile and deploy.
-2. Submarine runtime environment：you can use Submarine-installer https://github.com/hadoopsubmarine/hadoop-submarine-ecosystem/tree/master/submarine-installer, Deploy Docker and network environments.
+1. **YARN**
+  Submarine currently need to run on Hadoop 3.3+
+
+  + The hadoop version of the hadoop submarine team git repository is periodically submitted to the code repository of the hadoop.
+  + The version of the git repository for the hadoop submarine team will be faster than the hadoop version release cycle.
+  + You can use the hadoop version of the hadoop submarine team git repository.
+
+2. **Submarine runtime environment**
+  you can use Submarine-installer https://github.com/hadoopsubmarine, Deploy Docker and network environments.
 
 ## More
 
-Youtube Submarine Channel：https://www.youtube.com/channel/UC4JBt8Y8VJ0BW0IM9YpdCyQ
+**Hadoop Submarine Project**: https://hadoop.apache.org/submarine
+**Youtube Submarine Channel**: https://www.youtube.com/channel/UC4JBt8Y8VJ0BW0IM9YpdCyQ
