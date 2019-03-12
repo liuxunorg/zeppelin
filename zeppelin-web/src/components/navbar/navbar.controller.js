@@ -98,7 +98,7 @@ function NavCtrl($scope, $rootScope, $http, $routeParams, $location,
           if (res['isLogoutAPI'] === 'true') {
             $http.get(res['redirectURL']).then(function() {
             }, function() {
-              window.location = baseUrlSrv.getBase();
+              window.location = baseUrlSrv.getRestApiBase() + '/openid/login';
             });
           } else {
             window.location.href = res['redirectURL'] + window.location.href;

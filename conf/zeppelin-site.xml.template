@@ -637,4 +637,51 @@
   <description>Kubernetes yaml spec files</description>
 </property>
 
+  <!-- OpenID login configurations
+  <property>
+    <name>zeppelin.login.mode</name>
+    <value>normal</value>
+    <description>normal|openid|oauth</description>
+  </property>
+  <property>
+    <name>zeppelin.login.openid.domain</name>
+    <value></value>
+    <description>应用站点的域名。例如：bdms.netease.com</description>
+  </property>
+  <property>
+    <name>zeppelin.login.openid.realm</name>
+    <value></value>
+    <description>应用站点的URL地址，通常这个URL要能覆盖 openid.return_to 设定的URL。例如：http://bdms.netease.com</description>
+  </property>
+  -->
+
+  <!-- jdbc configurations
+  <property>
+    <name>zeppelin.jdbc.driver.name</name>
+    <value>com.mysql.jdbc.Driver</value>
+  </property>
+  <property>
+    <name>zeppelin.jdbc.url</name>
+    <value>jdbc:mysql://x.x.x.x:3306/zeppelin_dev?characterEncoding=utf-8&amp;autoReconnect=true&amp;failOverReadOnly=false&amp;allowMultiQueries=true</value>
+  </property>
+  <property>
+    <name>zeppelin.jdbc.username</name>
+    <value>zeppelin</value>
+  </property>
+  <property>
+    <name>zeppelin.jdbc.password</name>
+    <value>zeppelin</value>
+  </property>
+  -->
+
+  <!-- user kerberos
+  <property>
+    <name>zeppelin.mammut.rest.url</name>
+    <value>http://x.x.x.x:8888/api/v1/keytab/principal/</value>
+  </property>
+  <property>
+    <name>zeppelin.mammut.keytab.storage.path</name>
+    <value>／home/hadoop/zeppelin-current/keytabs</value>
+  </property>
+  -->
 </configuration>

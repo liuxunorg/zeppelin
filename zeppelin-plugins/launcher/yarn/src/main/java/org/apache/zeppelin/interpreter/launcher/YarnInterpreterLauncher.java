@@ -28,6 +28,8 @@ import org.apache.zeppelin.interpreter.remote.RemoteInterpreterRunningProcess;
 import org.apache.zeppelin.interpreter.remote.RemoteInterpreterUtils;
 import org.apache.zeppelin.submarine.componts.SubmarineConstants;
 import org.apache.zeppelin.submarine.hadoop.YarnClient;
+import org.apache.zeppelin.user.entity.UserKerberos;
+import org.apache.zeppelin.util.UserKerberosUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,9 +57,48 @@ public class YarnInterpreterLauncher extends StandardInterpreterLauncher {
     super(zConf, recoveryStorage);
   }
 
+  public void injectUserKerberos(Properties properties, String userName) {
+    LOGGER.info("injectUserKerberos() >>> ");
+    ZeppelinConfiguration conf = ZeppelinConfiguration.create();
+    String keytabStoragePath = conf.getZeppelinUserKeytabStoragePath();
+    String keytabPath = keytabStoragePath + File.separator + userName + ".keytab";
+    File fKeytabPath = new File(keytabPath);
+    if (!fKeytabPath.exists()) {
+      LOGGER.error("User's keytab file not found: " + keytabPath);
+      return;
+    }
+
+    UserKerberos userKerberos = UserKerberosUtils.getUserKerberos(userName);
+    if (null != userKerberos) {
+      // jdbc interpreter
+      properties.put("zeppelin.jdbc.principal", userKerberos.getPrincipal());
+      properties.put("zeppelin.jdbc.keytab.location", keytabPath);
+
+      // spark interpreter
+      properties.put("spark.yarn.principal", userKerberos.getPrincipal());
+      properties.put("spark.yarn.keytab", keytabPath);
+
+      // file interpreter
+      properties.put(ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_PRINCIPAL.getVarName(),
+          userKerberos.getPrincipal());
+      properties.put(ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_KEYTAB.getVarName(),
+          keytabPath);
+
+      // submarine interpreter
+      properties.put("SUBMARINE_HADOOP_PRINCIPAL", userKerberos.getPrincipal());
+      properties.put("SUBMARINE_HADOOP_KEYTAB", keytabPath);
+    }
+
+    LOGGER.info("injectUserKerberos() <<< ");
+  }
+
   private InterpreterClient launchOnYarn(InterpreterLaunchContext context) throws IOException {
     // Because need to modify the properties, make a clone
     this.properties = (Properties) context.getProperties().clone();
+
+    // Inject user kerberos
+    injectUserKerberos(properties, context.getUserName());
+
     yarnClient = new YarnClient(properties);
 
     InterpreterOption option = context.getOption();

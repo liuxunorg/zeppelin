@@ -727,6 +727,42 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     return getRelativeDir(ConfVars.ZEPPELIN_K8S_TEMPLATE_DIR);
   }
 
+  public String getZeppelinUserKerberosRestUrl() {
+    return getString(ConfVars.ZEPPELIN_MAMMUT_REST_URL);
+  }
+
+  public String getZeppelinUserKeytabStoragePath() {
+    return getString(ConfVars.ZEPPELIN_MAMMUT_KEYTAB_STORAGE_PATH);
+  }
+
+  public String getZeppelinJdbcDriverName() {
+    return getString(ConfVars.ZEPPELIN_JDBC_DRIVER_NAME);
+  }
+
+  public String getZeppelinJdbcUrl() {
+    return getString(ConfVars.ZEPPELIN_JDBC_URL);
+  }
+
+  public String getZeppelinJdbcUserName() {
+    return getString(ConfVars.ZEPPELIN_JDBC_USERNAME);
+  }
+
+  public String getZeppelinJdbcPassword() {
+   return getString(ConfVars.ZEPPELIN_JDBC_PASSWORD);
+  }
+
+  public String getZeppelinLoginMode() {
+    return getString(ConfVars.ZEPPELIN_LOGIN_OPENID_MODE);
+  }
+
+  public String getZeppelinLoginDomain() {
+    return getString(ConfVars.ZEPPELIN_LOGIN_OPENID_DOMAIN);
+  }
+
+  public String getZeppelinLoginRealm() {
+    return getString(ConfVars.ZEPPELIN_LOGIN_OPENID_REALM);
+  }
+
   public Map<String, String> dumpConfigurations(Predicate<String> predicate) {
     Map<String, String> properties = new HashMap<>();
 
@@ -880,6 +916,17 @@ public class ZeppelinConfiguration extends XMLConfiguration {
     ZEPPELIN_CLUSTER_ADDR("zeppelin.cluster.addr", ""),
     ZEPPELIN_CLUSTER_HEARTBEAT_INTERVAL("zeppelin.cluster.heartbeat.interval", 3000),
     ZEPPELIN_CLUSTER_HEARTBEAT_TIMEOUT("zeppelin.cluster.heartbeat.timeout", 9000),
+
+    ZEPPELIN_MAMMUT_REST_URL("zeppelin.mammut.rest.url", ""),
+    ZEPPELIN_MAMMUT_KEYTAB_STORAGE_PATH("zeppelin.mammut.keytab.storage.path", ""),
+    ZEPPELIN_JDBC_DRIVER_NAME("zeppelin.jdbc.driver.name", ""),
+    ZEPPELIN_JDBC_URL("zeppelin.jdbc.url", ""),
+    ZEPPELIN_JDBC_USERNAME("zeppelin.jdbc.username", ""),
+    ZEPPELIN_JDBC_PASSWORD("zeppelin.jdbc.password", ""),
+
+    ZEPPELIN_LOGIN_OPENID_MODE("zeppelin.login.mode", ""),
+    ZEPPELIN_LOGIN_OPENID_DOMAIN("zeppelin.login.openid.domain", ""),
+    ZEPPELIN_LOGIN_OPENID_REALM("zeppelin.login.openid.realm", ""),
 
     ZEPPELIN_RUN_MODE("zeppelin.run.mode", "auto"),              // auto | local | k8s
 

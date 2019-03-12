@@ -1,0 +1,29 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!DOCTYPE mapper PUBLIC '-//mybatis.org//DTD Mapper 3.0//EN'
+        'http://mybatis.org/dtd/mybatis-3-mapper.dtd'>
+
+<mapper namespace='org.apache.zeppelin.user.ServiceMapper'>
+    <resultMap id="UserKerberosResultMap" type="org.apache.zeppelin.user.entity.UserKerberos">
+        <id property="id" column="id" />
+        <result column="username" property="userName"/>
+        <result column="principal" property="principal"/>
+        <result column="keytab" property="keytab"/>
+        <result column="create_date_time" property="dbCreateTime"/>
+        <result column="email" property="email"/>
+        <result column="clusters" property="clusters"/>
+    </resultMap>
+
+    <select id='getUserKerberos' parameterType="java.util.Map" resultMap="UserKerberosResultMap">
+        SELECT * FROM user_kerberos WHERE username = '${user_name}'
+    </select>
+    <insert id="insertUserKerberos">
+        INSERT INTO user_kerberos(username, principal, keytab, db_create_time, email, clusters)
+        VALUE ('${item.userName}', '${item.principal}', #{item.keytab,jdbcType=BLOB}, now(), '${item.email}', '${item.clusters}');
+    </insert>
+    <update id="updateUserKerberos">
+        UPDATE user_kerberos SET db_create_time = now(), principal = '${item.principal}',
+        keytab = '${item.keytab}', email = '${item.email}', clusters = '${item.clusters}'
+        WHERE username = '${item.userName}'
+    </update>
+
+</mapper>

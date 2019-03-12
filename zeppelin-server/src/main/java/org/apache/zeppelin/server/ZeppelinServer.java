@@ -373,7 +373,7 @@ public class ZeppelinServer extends ResourceConfig {
     if (!StringUtils.isBlank(shiroIniPath)) {
       webapp.setInitParameter("shiroConfigLocations", new File(shiroIniPath).toURI().toString());
       webapp
-          .addFilter(ShiroFilter.class, "/api/*", EnumSet.allOf(DispatcherType.class))
+          .addFilter(ShiroFilter.class, "/*", EnumSet.allOf(DispatcherType.class))
           .setInitParameter("staticSecurityManagerEnabled", "true");
       webapp.addEventListener(new EnvironmentLoaderListener());
     }

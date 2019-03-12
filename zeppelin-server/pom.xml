@@ -52,6 +52,9 @@
     <plugin.failsafe.version>2.16</plugin.failsafe.version>
     <plugin.scala.version>2.15.2</plugin.scala.version>
     <plugin.scalatest.version>1.0</plugin.scalatest.version>
+
+    <hadoop-common.version>2.7.3</hadoop-common.version>
+    <mysql.version>5.1.39</mysql.version>
   </properties>
 
   <dependencyManagement>
@@ -274,6 +277,20 @@
       <artifactId>scala-reflect</artifactId>
       <version>${scala.version}</version>
     </dependency>
+
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-common</artifactId>
+      <version>${hadoop-common.version}</version>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>${mysql.version}</version>
+    </dependency>
+
 
     <!--test libraries-->
     <dependency>

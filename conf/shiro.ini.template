@@ -56,19 +56,16 @@ user3 = password4, role2
 #zeppelinHubRealm.zeppelinhubUrl = https://www.zeppelinhub.com
 #securityManager.realms = $zeppelinHubRealm
 
-## A same for configuring Knox SSO Realm
-#knoxJwtRealm = org.apache.zeppelin.realm.jwt.KnoxJwtRealm
-#knoxJwtRealm.providerUrl = https://domain.example.com/
-#knoxJwtRealm.login = gateway/knoxsso/knoxauth/login.html
-#knoxJwtRealm.logout = gateway/knoxssout/api/v1/webssout
-#knoxJwtRealm.logoutAPI = true
-#knoxJwtRealm.redirectParam = originalUrl
-#knoxJwtRealm.cookieName = hadoop-jwt
-#knoxJwtRealm.publicKeyPath = /etc/zeppelin/conf/knox-sso.pem
-#
-#knoxJwtRealm.groupPrincipalMapping = group.principal.mapping
-#knoxJwtRealm.principalMapping = principal.mapping
-#authc = org.apache.zeppelin.realm.jwt.KnoxAuthenticationFilter
+ds = com.mysql.jdbc.jdbc2.optional.MysqlDataSource
+ds.serverName = 10.120.232.16
+ds.user = zeppelin_dev
+ds.password = zeppelin_dev
+ds.databaseName = zeppelin_dev
+
+DBRealm = org.apache.shiro.realm.jdbc.JdbcRealm
+DBRealm.dataSource = $ds
+securityManager.realms = $DBRealm
+
 
 sessionManager = org.apache.shiro.web.session.mgt.DefaultWebSessionManager
 

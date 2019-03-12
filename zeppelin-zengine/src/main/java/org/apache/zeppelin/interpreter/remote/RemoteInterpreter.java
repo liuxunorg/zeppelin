@@ -165,8 +165,11 @@ public class RemoteInterpreter extends Interpreter {
           @Override
           public Void call(Client client) throws Exception {
             LOGGER.info("Create RemoteInterpreter {}", getClassName());
+            Properties properties = getProperties();
+            injectUserKerberos(properties);
+
             client.createInterpreter(getInterpreterGroup().getId(), sessionId,
-                className, (Map) getProperties(), getUserName());
+                className, (Map) properties, getUserName());
             return null;
           }
         });

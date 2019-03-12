@@ -74,6 +74,7 @@ public class PySubmarineInterpreter extends PythonInterpreter {
         LOGGER.error(e.getMessage(), e);
       }
     }
+
     return super.interpret(st, context);
   }
 

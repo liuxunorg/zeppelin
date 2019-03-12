@@ -22,14 +22,18 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.reflect.FieldUtils;
 import org.apache.zeppelin.annotation.Experimental;
 import org.apache.zeppelin.annotation.ZeppelinApi;
+import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.interpreter.thrift.InterpreterCompletion;
 import org.apache.zeppelin.resource.Resource;
 import org.apache.zeppelin.resource.ResourcePool;
 import org.apache.zeppelin.scheduler.Scheduler;
 import org.apache.zeppelin.scheduler.SchedulerFactory;
+import org.apache.zeppelin.user.entity.UserKerberos;
+import org.apache.zeppelin.util.UserKerberosUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.Arrays;
@@ -43,10 +47,10 @@ import java.util.regex.Pattern;
 /**
  * Interface for interpreters.
  * If you want to implement new Zeppelin interpreter, extend this class
- *
+ * <p>
  * Please see,
  * https://zeppelin.apache.org/docs/latest/development/writingzeppelininterpreter.html
- *
+ * <p>
  * open(), close(), interpret() is three the most important method you need to implement.
  * cancel(), getProgress(), completion() is good to have
  * getFormType(), getScheduler() determine Zeppelin's behavior
@@ -79,6 +83,41 @@ public abstract class Interpreter {
       return interpret(precode, interpreterContext);
     }
     return null;
+  }
+
+  public void injectUserKerberos(Properties properties) {
+    logger.info("injectUserKerberos() >>> ");
+    ZeppelinConfiguration conf = ZeppelinConfiguration.create();
+    String keytabStoragePath = conf.getZeppelinUserKeytabStoragePath();
+    String keytabPath = keytabStoragePath + File.separator + userName + ".keytab";
+    File fKeytabPath = new File(keytabPath);
+    if (!fKeytabPath.exists()) {
+      logger.error("User's keytab file not found: " + keytabPath);
+      return;
+    }
+
+    UserKerberos userKerberos = UserKerberosUtils.getUserKerberos(userName);
+    if (null != userKerberos) {
+      // jdbc interpreter
+      properties.put("zeppelin.jdbc.principal", userKerberos.getPrincipal());
+      properties.put("zeppelin.jdbc.keytab.location", keytabPath);
+
+      // spark interpreter
+      properties.put("spark.yarn.principal", userKerberos.getPrincipal());
+      properties.put("spark.yarn.keytab", keytabPath);
+
+      // file interpreter
+      properties.put(ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_PRINCIPAL.getVarName(),
+          userKerberos.getPrincipal());
+      properties.put(ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_KEYTAB.getVarName(),
+          keytabPath);
+
+      // submarine interpreter
+      properties.put("SUBMARINE_HADOOP_PRINCIPAL", userKerberos.getPrincipal());
+      properties.put("SUBMARINE_HADOOP_KEYTAB", keytabPath);
+    }
+
+    logger.info("injectUserKerberos() <<< ");
   }
 
   protected String interpolate(String cmd, ResourcePool resourcePool) {
@@ -148,14 +187,14 @@ public abstract class Interpreter {
    * Get completion list based on cursor position.
    * By implementing this method, it enables auto-completion.
    *
-   * @param buf statements
-   * @param cursor cursor position in statements
+   * @param buf                statements
+   * @param cursor             cursor position in statements
    * @param interpreterContext
    * @return list of possible completion. Return empty list if there're nothing to return.
    */
   @ZeppelinApi
   public List<InterpreterCompletion> completion(String buf, int cursor,
-      InterpreterContext interpreterContext) throws InterpreterException {
+                                                InterpreterContext interpreterContext) throws InterpreterException {
     return null;
   }
 
@@ -163,7 +202,7 @@ public abstract class Interpreter {
    * Interpreter can implements it's own scheduler by overriding this method.
    * There're two default scheduler provided, FIFO, Parallel.
    * If your interpret() can handle concurrent request, use Parallel or use FIFO.
-   *
+   * <p>
    * You can get default scheduler by using
    * SchedulerFactory.singleton().createOrGetFIFOScheduler()
    * SchedulerFactory.singleton().createOrGetParallelScheduler()
@@ -251,8 +290,8 @@ public abstract class Interpreter {
    * General function to register hook event
    *
    * @param noteId - Note to bind hook to
-   * @param event The type of event to hook to (pre_exec, post_exec)
-   * @param cmd The code to be executed by the interpreter on given event
+   * @param event  The type of event to hook to (pre_exec, post_exec)
+   * @param cmd    The code to be executed by the interpreter on given event
    */
   @Experimental
   public void registerHook(String noteId, String event, String cmd) throws InvalidHookException {
@@ -265,7 +304,7 @@ public abstract class Interpreter {
    * registerHook() wrapper for global scope
    *
    * @param event The type of event to hook to (pre_exec, post_exec)
-   * @param cmd The code to be executed by the interpreter on given event
+   * @param cmd   The code to be executed by the interpreter on given event
    */
   @Experimental
   public void registerHook(String event, String cmd) throws InvalidHookException {
@@ -276,7 +315,7 @@ public abstract class Interpreter {
    * Get the hook code
    *
    * @param noteId - Note to bind hook to
-   * @param event The type of event to hook to (pre_exec, post_exec)
+   * @param event  The type of event to hook to (pre_exec, post_exec)
    */
   @Experimental
   public String getHook(String noteId, String event) {
@@ -299,7 +338,7 @@ public abstract class Interpreter {
    * Unbind code from given hook event
    *
    * @param noteId - Note to bind hook to
-   * @param event The type of event to hook to (pre_exec, post_exec)
+   * @param event  The type of event to hook to (pre_exec, post_exec)
    */
   @Experimental
   public void unregisterHook(String noteId, String event) {
@@ -425,12 +464,12 @@ public abstract class Interpreter {
     private InterpreterRunner runner;
 
     public RegisteredInterpreter(String name, String group, String className,
-        Map<String, DefaultInterpreterProperty> properties) {
+                                 Map<String, DefaultInterpreterProperty> properties) {
       this(name, group, className, false, properties);
     }
 
     public RegisteredInterpreter(String name, String group, String className,
-        boolean defaultInterpreter, Map<String, DefaultInterpreterProperty> properties) {
+                                 boolean defaultInterpreter, Map<String, DefaultInterpreterProperty> properties) {
       super();
       this.name = name;
       this.group = group;

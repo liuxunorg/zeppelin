@@ -48,6 +48,7 @@
     <commons-math3.version>3.1.1</commons-math3.version>
     <guava.version>20.0</guava.version>
     <commons-lang3.version>3.7</commons-lang3.version>
+    <mybatis.version>3.2.8</mybatis.version>
 
     <!--plugin versions-->
     <plugin.shade.version>2.3</plugin.shade.version>
@@ -149,6 +150,12 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.mybatis</groupId>
+      <artifactId>mybatis</artifactId>
+      <version>${mybatis.version}</version>
     </dependency>
 
     <!-- Aether :: maven dependency resolution -->
