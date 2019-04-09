@@ -60,6 +60,7 @@ import org.apache.http.config.RegistryBuilder;
 import org.apache.http.impl.auth.SPNegoSchemeFactory;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.submarine.commons.SubmarineConstants;
@@ -140,6 +141,40 @@ public class YarnClient {
     }
   }
 
+  private HttpResponse callRest(final String url, HTTP operation) {
+    if (hadoopSecurityEnabled) {
+      return callSecurityRest(url, HTTP.DELETE);
+    } else {
+      return callSimpleRest(url, HTTP.DELETE);
+    }
+  }
+
+  public HttpResponse callSimpleRest(final String url, HTTP operation) {
+    DefaultHttpClient httpclient = new DefaultHttpClient();
+    HttpResponse response = null;
+    HttpUriRequest request = null;
+
+    switch (operation) {
+      case DELETE:
+        request = new HttpDelete(url);
+        break;
+      case POST:
+        request = new HttpPost(url);
+        break;
+      default:
+        request = new HttpGet(url);
+        break;
+    }
+
+    try {
+      response = httpclient.execute(request);
+    } catch (IOException e) {
+      LOGGER.error(e.getMessage(), e);
+    }
+
+    return response;
+  }
+
   // http://yarn-web-http-address/app/v1/services/{service_name}
   public void deleteService(String serviceName) {
     String appUrl = this.yarnWebHttpAddr + "/app/v1/services/" + serviceName
@@ -147,7 +182,7 @@ public class YarnClient {
 
     InputStream inputStream = null;
     try {
-      HttpResponse response = callRestUrl(appUrl, principal, HTTP.DELETE);
+      HttpResponse response = callRest(appUrl, HTTP.DELETE);
       inputStream = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(inputStream))
           .lines().collect(Collectors.joining(System.lineSeparator()));
@@ -156,8 +191,8 @@ public class YarnClient {
         LOGGER.warn("message is :" + Arrays.deepToString(response.getAllHeaders()));
         LOGGER.warn("result：\n" + result);
       }
-    } catch (Exception exp) {
-      exp.printStackTrace();
+    } catch (Exception e) {
+      LOGGER.error(e.getMessage(), e);
     } finally {
       try {
         if (null != inputStream) {
@@ -178,7 +213,7 @@ public class YarnClient {
 
     InputStream inputStream = null;
     try {
-      HttpResponse response = callRestUrl(appUrl, principal, HTTP.GET);
+      HttpResponse response = callRest(appUrl, HTTP.GET);
       inputStream = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(inputStream))
           .lines().collect(Collectors.joining(System.lineSeparator()));
@@ -191,8 +226,8 @@ public class YarnClient {
 
       // parse app status json
       mapStatus = parseAppServices(result);
-    } catch (Exception exp) {
-      exp.printStackTrace();
+    } catch (Exception e) {
+      LOGGER.error(e.getMessage(), e);
     } finally {
       try {
         if (null != inputStream) {
@@ -217,7 +252,7 @@ public class YarnClient {
 
     InputStream inputStream = null;
     try {
-      HttpResponse response = callRestUrl(appUrl, principal, HTTP.GET);
+      HttpResponse response = callRest(appUrl, HTTP.GET);
       inputStream = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(inputStream))
           .lines().collect(Collectors.joining(System.lineSeparator()));
@@ -230,8 +265,8 @@ public class YarnClient {
       appAttempts = parseClusterApps(result);
 
       return appAttempts;
-    } catch (Exception exp) {
-      exp.printStackTrace();
+    } catch (Exception e) {
+      LOGGER.error(e.getMessage(), e);
     } finally {
       try {
         if (null != inputStream) {
@@ -281,7 +316,7 @@ public class YarnClient {
 
     InputStream inputStream = null;
     try {
-      HttpResponse response = callRestUrl(appUrl, principal, HTTP.GET);
+      HttpResponse response = callRest(appUrl, HTTP.GET);
       inputStream = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(inputStream))
           .lines().collect(Collectors.joining(System.lineSeparator()));
@@ -293,8 +328,8 @@ public class YarnClient {
 
       // parse app status json
       appAttempts = parseAppAttempts(result);
-    } catch (Exception exp) {
-      exp.printStackTrace();
+    } catch (Exception e) {
+      LOGGER.error(e.getMessage(), e);
     } finally {
       try {
         if (null != inputStream) {
@@ -317,7 +352,7 @@ public class YarnClient {
 
     InputStream inputStream = null;
     try {
-      HttpResponse response = callRestUrl(appUrl, principal, HTTP.GET);
+      HttpResponse response = callRest(appUrl, HTTP.GET);
       inputStream = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(inputStream))
           .lines().collect(Collectors.joining(System.lineSeparator()));
@@ -329,8 +364,8 @@ public class YarnClient {
 
       // parse app status json
       appAttemptsContainers = parseAppAttemptsContainers(result);
-    } catch (Exception exp) {
-      exp.printStackTrace();
+    } catch (Exception e) {
+      LOGGER.error(e.getMessage(), e);
     } finally {
       try {
         if (null != inputStream) {
@@ -393,11 +428,12 @@ public class YarnClient {
     return httpClient;
   }
 
-  public HttpResponse callRestUrl(final String url, final String userId, HTTP operation) {
+  public HttpResponse callSecurityRest(final String url, HTTP operation) {
     if (LOGGER.isDebugEnabled()) {
       LOGGER.debug(String.format("Calling YarnClient %s %s %s",
           this.principal, this.keytab, url));
     }
+
     javax.security.auth.login.Configuration config = new javax.security.auth.login.Configuration() {
       @SuppressWarnings("serial")
       @Override
@@ -426,7 +462,7 @@ public class YarnClient {
     };
 
     Set<Principal> principals = new HashSet<Principal>(1);
-    principals.add(new KerberosPrincipal(userId));
+    principals.add(new KerberosPrincipal(principal));
     Subject sub = new Subject(false, principals, new HashSet<Object>(), new HashSet<Object>());
     try {
       // Authentication module: Krb5Login

@@ -85,4 +85,11 @@ public class YarnClientTest {
 
     LOGGER.info("");
   }
+
+  @Test
+  public void testSimple() throws IOException {
+    yarnClient.callSimpleRest("https://www.baidu.com/", YarnClient.HTTP.GET);
+
+    LOGGER.info("");
+  }
 }

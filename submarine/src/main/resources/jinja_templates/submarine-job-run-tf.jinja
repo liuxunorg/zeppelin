@@ -49,7 +49,9 @@
 {%- if SUBMARINE_HADOOP_CONF_DIR %}
   --localization "{{ SUBMARINE_HADOOP_CONF_DIR }}:{{ SUBMARINE_HADOOP_CONF_DIR }}" \
 {%- endif %}
+{%- if ZEPPELIN_SUBMARINE_AUTH_TYPE and ZEPPELIN_SUBMARINE_AUTH_TYPE == 'kerberos' %}
   --keytab {{ SUBMARINE_HADOOP_KEYTAB }} \
   --principal {{ SUBMARINE_HADOOP_PRINCIPAL }} \
   --distribute_keytab \
+{%- endif %}
   --verbose

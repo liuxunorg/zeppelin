@@ -30,7 +30,9 @@
   --num_workers 0 \
   --tensorboard \
   --tensorboard_docker_image {{ TF_PARAMETER_SERVICES_DOCKER_IMAGE }} \
+{%- if ZEPPELIN_SUBMARINE_AUTH_TYPE and ZEPPELIN_SUBMARINE_AUTH_TYPE == 'kerberos' %}
   --keytab {{ SUBMARINE_HADOOP_KEYTAB }} \
   --principal {{ SUBMARINE_HADOOP_PRINCIPAL }} \
   --distribute_keytab \
+{%- endif %}
   --verbose

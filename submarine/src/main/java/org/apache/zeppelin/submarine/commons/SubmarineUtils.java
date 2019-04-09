@@ -62,6 +62,7 @@ import static org.apache.zeppelin.submarine.commons.SubmarineConstants.TF_WORKER
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.TF_WORKER_SERVICES_MEMORY;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.TF_WORKER_SERVICES_NUM;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.WORKER_LAUNCH_CMD;
+import static org.apache.zeppelin.submarine.commons.SubmarineConstants.ZEPPELIN_SUBMARINE_AUTH_TYPE;
 
 public class SubmarineUtils {
   private static Logger LOGGER = LoggerFactory.getLogger(SubmarineUI.class);
@@ -144,6 +145,13 @@ public class SubmarineUtils {
   public static HashMap propertiesToJinjaParams(Properties properties, SubmarineJob submarineJob,
                                                 boolean outLog)
       throws IOException {
+    boolean hadoopSecurityEnabled = true; // simple or kerberos
+    String hadoopAuthType = properties.getProperty(
+        ZEPPELIN_SUBMARINE_AUTH_TYPE, "kerberos");
+    if (StringUtils.equals(hadoopAuthType, "simple")) {
+      hadoopSecurityEnabled = false;
+    }
+
     StringBuffer sbMessage = new StringBuffer();
     String noteId = submarineJob.getNoteId();
 
@@ -195,15 +203,19 @@ public class SubmarineUtils {
         outLog, sbMessage);
     String algorithmUploadPath = getProperty(properties, SUBMARINE_ALGORITHM_HDFS_PATH,
         outLog, sbMessage);
-    String submarineHadoopKeytab = getProperty(properties, SUBMARINE_HADOOP_KEYTAB,
-        outLog, sbMessage);
-    file = new File(submarineHadoopKeytab);
-    if (!file.exists()) {
-      sbMessage.append(SUBMARINE_HADOOP_KEYTAB + ":"
-          + submarineHadoopKeytab + " is not a valid file path!\n");
+
+    String submarineHadoopKeytab = "", submarineHadoopPrincipal = "";
+    if (hadoopSecurityEnabled) {
+      submarineHadoopKeytab = getProperty(properties, SUBMARINE_HADOOP_KEYTAB,
+          outLog, sbMessage);
+      file = new File(submarineHadoopKeytab);
+      if (!file.exists()) {
+        sbMessage.append(SUBMARINE_HADOOP_KEYTAB + ":"
+            + submarineHadoopKeytab + " is not a valid file path!\n");
+      }
+      submarineHadoopPrincipal = getProperty(properties, SUBMARINE_HADOOP_PRINCIPAL,
+          outLog, sbMessage);
     }
-    String submarineHadoopPrincipal = getProperty(properties, SUBMARINE_HADOOP_PRINCIPAL,
-        outLog, sbMessage);
     String dockerHadoopHdfsHome = getProperty(properties, DOCKER_HADOOP_HDFS_HOME,
         outLog, sbMessage);
     String dockerJavaHome = getProperty(properties, DOCKER_JAVA_HOME, outLog, sbMessage);
@@ -274,8 +286,6 @@ public class SubmarineUtils {
     mapParams.put(unifyKey(JOB_NAME), jobName);
     mapParams.put(unifyKey(DOCKER_CONTAINER_NETWORK), containerNetwork);
     mapParams.put(unifyKey(SUBMARINE_YARN_QUEUE), submarineYarnQueue);
-    mapParams.put(unifyKey(SUBMARINE_HADOOP_KEYTAB), submarineHadoopKeytab);
-    mapParams.put(unifyKey(SUBMARINE_HADOOP_PRINCIPAL), submarineHadoopPrincipal);
     mapParams.put(unifyKey(MACHINELEARNING_DISTRIBUTED_ENABLE), machinelearingDistributed);
     mapParams.put(unifyKey(SUBMARINE_ALGORITHM_HDFS_PATH), notePath);
     mapParams.put(unifyKey(SUBMARINE_ALGORITHM_HDFS_FILES), arrayHdfsFiles);
@@ -295,6 +305,11 @@ public class SubmarineUtils {
     mapParams.put(unifyKey(TF_WORKER_SERVICES_MEMORY), workerServicesMemory);
     mapParams.put(unifyKey(TF_TENSORBOARD_ENABLE), tensorboardEnable);
     mapParams.put(unifyKey(TF_CHECKPOINT_PATH), userTensorboardCheckpoint);
+    mapParams.put(unifyKey(ZEPPELIN_SUBMARINE_AUTH_TYPE), hadoopAuthType);
+    if (hadoopSecurityEnabled) {
+      mapParams.put(unifyKey(SUBMARINE_HADOOP_KEYTAB), submarineHadoopKeytab);
+      mapParams.put(unifyKey(SUBMARINE_HADOOP_PRINCIPAL), submarineHadoopPrincipal);
+    }
 
     return mapParams;
   }
