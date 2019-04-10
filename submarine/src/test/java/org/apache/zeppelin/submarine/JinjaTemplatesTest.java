@@ -17,7 +17,6 @@ package org.apache.zeppelin.submarine;
 import com.google.common.io.Resources;
 import com.hubspot.jinjava.Jinjava;
 import org.apache.commons.io.Charsets;
-import org.apache.zeppelin.submarine.commons.SubmarineConstants;
 import org.apache.zeppelin.submarine.job.SubmarineJob;
 import org.apache.zeppelin.submarine.commons.SubmarineUtils;
 import org.junit.Test;
@@ -660,7 +659,8 @@ public class JinjaTemplatesTest {
     assertEquals(str, sbCheck.toString());
   }
 
-  public String jobRunJinjaTemplateTest(Boolean dist, Boolean launchMode, String auth) throws IOException {
+  public String jobRunJinjaTemplateTest(Boolean dist, Boolean launchMode, String auth)
+      throws IOException {
     URL urlTemplate = Resources.getResource(SubmarineJob.SUBMARINE_JOBRUN_TF_JINJA);
     String template = Resources.toString(urlTemplate, Charsets.UTF_8);
     Jinjava jinjava = new Jinjava();
@@ -679,7 +679,8 @@ public class JinjaTemplatesTest {
     return submarineCmd;
   }
 
-  public String tensorboardJinjaTemplateTest(Boolean dist, Boolean launchMode, String auth) throws IOException {
+  public String tensorboardJinjaTemplateTest(Boolean dist, Boolean launchMode, String auth)
+      throws IOException {
     URL urlTemplate = Resources.getResource(SubmarineJob.SUBMARINE_TENSORBOARD_JINJA);
     String template = Resources.toString(urlTemplate, Charsets.UTF_8);
     Jinjava jinjava = new Jinjava();
