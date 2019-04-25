@@ -188,6 +188,7 @@ public class RemoteInterpreterServer extends Thread
 
         @Override
         public void run() {
+          logger.debug("1:interrupted={}", interrupted);
           while (!interrupted && !server.isServing()) {
             try {
               Thread.sleep(1000);
@@ -195,8 +196,9 @@ public class RemoteInterpreterServer extends Thread
               interrupted = true;
             }
           }
-
+          logger.debug("2:interrupted={}", interrupted);
           if (!interrupted) {
+            logger.debug("3:interrupted={}", interrupted);
             RegisterInfo registerInfo = new RegisterInfo(host, port, interpreterGroupId);
             try {
               intpEventServiceClient.registerInterpreterProcess(registerInfo);

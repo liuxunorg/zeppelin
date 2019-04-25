@@ -14,15 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #}
-{%- if INTERPRETER_LAUNCH_MODE and INTERPRETER_LAUNCH_MODE == 'yarn' -%}
-{{ DOCKER_HADOOP_HDFS_HOME }}/bin/yarn jar \
-{%- else -%}
-{{ SUBMARINE_HADOOP_HOME }}/bin/yarn jar \
-{%- endif %}
-  {{ HADOOP_YARN_SUBMARINE_JAR }} job run \
+{{ HADOOP_HOME }}/bin/yarn jar {{ HADOOP_YARN_SUBMARINE_JAR }} job run \
   --name {{ JOB_NAME }} \
   --env DOCKER_JAVA_HOME={{ DOCKER_JAVA_HOME }} \
-  --env DOCKER_HADOOP_HDFS_HOME={{ DOCKER_HADOOP_HDFS_HOME }} \
+  --env DOCKER_HADOOP_HDFS_HOME={{ DOCKER_HADOOP_HOME }} \
   --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=bridge \
   --env TZ="{{ DOCKER_CONTAINER_TIME_ZONE }}" \
   --checkpoint_path {{ CHECKPOINT_PATH }} \

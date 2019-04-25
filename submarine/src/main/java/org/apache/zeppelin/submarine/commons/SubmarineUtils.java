@@ -16,6 +16,7 @@ package org.apache.zeppelin.submarine.commons;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.fs.Path;
+import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.display.AngularObject;
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.submarine.job.SubmarineJob;
@@ -28,24 +29,24 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
+import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.CHECKPOINT_PATH;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.DOCKER_CONTAINER_NETWORK;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.DOCKER_CONTAINER_TIME_ZONE;
-import static org.apache.zeppelin.submarine.commons.SubmarineConstants.DOCKER_HADOOP_HDFS_HOME;
+import static org.apache.zeppelin.submarine.commons.SubmarineConstants.DOCKER_HADOOP_HOME;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.DOCKER_JAVA_HOME;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.INPUT_PATH;
-import static org.apache.zeppelin.submarine.commons.SubmarineConstants.INTERPRETER_LAUNCH_MODE;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.JOB_NAME;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.MACHINELEARNING_DISTRIBUTED_ENABLE;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.PS_LAUNCH_CMD;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_FILES;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH;
-import static org.apache.zeppelin.submarine.commons.SubmarineConstants.SUBMARINE_HADOOP_CONF_DIR;
-import static org.apache.zeppelin.submarine.commons.SubmarineConstants.SUBMARINE_HADOOP_HOME;
+import static org.apache.zeppelin.submarine.commons.SubmarineConstants.HADOOP_CONF_DIR;
+import static org.apache.zeppelin.submarine.commons.SubmarineConstants.HADOOP_HOME;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.SUBMARINE_HADOOP_KEYTAB;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL;
 import static org.apache.zeppelin.submarine.commons.SubmarineConstants.SUBMARINE_YARN_QUEUE;
@@ -142,7 +143,7 @@ public class SubmarineUtils {
 
   // Convert properties to Map and check that the variable cannot be empty
   public static HashMap propertiesToJinjaParams(Properties properties, SubmarineJob submarineJob,
-                                                boolean outLog)
+                                                ZeppelinConfiguration zconf, boolean outLog)
       throws IOException {
     StringBuffer sbMessage = new StringBuffer();
     String noteId = submarineJob.getNoteId();
@@ -159,14 +160,24 @@ public class SubmarineUtils {
 
     String workerLaunchCmd = getProperty(properties, WORKER_LAUNCH_CMD, outLog, sbMessage);
 
+    ZeppelinConfiguration.RUN_MODE launchMode = zconf.getRunMode();
+
     // Check interpretere set Properties
-    String submarineHadoopHome;
-    submarineHadoopHome = getProperty(properties, SUBMARINE_HADOOP_HOME, outLog, sbMessage);
-    File file = new File(submarineHadoopHome);
-    if (!file.exists()) {
-      sbMessage.append(SUBMARINE_HADOOP_HOME + ": "
-          + submarineHadoopHome + " is not a valid file path!\n");
+    String hadoopHome = "";
+    if (launchMode == ZeppelinConfiguration.RUN_MODE.YARN) {
+      hadoopHome = getProperty(properties, DOCKER_HADOOP_HOME, outLog, sbMessage);
+    } else {
+      // run on local
+      if (System.getenv("HADOOP_HOME") != null) {
+        hadoopHome = System.getenv("HADOOP_HOME");
+      }
     }
+    File file = new File(hadoopHome);
+    if (!file.exists()) {
+      sbMessage.append(HADOOP_HOME + ": " + hadoopHome + " is not a valid file path!\n");
+    }
+    String dockerHadoopHome = getProperty(properties, DOCKER_HADOOP_HOME,
+        outLog, sbMessage);
 
     String submarineJar = getProperty(properties, HADOOP_YARN_SUBMARINE_JAR, outLog, sbMessage);
     file = new File(submarineJar);
@@ -204,16 +215,12 @@ public class SubmarineUtils {
     }
     String submarineHadoopPrincipal = getProperty(properties, SUBMARINE_HADOOP_PRINCIPAL,
         outLog, sbMessage);
-    String dockerHadoopHdfsHome = getProperty(properties, DOCKER_HADOOP_HDFS_HOME,
-        outLog, sbMessage);
+
     String dockerJavaHome = getProperty(properties, DOCKER_JAVA_HOME, outLog, sbMessage);
-    String intpLaunchMode = getProperty(properties, INTERPRETER_LAUNCH_MODE, outLog, sbMessage);
-    if (StringUtils.isEmpty(intpLaunchMode)) {
-      intpLaunchMode = "local"; // default
-    }
+
     String tensorboardEnable = getProperty(properties, TF_TENSORBOARD_ENABLE, outLog, sbMessage);
     if (StringUtils.isEmpty(tensorboardEnable)) {
-      tensorboardEnable = "false"; // default
+      tensorboardEnable = "true"; // default
     }
 
     // check
@@ -228,8 +235,23 @@ public class SubmarineUtils {
       sbMessage.append("Checkpoint path depth must be greater than 3!\n");
     }
 
-    String sumbarineHadoopConfDir = getProperty(properties, SUBMARINE_HADOOP_CONF_DIR,
-        outLog, sbMessage);
+    String hadoopConfDir = "";
+    if (System.getenv("DOCKER_HADOOP_CONF_DIR") != null) {
+      LOGGER.info("hadoopConfDir = System.getenv(\"DOCKER_HADOOP_CONF_DIR\");");
+      hadoopConfDir = System.getenv("DOCKER_HADOOP_CONF_DIR");
+    } else {
+      File coreSite = findFileOnClassPath("core-site.xml");
+      File hdfsSite = findFileOnClassPath("hdfs-site.xml");
+      File yarnSite = findFileOnClassPath("yarn-site.xml");
+      if (coreSite == null || hdfsSite == null || yarnSite == null) {
+        LOGGER.error("hdfs is being used, however we couldn't locate core-site.xml/"
+            + "hdfs-site.xml / yarn-site.xml from classpath, please double check you classpath"
+            + "setting and make sure they're included.");
+        throw new IOException(
+            "Failed to locate core-site.xml / hdfs-site.xml / yarn-site.xml from class path");
+      }
+      hadoopConfDir = coreSite.getParent();
+    }
 
     String dockerContainerTimezone = getProperty(properties, DOCKER_CONTAINER_TIME_ZONE,
         outLog, sbMessage);
@@ -264,10 +286,9 @@ public class SubmarineUtils {
     String jobName = SubmarineUtils.getJobName(submarineJob.getUserName(),
         submarineJob.getNoteId());
     HashMap<String, Object> mapParams = new HashMap();
-    mapParams.put(unifyKey(INTERPRETER_LAUNCH_MODE), intpLaunchMode);
-    mapParams.put(unifyKey(SUBMARINE_HADOOP_HOME), submarineHadoopHome);
-    mapParams.put(unifyKey(SUBMARINE_HADOOP_CONF_DIR), sumbarineHadoopConfDir);
-    mapParams.put(unifyKey(DOCKER_HADOOP_HDFS_HOME), dockerHadoopHdfsHome);
+    mapParams.put(unifyKey(HADOOP_HOME), hadoopHome);
+    mapParams.put(unifyKey(HADOOP_CONF_DIR), hadoopConfDir);
+    mapParams.put(unifyKey(DOCKER_HADOOP_HOME), dockerHadoopHome);
     mapParams.put(unifyKey(DOCKER_JAVA_HOME), dockerJavaHome);
     mapParams.put(unifyKey(DOCKER_CONTAINER_TIME_ZONE), dockerContainerTimezone);
     mapParams.put(unifyKey(HADOOP_YARN_SUBMARINE_JAR), submarineJar);
@@ -296,6 +317,37 @@ public class SubmarineUtils {
     mapParams.put(unifyKey(TF_TENSORBOARD_ENABLE), tensorboardEnable);
     mapParams.put(unifyKey(TF_CHECKPOINT_PATH), userTensorboardCheckpoint);
 
+
+    LOGGER.info("properties = " + properties.toString());
+    LOGGER.info("mapParams = " + mapParams.toString());
+
     return mapParams;
+  }
+
+  private static File findFileOnClassPath(final String fileName) {
+    final String classpath = System.getProperty("java.class.path");
+    LOGGER.info("classpath = " + classpath);
+    final String pathSeparator = System.getProperty("path.separator");
+    final StringTokenizer tokenizer = new StringTokenizer(classpath, pathSeparator);
+
+    while (tokenizer.hasMoreTokens()) {
+      final String pathElement = tokenizer.nextToken();
+      final File directoryOrJar = new File(pathElement);
+      final File absoluteDirectoryOrJar = directoryOrJar.getAbsoluteFile();
+      if (absoluteDirectoryOrJar.isFile()) {
+        final File target = new File(absoluteDirectoryOrJar.getParent(),
+            fileName);
+        if (target.exists()) {
+          return target;
+        }
+      } else {
+        final File target = new File(directoryOrJar, fileName);
+        if (target.exists()) {
+          return target;
+        }
+      }
+    }
+
+    return null;
   }
 }

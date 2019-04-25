@@ -44,7 +44,7 @@ public class PySubmarineInterpreter extends PythonInterpreter {
       throws InterpreterException {
     setParagraphConfig(context);
 
-    // algorithm & checkpoint path support replaces ${username} with real user name
+    // algorithm & checkpoint path support replaces ${user.name} with real user name
     String algorithmPath = properties.getProperty(
         SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH, "");
     if (algorithmPath.contains(SubmarineConstants.USERNAME_SYMBOL)) {

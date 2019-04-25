@@ -25,6 +25,7 @@ import org.apache.commons.exec.LogOutputStream;
 import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
+import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.submarine.commons.SubmarineConstants;
 import org.apache.zeppelin.submarine.commons.SubmarineUI;
 import org.apache.zeppelin.submarine.commons.SubmarineUtils;
@@ -47,6 +48,8 @@ public class TensorboardRunThread extends Thread {
   private SubmarineJob submarineJob;
 
   private AtomicBoolean running = new AtomicBoolean(false);
+
+  private ZeppelinConfiguration zconf = ZeppelinConfiguration.create();
 
   private Lock lockRunning = new ReentrantLock();
 
@@ -71,7 +74,7 @@ public class TensorboardRunThread extends Thread {
       running.set(true);
 
       HashMap jinjaParams = SubmarineUtils.propertiesToJinjaParams(
-          properties, submarineJob, false);
+          properties, submarineJob, zconf, false);
       // update jobName -> tensorboardName
       jinjaParams.put(SubmarineConstants.JOB_NAME, tensorboardName);
 
@@ -110,13 +113,12 @@ public class TensorboardRunThread extends Thread {
       }
 
       Map<String, String> env = new HashMap<>();
-      String launchMode = (String) jinjaParams.get(SubmarineConstants.INTERPRETER_LAUNCH_MODE);
-      if (StringUtils.equals(launchMode, "yarn")) {
+      if (zconf.getRunMode() == ZeppelinConfiguration.RUN_MODE.YARN) {
         // Set environment variables in the container
         String javaHome, hadoopHome, hadoopConf;
         javaHome = (String) jinjaParams.get(SubmarineConstants.DOCKER_JAVA_HOME);
-        hadoopHome = (String) jinjaParams.get(SubmarineConstants.DOCKER_HADOOP_HDFS_HOME);
-        hadoopConf = (String) jinjaParams.get(SubmarineConstants.SUBMARINE_HADOOP_CONF_DIR);
+        hadoopHome = (String) jinjaParams.get(SubmarineConstants.DOCKER_HADOOP_HOME);
+        hadoopConf = (String) jinjaParams.get(SubmarineConstants.HADOOP_CONF_DIR);
         env.put("JAVA_HOME", javaHome);
         env.put("HADOOP_HOME", hadoopHome);
         env.put("HADOOP_HDFS_HOME", hadoopHome);

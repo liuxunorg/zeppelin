@@ -25,6 +25,7 @@ import org.apache.commons.exec.LogOutputStream;
 import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
+import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.thrift.ParagraphInfo;
 import org.apache.zeppelin.submarine.hadoop.HdfsClient;
@@ -45,6 +46,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import static org.apache.zeppelin.submarine.commons.SubmarineConstants.DOCKER_HADOOP_HOME;
+import static org.apache.zeppelin.submarine.commons.SubmarineConstants.DOCKER_JAVA_HOME;
+import static org.apache.zeppelin.submarine.commons.SubmarineConstants.HADOOP_CONF_DIR;
+import static org.apache.zeppelin.submarine.commons.SubmarineUtils.unifyKey;
 import static org.apache.zeppelin.submarine.job.SubmarineJobStatus.EXECUTE_SUBMARINE;
 import static org.apache.zeppelin.submarine.job.SubmarineJobStatus.EXECUTE_SUBMARINE_ERROR;
 import static org.apache.zeppelin.submarine.job.SubmarineJobStatus.EXECUTE_SUBMARINE_FINISHED;
@@ -57,6 +62,8 @@ public class JobRunThread extends Thread {
   private AtomicBoolean running = new AtomicBoolean(false);
 
   private Lock lockRunning = new ReentrantLock();
+
+  private ZeppelinConfiguration zconf = ZeppelinConfiguration.create();
 
   public JobRunThread(SubmarineJob submarineJob) {
     this.submarineJob = submarineJob;
@@ -108,7 +115,7 @@ public class JobRunThread extends Thread {
       }
 
       HashMap jinjaParams = SubmarineUtils.propertiesToJinjaParams(
-          properties, submarineJob, true);
+          properties, submarineJob, zconf, true);
 
       URL urlTemplate = Resources.getResource(SubmarineJob.SUBMARINE_JOBRUN_TF_JINJA);
       String template = Resources.toString(urlTemplate, Charsets.UTF_8);
@@ -146,19 +153,18 @@ public class JobRunThread extends Thread {
       }
 
       Map<String, String> env = new HashMap<>();
-      String launchMode = (String) jinjaParams.get(SubmarineConstants.INTERPRETER_LAUNCH_MODE);
-      if (StringUtils.equals(launchMode, "yarn")) {
+      ZeppelinConfiguration.RUN_MODE launchMode = zconf.getRunMode();
+      if (launchMode == ZeppelinConfiguration.RUN_MODE.YARN) {
         // Set environment variables in the submarine interpreter container run on yarn
         String javaHome, hadoopHome, hadoopConf;
-        javaHome = (String) jinjaParams.get(SubmarineConstants.DOCKER_JAVA_HOME);
-        hadoopHome = (String) jinjaParams.get(SubmarineConstants.DOCKER_HADOOP_HDFS_HOME);
-        hadoopConf = (String) jinjaParams.get(SubmarineConstants.SUBMARINE_HADOOP_CONF_DIR);
+        javaHome = (String) jinjaParams.get(unifyKey(DOCKER_JAVA_HOME));
+        hadoopHome = (String) jinjaParams.get(unifyKey(DOCKER_HADOOP_HOME));
+        hadoopConf = (String) jinjaParams.get(unifyKey(HADOOP_CONF_DIR));
         env.put("JAVA_HOME", javaHome);
         env.put("HADOOP_HOME", hadoopHome);
         env.put("HADOOP_HDFS_HOME", hadoopHome);
         env.put("HADOOP_CONF_DIR", hadoopConf);
         env.put("YARN_CONF_DIR", hadoopConf);
-        env.put("CLASSPATH", "`$HADOOP_HDFS_HOME/bin/hadoop classpath --glob`");
         env.put("ZEPPELIN_FORCE_STOP", "true");
       }
 

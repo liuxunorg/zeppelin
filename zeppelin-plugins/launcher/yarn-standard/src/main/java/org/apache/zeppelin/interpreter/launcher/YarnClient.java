@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.submarine.hadoop;
+package org.apache.zeppelin.interpreter.launcher;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -60,8 +60,10 @@ import org.apache.http.config.RegistryBuilder;
 import org.apache.http.impl.auth.SPNegoSchemeFactory;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.zeppelin.submarine.commons.SubmarineConstants;
+import org.apache.zeppelin.conf.ZeppelinConfiguration;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,10 +72,12 @@ import javax.security.auth.kerberos.KerberosPrincipal;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
 
+import static org.apache.zeppelin.conf.ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_KEYTAB;
+import static org.apache.zeppelin.conf.ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_PRINCIPAL;
+
 public class YarnClient {
   private Logger LOGGER = LoggerFactory.getLogger(YarnClient.class);
 
-  private Configuration hadoopConf;
   private String yarnWebHttpAddr;
   private String principal = "";
   private String keytab = "";
@@ -89,31 +93,22 @@ public class YarnClient {
   public static final String HOST_IP = "HOST_IP";
   public static final String HOST_PORT = "HOST_PORT";
 
-  String SERVICE_PATH = "/services/{service_name}";
+  private Configuration hadoopConf;
+  private ZeppelinConfiguration zConf = ZeppelinConfiguration.create();
+  private boolean hadoopSecurityEnabled = false; // simple or kerberos
 
-  private boolean hadoopSecurityEnabled = true; // simple or kerberos
-
-  public YarnClient(Properties properties) {
+  public YarnClient() {
     this.hadoopConf = new Configuration();
 
-    String hadoopAuthType = properties.getProperty(
-        SubmarineConstants.ZEPPELIN_SUBMARINE_AUTH_TYPE, "kerberos");
-    if (StringUtils.equals(hadoopAuthType, "simple")) {
-      hadoopSecurityEnabled = false;
-    }
+    hadoopSecurityEnabled = UserGroupInformation.isSecurityEnabled();
+    if (hadoopSecurityEnabled) {
+      String keytab = zConf.getString(ZEPPELIN_SERVER_KERBEROS_KEYTAB);
+      String principal = zConf.getString(ZEPPELIN_SERVER_KERBEROS_PRINCIPAL);
 
-    yarnWebHttpAddr = properties.getProperty(SubmarineConstants.YARN_WEB_HTTP_ADDRESS, "");
-    boolean isSecurityEnabled = UserGroupInformation.isSecurityEnabled();
-    if (isSecurityEnabled || hadoopSecurityEnabled) {
-      String keytab = properties.getProperty(
-          SubmarineConstants.SUBMARINE_HADOOP_KEYTAB, "");
-      String principal = properties.getProperty(
-          SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL, "");
       if (StringUtils.isBlank(keytab) || StringUtils.isBlank(principal)) {
         throw new RuntimeException("keytab and principal can not be empty, keytab: "
             + keytab + ", principal: " + principal);
       }
-
       this.principal = principal;
       this.keytab = keytab;
       if (LOGGER.isDebugEnabled()) {
@@ -121,6 +116,46 @@ public class YarnClient {
         System.setProperty("sun.security.krb5.debug", "true");
       }
     }
+    yarnWebHttpAddr = zConf.getYarnWebappAddress();
+  }
+
+  private HttpResponse callRest(final String url, HTTP operation) {
+    if (hadoopSecurityEnabled) {
+      return callSecurityRest(url, HTTP.DELETE);
+    } else {
+      return callSimpleRest(url, HTTP.DELETE);
+    }
+  }
+
+  public HttpResponse callSimpleRest(final String url, HTTP operation) {
+    DefaultHttpClient httpclient = new DefaultHttpClient();
+    HttpResponse response = null;
+    HttpUriRequest request = null;
+
+    switch (operation) {
+      case DELETE:
+        request = new HttpDelete(url);
+        break;
+      case POST:
+        request = new HttpPost(url);
+        break;
+      default:
+        request = new HttpGet(url);
+        break;
+    }
+
+    try {
+      response = httpclient.execute(request);
+    } catch (IOException e) {
+      LOGGER.error(e.getMessage(), e);
+    }
+
+    return response;
+  }
+
+  // yarn application name match the pattern [a-z][a-z0-9-]*
+  public static String formatYarnAppName(String interpreterGroupId) {
+    return interpreterGroupId.toLowerCase().replace("_", "-");
   }
 
   // http://yarn-web-http-address/app/v1/services/{service_name}
@@ -130,7 +165,7 @@ public class YarnClient {
 
     InputStream inputStream = null;
     try {
-      HttpResponse response = callRestUrl(appUrl, principal, HTTP.DELETE);
+      HttpResponse response = callRest(appUrl, HTTP.DELETE);
       inputStream = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(inputStream))
           .lines().collect(Collectors.joining(System.lineSeparator()));
@@ -161,19 +196,21 @@ public class YarnClient {
 
     InputStream inputStream = null;
     try {
-      HttpResponse response = callRestUrl(appUrl, principal, HTTP.GET);
-      inputStream = response.getEntity().getContent();
-      String result = new BufferedReader(new InputStreamReader(inputStream))
-          .lines().collect(Collectors.joining(System.lineSeparator()));
-      if (response.getStatusLine().getStatusCode() != 200 /*success*/
-          && response.getStatusLine().getStatusCode() != 404 /*Not found*/) {
-        LOGGER.warn("Status code " + response.getStatusLine().getStatusCode());
-        LOGGER.warn("message is :" + Arrays.deepToString(response.getAllHeaders()));
-        LOGGER.warn("result：\n" + result);
-      }
+      HttpResponse response = callRest(appUrl, HTTP.GET);
+      if (null != response) {
+        inputStream = response.getEntity().getContent();
+        String result = new BufferedReader(new InputStreamReader(inputStream))
+            .lines().collect(Collectors.joining(System.lineSeparator()));
+        if (response.getStatusLine().getStatusCode() != 200 /*success*/
+            && response.getStatusLine().getStatusCode() != 404 /*Not found*/) {
+          LOGGER.warn("Status code " + response.getStatusLine().getStatusCode());
+          LOGGER.warn("message is :" + Arrays.deepToString(response.getAllHeaders()));
+          LOGGER.warn("result：\n" + result);
+        }
 
-      // parse app status json
-      mapStatus = parseAppServices(result);
+        // parse app status json
+        mapStatus = parseAppServices(result);
+      }
     } catch (Exception exp) {
       exp.printStackTrace();
     } finally {
@@ -200,7 +237,7 @@ public class YarnClient {
 
     InputStream inputStream = null;
     try {
-      HttpResponse response = callRestUrl(appUrl, principal, HTTP.GET);
+      HttpResponse response = callRest(appUrl, HTTP.GET);
       inputStream = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(inputStream))
           .lines().collect(Collectors.joining(System.lineSeparator()));
@@ -264,7 +301,7 @@ public class YarnClient {
 
     InputStream inputStream = null;
     try {
-      HttpResponse response = callRestUrl(appUrl, principal, HTTP.GET);
+      HttpResponse response = callRest(appUrl, HTTP.GET);
       inputStream = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(inputStream))
           .lines().collect(Collectors.joining(System.lineSeparator()));
@@ -300,7 +337,7 @@ public class YarnClient {
 
     InputStream inputStream = null;
     try {
-      HttpResponse response = callRestUrl(appUrl, principal, HTTP.GET);
+      HttpResponse response = callRest(appUrl, HTTP.GET);
       inputStream = response.getEntity().getContent();
       String result = new BufferedReader(new InputStreamReader(inputStream))
           .lines().collect(Collectors.joining(System.lineSeparator()));
@@ -350,7 +387,7 @@ public class YarnClient {
     HttpClientBuilder builder = HttpClientBuilder.create();
     Lookup<AuthSchemeProvider> authSchemeRegistry
         = RegistryBuilder.<AuthSchemeProvider>create().register(
-            AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true)).build();
+        AuthSchemes.SPNEGO, new SPNegoSchemeFactory(true)).build();
     builder.setDefaultAuthSchemeRegistry(authSchemeRegistry);
     BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
     credentialsProvider.setCredentials(new AuthScope(null, -1, null), new Credentials() {
@@ -376,7 +413,7 @@ public class YarnClient {
     return httpClient;
   }
 
-  public HttpResponse callRestUrl(final String url, final String userId, HTTP operation) {
+  public HttpResponse callSecurityRest(final String url, HTTP operation) {
     if (LOGGER.isDebugEnabled()) {
       LOGGER.debug(String.format("Calling YarnClient %s %s %s",
           this.principal, this.keytab, url));
@@ -409,7 +446,7 @@ public class YarnClient {
     };
 
     Set<Principal> principals = new HashSet<Principal>(1);
-    principals.add(new KerberosPrincipal(userId));
+    principals.add(new KerberosPrincipal(this.principal));
     Subject sub = new Subject(false, principals, new HashSet<Object>(), new HashSet<Object>());
     try {
       // Authentication module: Krb5Login
@@ -466,13 +503,13 @@ public class YarnClient {
       String appName = (elementAppName == null) ? "" : elementAppName.getAsString();
 
       if (!StringUtils.isEmpty(appId)) {
-        mapStatus.put(SubmarineConstants.YARN_APPLICATION_ID, appId);
+        mapStatus.put(YarnConstants.YARN_APPLICATION_ID, appId);
       }
       if (!StringUtils.isEmpty(appName)) {
-        mapStatus.put(SubmarineConstants.YARN_APPLICATION_NAME, appName);
+        mapStatus.put(YarnConstants.YARN_APPLICATION_NAME, appName);
       }
       if (!StringUtils.isEmpty(appState)) {
-        mapStatus.put(SubmarineConstants.YARN_APPLICATION_STATUS, appState);
+        mapStatus.put(YarnConstants.YARN_APPLICATION_STATUS, appState);
       }
     } catch (JsonIOException e) {
       LOGGER.error(e.getMessage(), e);
@@ -582,11 +619,11 @@ public class YarnClient {
   public List<Map<String, Object>> getAppExportPorts(String name) {
     // Query the IP and port of the submarine interpreter process through the yarn client
     Map<String, Object> mapAppStatus = getAppServices(name);
-    if (mapAppStatus.containsKey(SubmarineConstants.YARN_APPLICATION_ID)
-        && mapAppStatus.containsKey(SubmarineConstants.YARN_APPLICATION_NAME)
-        && mapAppStatus.containsKey(SubmarineConstants.YARN_APPLICATION_STATUS)) {
-      String appId = mapAppStatus.get(SubmarineConstants.YARN_APPLICATION_ID).toString();
-      String appStatus = mapAppStatus.get(SubmarineConstants.YARN_APPLICATION_STATUS).toString();
+    if (mapAppStatus.containsKey(YarnConstants.YARN_APPLICATION_ID)
+        && mapAppStatus.containsKey(YarnConstants.YARN_APPLICATION_NAME)
+        && mapAppStatus.containsKey(YarnConstants.YARN_APPLICATION_STATUS)) {
+      String appId = mapAppStatus.get(YarnConstants.YARN_APPLICATION_ID).toString();
+      String appStatus = mapAppStatus.get(YarnConstants.YARN_APPLICATION_STATUS).toString();
 
       // if (StringUtils.equals(appStatus, SubmarineJob.YarnApplicationState.RUNNING.toString())) {
       List<Map<String, Object>> mapAppAttempts = getAppAttemptsContainersExportPorts(appId);
@@ -596,6 +633,41 @@ public class YarnClient {
 
     return new ArrayList<Map<String, Object>>() {
     };
+  }
+
+  public Map<String, String> getAppExportPorts(String name, String port) {
+    // Query the IP and port of the submarine interpreter process through the yarn client
+    Map<String, Object> mapAppStatus = getAppServices(name);
+    if (mapAppStatus.containsKey(YarnConstants.YARN_APPLICATION_ID)
+        && mapAppStatus.containsKey(YarnConstants.YARN_APPLICATION_NAME)
+        && mapAppStatus.containsKey(YarnConstants.YARN_APPLICATION_STATUS)) {
+      String appId = mapAppStatus.get(YarnConstants.YARN_APPLICATION_ID).toString();
+      String appStatus = mapAppStatus.get(YarnConstants.YARN_APPLICATION_STATUS).toString();
+
+      List<Map<String, Object>> mapAppAttempts = getAppAttemptsContainersExportPorts(appId);
+      boolean findExistIntpContainer = false;
+      for (Map<String, Object> exportPorts : mapAppAttempts) {
+        if (exportPorts.containsKey(YarnClient.HOST_IP) && exportPorts.containsKey(YarnClient.HOST_PORT)
+            && exportPorts.containsKey(YarnClient.CONTAINER_PORT)) {
+          String intpAppHostIp = (String) exportPorts.get(YarnClient.HOST_IP);
+          String intpAppHostPort = (String) exportPorts.get(YarnClient.HOST_PORT);
+          String intpAppContainerPort = (String) exportPorts.get(YarnClient.CONTAINER_PORT);
+          if (StringUtils.equals(port, intpAppContainerPort)) {
+            LOGGER.info("Detection Submarine interpreter Container hostIp:{}, hostPort:{}, containerPort:{}.",
+                intpAppHostIp, intpAppHostPort, intpAppContainerPort);
+
+            Map<String, String> exportPortsAttr = new HashMap<>();
+            exportPortsAttr.put(HOST_IP, intpAppHostIp);
+            exportPortsAttr.put(HOST_PORT, intpAppHostPort);
+            exportPortsAttr.put(CONTAINER_PORT, intpAppContainerPort);
+
+            return exportPortsAttr;
+          }
+        }
+      }
+    }
+
+    return new HashMap<String, String>();
   }
 
   public enum HTTP {

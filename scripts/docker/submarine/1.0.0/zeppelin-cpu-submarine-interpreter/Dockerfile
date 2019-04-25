@@ -13,8 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM zeppelin-cpu-tensorflow_1.13.0-hadoop_3.1.2:1.0.0
+FROM zeppelin-cpu-tensorflow_1.13.1-hadoop_3.1.2:1.0.0
 MAINTAINER Apache Software Foundation <dev@zeppelin.apache.org>
+
+# Submarine auto mount in /etc/krb5.conf
+RUN rm /etc/krb5.conf
 
 # expose interpreter thrift port
 EXPOSE 29914

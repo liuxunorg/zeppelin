@@ -610,7 +610,7 @@
 <property>
   <name>zeppelin.run.mode</name>
   <value>auto</value>
-  <description>'auto|local|k8s'</description>
+  <description>'auto|local|k8s|yarn'</description>
 </property>
 
 <property>
@@ -637,4 +637,37 @@
   <description>Kubernetes yaml spec files</description>
 </property>
 
+  <!--Zeppelin On Yarn-->
+  <property>
+    <name>zeppelin.hadoop.auth.type</name>
+    <value>simple</value>
+    <description>Hadoop authentication type. simple/kerberos</description>
+  </property>
+
+  <property>
+    <name>zeppelin.yarn.webapp.address</name>
+    <value></value>
+    <description>zeppelin.yarn.webapp.address</description>
+  </property>
+
+  <property>
+    <name>zeppelin.yarn.container.image</name>
+    <value>apache/zeppelin:0.9.0-SNAPSHOT</value>
+    <description>Docker image for interpreters</description>
+  </property>
+
+  <property>
+    <name>zeppelin.yarn.container.resource</name>
+    <value>memory=8G,vcores=1,gpu=0</value>
+    <description>Docker default resource for interpreters container</description>
+  </property>
+
+  <!-- Specify the required resources for the interpreter container
+  <property>
+    <name>zeppelin.yarn.container.${INTERPRETER_SETTING_NAME}.resource</name>
+    <name>e.g: zeppelin.yarn.container.python.resource</name>
+    <value>memory=8G,vcores=1,gpu=0</value>
+    <description>Specify the required resources for the interpreter container</description>
+  </property>
+  -->
 </configuration>

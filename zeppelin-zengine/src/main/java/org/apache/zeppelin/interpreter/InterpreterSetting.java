@@ -660,6 +660,8 @@ public class InterpreterSetting {
     } else {
       if (group.equals("spark")) {
         return "SparkInterpreterLauncher";
+      } else if (isRunningOnYarn()) {
+        return "YarnStandardInterpreterLauncher";
       } else {
         return "StandardInterpreterLauncher";
       }
@@ -668,6 +670,10 @@ public class InterpreterSetting {
 
   private boolean isRunningOnKubernetes() {
     return conf.getRunMode() == ZeppelinConfiguration.RUN_MODE.K8S;
+  }
+
+  private boolean isRunningOnYarn() {
+    return conf.getRunMode() == ZeppelinConfiguration.RUN_MODE.YARN;
   }
 
   public boolean isUserAuthorized(List<String> userAndRoles) {

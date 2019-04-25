@@ -59,11 +59,6 @@ public class HdfsClient {
       Pattern.compile("(\\s*)%([\\w\\.]+)(\\(.*?\\))?.*", Pattern.DOTALL);
 
   public HdfsClient(Properties properties) {
-    String krb5conf = properties.getProperty(SubmarineConstants.SUBMARINE_HADOOP_KRB5_CONF, "");
-    if (!StringUtils.isEmpty(krb5conf)) {
-      System.setProperty("java.security.krb5.conf", krb5conf);
-    }
-
     this.hadoopConf = new Configuration();
     // disable checksum for local file system. because interpreter.json may be updated by
     // non-hadoop filesystem api
@@ -78,16 +73,6 @@ public class HdfsClient {
           SubmarineConstants.SUBMARINE_HADOOP_KEYTAB, "");
       String principal = properties.getProperty(
           SubmarineConstants.SUBMARINE_HADOOP_PRINCIPAL, "");
-
-      ZeppelinConfiguration zConf = ZeppelinConfiguration.create();
-      if (StringUtils.isEmpty(keytab)) {
-        keytab = zConf.getString(
-            ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_KEYTAB);
-      }
-      if (StringUtils.isEmpty(principal)) {
-        principal = zConf.getString(
-            ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_PRINCIPAL);
-      }
       if (StringUtils.isBlank(keytab) || StringUtils.isBlank(principal)) {
         throw new RuntimeException("keytab and principal can not be empty, keytab: " + keytab
             + ", principal: " + principal);

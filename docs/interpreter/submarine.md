@@ -132,7 +132,6 @@ With Submarine Dashboard you can do all the operational control of Submarine, fo
 
    + **JOB RUN**：Selecting `JOB RUN` will display the parameter input interface for submitting JOB.
 
-
 <table class="table-configuration">
   <tr>
     <th>Name</th>
@@ -148,13 +147,14 @@ With Submarine Dashboard you can do all the operational control of Submarine, fo
   </tr>
   <tr>
     <td>PS Launch Cmd</td>
-    <td>Tensorflow Parameter services launch command，例如：`python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0 ...`</td>
+    <td>Tensorflow Parameter services launch command，eg：`python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0 ...`</td>
   </tr>
   <tr>
     <td>Worker Launch Cmd</td>
-    <td>Tensorflow Worker services launch command，例如：`python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=1 ...`</td>
+    <td>Tensorflow Worker services launch command，eg：`python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=1 ...`</td>
   </tr>
 </table>
+
 
    + **JOB STOP**
 
@@ -184,27 +184,27 @@ Zeppelin Submarine interpreter provides the following properties to customize th
   <tr>
     <td>DOCKER_CONTAINER_TIME_ZONE</td>
     <td>Etc/UTC</td>
-    <td>Set the time zone in the container                           |
+    <td>Set the time zone in the container</td>
   </tr>
   <tr>
     <td>DOCKER_HADOOP_HDFS_HOME</td>
     <td>/hadoop-3.1-0</td>
-    <td>Hadoop path in the following 3 images（SUBMARINE_INTERPRETER_DOCKER_IMAGE、tf.parameter.services.docker.image、tf.worker.services.docker.image） |
+    <td>Hadoop path in the following 3 images (SUBMARINE_INTERPRETER_DOCKER_IMAGE、tf.parameter.services.docker.image、tf.worker.services.docker.image)</td>
   </tr>
   <tr>
     <td>DOCKER_JAVA_HOME</td>
     <td>/opt/java</td>
-    <td>JAVA path in the following 3 images（SUBMARINE_INTERPRETER_DOCKER_IMAGE、tf.parameter.services.docker.image、tf.worker.services.docker.image） |
+    <td>JAVA path in the following 3 images (SUBMARINE_INTERPRETER_DOCKER_IMAGE、tf.parameter.services.docker.image、tf.worker.services.docker.image)</td>
   </tr>
   <tr>
     <td>HADOOP_YARN_SUBMARINE_JAR</td>
     <td></td>
-    <td>Path to the Submarine JAR package in the Hadoop-3.1+ release installed on the Zeppelin server |
+    <td>Path to the Submarine JAR package in the Hadoop-3.1+ release installed on the Zeppelin server
   </tr>
   <tr>
     <td>INTERPRETER_LAUNCH_MODE</td>
     <td>local/yarn</td>
-    <td>Run the Submarine interpreter instance in local or YARN local mainly for submarine interpreter development and debugging YARN mode for production environment |
+    <td>Run the Submarine interpreter instance in local or YARN local mainly for submarine interpreter development and debugging YARN mode for production environment</td>
   </tr>
   <tr>
     <td>SUBMARINE_HADOOP_CONF_DIR</td>
@@ -212,7 +212,7 @@ Zeppelin Submarine interpreter provides the following properties to customize th
     <td>Set the HADOOP-CONF path to support multiple Hadoop cluster environments</td>
   </tr>
   <tr>
-    <td>SUBMARINE_HADOOP_HOME</td>
+    <td>HADOOP_HOME</td>
     <td></td>
     <td>Hadoop-3.1+ above path installed on the Zeppelin server</td>
   </tr>
@@ -229,7 +229,7 @@ Zeppelin Submarine interpreter provides the following properties to customize th
   <tr>
     <td>SUBMARINE_INTERPRETER_DOCKER_IMAGE</td>
     <td></td>
-    <td>At INTERPRETER_LAUNCH_MODE=yarn, Submarine uses this image to create a Zeppelin Submarine interpreter container to create an algorithm development environment for the user. |
+    <td>At INTERPRETER_LAUNCH_MODE=yarn, Submarine uses this image to create a Zeppelin Submarine interpreter container to create an algorithm development environment for the user.</td>
   </tr>
   <tr>
     <td>docker.container.network</td>
@@ -249,7 +249,7 @@ Zeppelin Submarine interpreter provides the following properties to customize th
   <tr>
     <td>submarine.algorithm.hdfs.path</td>
     <td></td>
-    <td>Save machine-based algorithms developed using Submarine interpreter to HDFS as files</td>
+    <td>Save algorithms developed using Submarine interpreter to HDFS as path. Support replaces ${user.name} with login user name, eg, http://user/${user.name}/zeppelin/algorithm</td>
   </tr>
   <tr>
     <td>submarine.yarn.queue</td>
@@ -259,7 +259,7 @@ Zeppelin Submarine interpreter provides the following properties to customize th
   <tr>
     <td>tf.checkpoint.path</td>
     <td></td>
-    <td>Tensorflow checkpoint path, Each user will create a user's checkpoint secondary path using the username under this path. Each algorithm submitted by the user will create a checkpoint three-level path using the note id (the user's Tensorboard uses the checkpoint data in this path for visual display)</td>
+    <td>Tensorflow checkpoint path. Support replaces ${user.name} with login user name, eg, http://user/${user.name}/zeppelin/checkpoint (the user's Tensorboard uses the checkpoint data in this path for visual display)</td>
   </tr>
   <tr>
     <td>tf.parameter.services.cpu</td>

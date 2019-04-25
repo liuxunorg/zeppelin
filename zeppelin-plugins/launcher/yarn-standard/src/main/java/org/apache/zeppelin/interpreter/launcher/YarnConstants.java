@@ -12,27 +12,30 @@
  * limitations under the License.
  */
 
-package org.apache.zeppelin.submarine.commons;
+package org.apache.zeppelin.interpreter.launcher;
 
 /*
  * NOTE: use lowercase + "_" for the option name
  */
-public class SubmarineConstants {
-  // interpreter.sh Environmental variable
-  public static final String HADOOP_HOME      = "HADOOP_HOME";
-  public static final String HADOOP_CONF_DIR  = "HADOOP_CONF_DIR";
-  public static final String HADOOP_YARN_SUBMARINE_JAR  = "hadoop.yarn.submarine.jar";
-
+public class YarnConstants {
   // Docker container Environmental variable at `submarine-job-run-tf.jinja`
   // and `/bin/interpreter.sh`
-  public static final String DOCKER_JAVA_HOME         = "docker.java.home";
-  public static final String DOCKER_HADOOP_HOME       = "docker.hadoop.home";
-  public static final String DOCKER_CONTAINER_TIME_ZONE = "docker.container.time.zone";
-  public static final String DOCKER_CONTAINER_NETWORK   = "docker.container.network";
+  public static final String DOCKER_HADOOP_HDFS_HOME = "DOCKER_HADOOP_HDFS_HOME";
+  public static final String DOCKER_JAVA_HOME        = "DOCKER_JAVA_HOME";
+  public static final String DOCKER_CONTAINER_TIME_ZONE = "DOCKER_CONTAINER_TIME_ZONE";
+  public static final String INTERPRETER_LAUNCH_MODE = "INTERPRETER_LAUNCH_MODE";
+
+  // interpreter.sh Environmental variable
+  public static final String SUBMARINE_HADOOP_HOME  = "SUBMARINE_HADOOP_HOME";
+  public static final String HADOOP_YARN_SUBMARINE_JAR  = "HADOOP_YARN_SUBMARINE_JAR";
+  public static final String SUBMARINE_INTERPRETER_DOCKER_IMAGE
+      = "SUBMARINE_INTERPRETER_DOCKER_IMAGE";
 
   public static final String ZEPPELIN_SUBMARINE_AUTH_TYPE = "zeppelin.submarine.auth.type";
-  public static final String SUBMARINE_HADOOP_KEYTAB      = "submarine.hadoop.keytab";
-  public static final String SUBMARINE_HADOOP_PRINCIPAL   = "submarine.hadoop.principal";
+  public static final String SUBMARINE_HADOOP_CONF_DIR  = "SUBMARINE_HADOOP_CONF_DIR";
+  public static final String SUBMARINE_HADOOP_KEYTAB    = "SUBMARINE_HADOOP_KEYTAB";
+  public static final String SUBMARINE_HADOOP_PRINCIPAL = "SUBMARINE_HADOOP_PRINCIPAL";
+  public static final String SUBMARINE_HADOOP_KRB5_CONF = "submarine.hadoop.krb5.conf";
 
   public static final String JOB_NAME = "JOB_NAME";
   public static final String CLEAN_CHECKPOINT = "CLEAN_CHECKPOINT";
@@ -43,8 +46,13 @@ public class SubmarineConstants {
   public static final String MACHINELEARNING_DISTRIBUTED_ENABLE
       = "machinelearning.distributed.enable";
 
+  public static final String ZEPPELIN_INTERPRETER_RPC_PORTRANGE
+      = "zeppelin.interpreter.rpc.portRange";
+
+  public static final String DOCKER_CONTAINER_NETWORK   = "docker.container.network";
   public static final String SUBMARINE_YARN_QUEUE       = "submarine.yarn.queue";
   public static final String SUBMARINE_CONCURRENT_MAX   = "submarine.concurrent.max";
+
   public static final String SUBMARINE_ALGORITHM_HDFS_PATH  = "submarine.algorithm.hdfs.path";
   public static final String SUBMARINE_ALGORITHM_HDFS_FILES = "submarine.algorithm.hdfs.files";
 
@@ -79,7 +87,7 @@ public class SubmarineConstants {
   public static final String COMMANDLINE_OPTIONS = "COMMANDLINE_OPTIONS";
 
   // YARN
-  public static final String YARN_WEB_HTTP_ADDRESS
+  public static final String YARN_WEB_ADDRESS
       = "yarn.webapp.http.address";
 
   public static final String YARN_APPLICATION_ID     = "YARN_APPLICATION_ID";
@@ -108,4 +116,9 @@ public class SubmarineConstants {
 
   // submarine.algorithm.hdfs.path support for replacing ${user.name} with real user name
   public static final String USERNAME_SYMBOL = "${user.name}";
+
+  public static String unifyKey(String key) {
+    key = key.replace(".", "_").toUpperCase();
+    return key;
+  }
 }

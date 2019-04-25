@@ -98,7 +98,7 @@ public class SubmarineInterpreter extends Interpreter {
     try {
       setParagraphConfig(context);
 
-      // algorithm & checkpoint path support replaces ${username} with real user name
+      // algorithm & checkpoint path support replaces ${user.name} with real user name
       String algorithmPath = properties.getProperty(SUBMARINE_ALGORITHM_HDFS_PATH, "");
       if (algorithmPath.contains(USERNAME_SYMBOL)) {
         algorithmPath = algorithmPath.replace(USERNAME_SYMBOL, userName);

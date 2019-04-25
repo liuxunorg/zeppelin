@@ -37,7 +37,7 @@ public class JinjaTemplatesTest {
 
   @Test
   public void jobRunJinjaTemplateTest1() throws IOException {
-    String str = jobRunJinjaTemplateTest(Boolean.TRUE, Boolean.TRUE);
+    String str = jobRunJinjaTemplateTest(Boolean.TRUE);
 
     StringBuffer sbCheck = new StringBuffer();
     sbCheck.append("DOCKER_HADOOP_HDFS_HOME_VALUE/bin/yarn jar " +
@@ -45,7 +45,7 @@ public class JinjaTemplatesTest {
         "  job run \\\n" +
         "  --name JOB_NAME_VALUE \\\n" +
         "  --env DOCKER_JAVA_HOME=DOCKER_JAVA_HOME_VALUE \\\n" +
-        "  --env DOCKER_HADOOP_HDFS_HOME=DOCKER_HADOOP_HDFS_HOME_VALUE \\\n" +
+        "  --env DOCKER_HADOOP_HOME=DOCKER_HADOOP_HDFS_HOME_VALUE \\\n" +
         "  --env PYTHONPATH=\"./submarine_algorithm:$PYTHONPATH\" \\\n" +
         "  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=" +
         "DOCKER_CONTAINER_NETWORK_VALUE \\\n" +
@@ -68,106 +68,26 @@ public class JinjaTemplatesTest {
         "  --localization \"hdfs://file2:.\" \\\n" +
         "  --localization \"hdfs://file3:.\" \\\n" +
         "  --localization \"SUBMARINE_ALGORITHM_HDFS_PATH_VALUE:./submarine_algorithm\" \\\n" +
-        "  --localization \"SUBMARINE_HADOOP_CONF_DIR_VALUE:" +
-        "SUBMARINE_HADOOP_CONF_DIR_VALUE\" \\\n" +
+        "  --localization \"HADOOP_CONF_DIR_VALUE:" +
+        "HADOOP_CONF_DIR_VALUE\" \\\n" +
         "  --keytab SUBMARINE_HADOOP_KEYTAB_VALUE \\\n" +
         "  --principal SUBMARINE_HADOOP_PRINCIPAL_VALUE \\\n" +
         "  --distribute_keytab \\\n" +
         "  --verbose");
 
-    assertEquals(str, sbCheck.toString());
-  }
-
-  @Test
-  public void jobRunJinjaTemplateTest2() throws IOException {
-    String str = jobRunJinjaTemplateTest(Boolean.TRUE, Boolean.FALSE);
-    StringBuffer sbCheck = new StringBuffer();
-    sbCheck.append("SUBMARINE_HADOOP_HOME_VALUE/bin/yarn jar HADOOP_YARN_SUBMARINE_JAR_VALUE \\\n" +
-        "  job run \\\n" +
-        "  --name JOB_NAME_VALUE \\\n" +
-        "  --env DOCKER_JAVA_HOME=DOCKER_JAVA_HOME_VALUE \\\n" +
-        "  --env DOCKER_HADOOP_HDFS_HOME=DOCKER_HADOOP_HDFS_HOME_VALUE \\\n" +
-        "  --env PYTHONPATH=\"./submarine_algorithm:$PYTHONPATH\" \\\n" +
-        "  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=" +
-        "DOCKER_CONTAINER_NETWORK_VALUE \\\n" +
-        "  --env HADOOP_LOG_DIR=/tmp \\\n" +
-        "  --env TZ=\"\" \\\n" +
-        "  --input_path INPUT_PATH_VALUE \\\n" +
-        "  --checkpoint_path CHECKPOINT_PATH_VALUE \\\n" +
-        "  --queue SUBMARINE_YARN_QUEUE \\\n" +
-        "  --num_ps TF_PARAMETER_SERVICES_NUM_VALUE \\\n" +
-        "  --ps_docker_image TF_PARAMETER_SERVICES_DOCKER_IMAGE_VALUE \\\n" +
-        "  --ps_resources memory=TF_PARAMETER_SERVICES_MEMORY_VALUE," +
-        "vcores=TF_PARAMETER_SERVICES_CPU_VALUE,gpu=TF_PARAMETER_SERVICES_GPU_VALUE \\\n" +
-        "  --ps_launch_cmd \"PS_LAUNCH_CMD_VALUE\" \\\n" +
-        "  --num_workers TF_WORKER_SERVICES_NUM_VALUE \\\n" +
-        "  --worker_docker_image TF_WORKER_SERVICES_DOCKER_IMAGE_VALUE \\\n" +
-        "  --worker_resources memory=TF_WORKER_SERVICES_MEMORY_VALUE," +
-        "vcores=TF_WORKER_SERVICES_CPU_VALUE,gpu=TF_WORKER_SERVICES_GPU_VALUE \\\n" +
-        "  --worker_launch_cmd \"WORKER_LAUNCH_CMD_VALUE\" \\\n" +
-        "  --localization \"hdfs://file1:.\" \\\n" +
-        "  --localization \"hdfs://file2:.\" \\\n" +
-        "  --localization \"hdfs://file3:.\" \\\n" +
-        "  --localization \"SUBMARINE_ALGORITHM_HDFS_PATH_VALUE:./submarine_algorithm\" \\\n" +
-        "  --localization \"SUBMARINE_HADOOP_CONF_DIR_VALUE:" +
-        "SUBMARINE_HADOOP_CONF_DIR_VALUE\" \\\n" +
-        "  --keytab SUBMARINE_HADOOP_KEYTAB_VALUE \\\n" +
-        "  --principal SUBMARINE_HADOOP_PRINCIPAL_VALUE \\\n" +
-        "  --distribute_keytab \\\n" +
-        "  --verbose");
-    assertEquals(str, sbCheck.toString());
-  }
-
-  @Test
-  public void jobRunJinjaTemplateTest3() throws IOException {
-    String str = jobRunJinjaTemplateTest(Boolean.TRUE, null);
-    StringBuffer sbCheck = new StringBuffer();
-    sbCheck.append("SUBMARINE_HADOOP_HOME_VALUE/bin/yarn jar HADOOP_YARN_SUBMARINE_JAR_VALUE \\\n" +
-        "  job run \\\n" +
-        "  --name JOB_NAME_VALUE \\\n" +
-        "  --env DOCKER_JAVA_HOME=DOCKER_JAVA_HOME_VALUE \\\n" +
-        "  --env DOCKER_HADOOP_HDFS_HOME=DOCKER_HADOOP_HDFS_HOME_VALUE \\\n" +
-        "  --env PYTHONPATH=\"./submarine_algorithm:$PYTHONPATH\" \\\n" +
-        "  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=" +
-        "DOCKER_CONTAINER_NETWORK_VALUE \\\n" +
-        "  --env HADOOP_LOG_DIR=/tmp \\\n" +
-        "  --env TZ=\"\" \\\n" +
-        "  --input_path INPUT_PATH_VALUE \\\n" +
-        "  --checkpoint_path CHECKPOINT_PATH_VALUE \\\n" +
-        "  --queue SUBMARINE_YARN_QUEUE \\\n" +
-        "  --num_ps TF_PARAMETER_SERVICES_NUM_VALUE \\\n" +
-        "  --ps_docker_image TF_PARAMETER_SERVICES_DOCKER_IMAGE_VALUE \\\n" +
-        "  --ps_resources memory=TF_PARAMETER_SERVICES_MEMORY_VALUE," +
-        "vcores=TF_PARAMETER_SERVICES_CPU_VALUE,gpu=TF_PARAMETER_SERVICES_GPU_VALUE \\\n" +
-        "  --ps_launch_cmd \"PS_LAUNCH_CMD_VALUE\" \\\n" +
-        "  --num_workers TF_WORKER_SERVICES_NUM_VALUE \\\n" +
-        "  --worker_docker_image TF_WORKER_SERVICES_DOCKER_IMAGE_VALUE \\\n" +
-        "  --worker_resources memory=TF_WORKER_SERVICES_MEMORY_VALUE," +
-        "vcores=TF_WORKER_SERVICES_CPU_VALUE,gpu=TF_WORKER_SERVICES_GPU_VALUE \\\n" +
-        "  --worker_launch_cmd \"WORKER_LAUNCH_CMD_VALUE\" \\\n" +
-        "  --localization \"hdfs://file1:.\" \\\n" +
-        "  --localization \"hdfs://file2:.\" \\\n" +
-        "  --localization \"hdfs://file3:.\" \\\n" +
-        "  --localization \"SUBMARINE_ALGORITHM_HDFS_PATH_VALUE:./submarine_algorithm\" \\\n" +
-        "  --localization \"SUBMARINE_HADOOP_CONF_DIR_VALUE:" +
-        "SUBMARINE_HADOOP_CONF_DIR_VALUE\" \\\n" +
-        "  --keytab SUBMARINE_HADOOP_KEYTAB_VALUE \\\n" +
-        "  --principal SUBMARINE_HADOOP_PRINCIPAL_VALUE \\\n" +
-        "  --distribute_keytab \\\n" +
-        "  --verbose");
     assertEquals(str, sbCheck.toString());
   }
 
   @Test
   public void jobRunJinjaTemplateTest4() throws IOException {
-    String str = jobRunJinjaTemplateTest(Boolean.FALSE, Boolean.TRUE);
+    String str = jobRunJinjaTemplateTest(Boolean.FALSE);
     StringBuffer sbCheck = new StringBuffer();
     sbCheck.append("DOCKER_HADOOP_HDFS_HOME_VALUE/bin/yarn jar " +
         "HADOOP_YARN_SUBMARINE_JAR_VALUE \\\n" +
         "  job run \\\n" +
         "  --name JOB_NAME_VALUE \\\n" +
         "  --env DOCKER_JAVA_HOME=DOCKER_JAVA_HOME_VALUE \\\n" +
-        "  --env DOCKER_HADOOP_HDFS_HOME=DOCKER_HADOOP_HDFS_HOME_VALUE \\\n" +
+        "  --env DOCKER_HADOOP_HOME=DOCKER_HADOOP_HDFS_HOME_VALUE \\\n" +
         "  --env PYTHONPATH=\"./submarine_algorithm:$PYTHONPATH\" \\\n" +
         "  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=" +
         "DOCKER_CONTAINER_NETWORK_VALUE \\\n" +
@@ -185,44 +105,8 @@ public class JinjaTemplatesTest {
         "  --localization \"hdfs://file2:.\" \\\n" +
         "  --localization \"hdfs://file3:.\" \\\n" +
         "  --localization \"SUBMARINE_ALGORITHM_HDFS_PATH_VALUE:./submarine_algorithm\" \\\n" +
-        "  --localization \"SUBMARINE_HADOOP_CONF_DIR_VALUE:" +
-        "SUBMARINE_HADOOP_CONF_DIR_VALUE\" \\\n" +
-        "  --keytab SUBMARINE_HADOOP_KEYTAB_VALUE \\\n" +
-        "  --principal SUBMARINE_HADOOP_PRINCIPAL_VALUE \\\n" +
-        "  --distribute_keytab \\\n" +
-        "  --verbose");
-    assertEquals(str, sbCheck.toString());
-  }
-
-  @Test
-  public void jobRunJinjaTemplateTest5() throws IOException {
-    String str = jobRunJinjaTemplateTest(Boolean.FALSE, Boolean.FALSE);
-    StringBuffer sbCheck = new StringBuffer();
-    sbCheck.append("SUBMARINE_HADOOP_HOME_VALUE/bin/yarn jar " +
-        "HADOOP_YARN_SUBMARINE_JAR_VALUE \\\n" +
-        "  job run \\\n" +
-        "  --name JOB_NAME_VALUE \\\n" +
-        "  --env DOCKER_JAVA_HOME=DOCKER_JAVA_HOME_VALUE \\\n" +
-        "  --env DOCKER_HADOOP_HDFS_HOME=DOCKER_HADOOP_HDFS_HOME_VALUE \\\n" +
-        "  --env PYTHONPATH=\"./submarine_algorithm:$PYTHONPATH\" \\\n" +
-        "  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=" +
-        "DOCKER_CONTAINER_NETWORK_VALUE \\\n" +
-        "  --env HADOOP_LOG_DIR=/tmp \\\n" +
-        "  --env TZ=\"\" \\\n" +
-        "  --input_path INPUT_PATH_VALUE \\\n" +
-        "  --checkpoint_path CHECKPOINT_PATH_VALUE \\\n" +
-        "  --queue SUBMARINE_YARN_QUEUE \\\n" +
-        "  --num_workers 1 \\\n" +
-        "  --worker_docker_image TF_WORKER_SERVICES_DOCKER_IMAGE_VALUE \\\n" +
-        "  --worker_resources memory=TF_WORKER_SERVICES_MEMORY_VALUE," +
-        "vcores=TF_WORKER_SERVICES_CPU_VALUE,gpu=TF_WORKER_SERVICES_GPU_VALUE \\\n" +
-        "  --worker_launch_cmd \"WORKER_LAUNCH_CMD_VALUE\" \\\n" +
-        "  --localization \"hdfs://file1:.\" \\\n" +
-        "  --localization \"hdfs://file2:.\" \\\n" +
-        "  --localization \"hdfs://file3:.\" \\\n" +
-        "  --localization \"SUBMARINE_ALGORITHM_HDFS_PATH_VALUE:./submarine_algorithm\" \\\n" +
-        "  --localization \"SUBMARINE_HADOOP_CONF_DIR_VALUE:" +
-        "SUBMARINE_HADOOP_CONF_DIR_VALUE\" \\\n" +
+        "  --localization \"HADOOP_CONF_DIR_VALUE:" +
+        "HADOOP_CONF_DIR_VALUE\" \\\n" +
         "  --keytab SUBMARINE_HADOOP_KEYTAB_VALUE \\\n" +
         "  --principal SUBMARINE_HADOOP_PRINCIPAL_VALUE \\\n" +
         "  --distribute_keytab \\\n" +
@@ -232,13 +116,13 @@ public class JinjaTemplatesTest {
 
   @Test
   public void jobRunJinjaTemplateTest6() throws IOException {
-    String str = jobRunJinjaTemplateTest(null, Boolean.FALSE);
+    String str = jobRunJinjaTemplateTest(null);
     StringBuffer sbCheck = new StringBuffer();
-    sbCheck.append("SUBMARINE_HADOOP_HOME_VALUE/bin/yarn jar HADOOP_YARN_SUBMARINE_JAR_VALUE \\\n" +
+    sbCheck.append("HADOOP_HOME_VALUE/bin/yarn jar HADOOP_YARN_SUBMARINE_JAR_VALUE \\\n" +
         "  job run \\\n" +
         "  --name JOB_NAME_VALUE \\\n" +
         "  --env DOCKER_JAVA_HOME=DOCKER_JAVA_HOME_VALUE \\\n" +
-        "  --env DOCKER_HADOOP_HDFS_HOME=DOCKER_HADOOP_HDFS_HOME_VALUE \\\n" +
+        "  --env DOCKER_HADOOP_HOME=DOCKER_HADOOP_HDFS_HOME_VALUE \\\n" +
         "  --env PYTHONPATH=\"./submarine_algorithm:$PYTHONPATH\" \\\n" +
         "  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=" +
         "DOCKER_CONTAINER_NETWORK_VALUE \\\n" +
@@ -256,43 +140,8 @@ public class JinjaTemplatesTest {
         "  --localization \"hdfs://file2:.\" \\\n" +
         "  --localization \"hdfs://file3:.\" \\\n" +
         "  --localization \"SUBMARINE_ALGORITHM_HDFS_PATH_VALUE:./submarine_algorithm\" \\\n" +
-        "  --localization \"SUBMARINE_HADOOP_CONF_DIR_VALUE:" +
-        "SUBMARINE_HADOOP_CONF_DIR_VALUE\" \\\n" +
-        "  --keytab SUBMARINE_HADOOP_KEYTAB_VALUE \\\n" +
-        "  --principal SUBMARINE_HADOOP_PRINCIPAL_VALUE \\\n" +
-        "  --distribute_keytab \\\n" +
-        "  --verbose");
-    assertEquals(str, sbCheck.toString());
-  }
-
-  @Test
-  public void jobRunJinjaTemplateTest7() throws IOException {
-    String str = jobRunJinjaTemplateTest(null, null);
-    StringBuffer sbCheck = new StringBuffer();
-    sbCheck.append("SUBMARINE_HADOOP_HOME_VALUE/bin/yarn jar HADOOP_YARN_SUBMARINE_JAR_VALUE \\\n" +
-        "  job run \\\n" +
-        "  --name JOB_NAME_VALUE \\\n" +
-        "  --env DOCKER_JAVA_HOME=DOCKER_JAVA_HOME_VALUE \\\n" +
-        "  --env DOCKER_HADOOP_HDFS_HOME=DOCKER_HADOOP_HDFS_HOME_VALUE \\\n" +
-        "  --env PYTHONPATH=\"./submarine_algorithm:$PYTHONPATH\" \\\n" +
-        "  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=" +
-        "DOCKER_CONTAINER_NETWORK_VALUE \\\n" +
-        "  --env HADOOP_LOG_DIR=/tmp \\\n" +
-        "  --env TZ=\"\" \\\n" +
-        "  --input_path INPUT_PATH_VALUE \\\n" +
-        "  --checkpoint_path CHECKPOINT_PATH_VALUE \\\n" +
-        "  --queue SUBMARINE_YARN_QUEUE \\\n" +
-        "  --num_workers 1 \\\n" +
-        "  --worker_docker_image TF_WORKER_SERVICES_DOCKER_IMAGE_VALUE \\\n" +
-        "  --worker_resources memory=TF_WORKER_SERVICES_MEMORY_VALUE," +
-        "vcores=TF_WORKER_SERVICES_CPU_VALUE,gpu=TF_WORKER_SERVICES_GPU_VALUE \\\n" +
-        "  --worker_launch_cmd \"WORKER_LAUNCH_CMD_VALUE\" \\\n" +
-        "  --localization \"hdfs://file1:.\" \\\n" +
-        "  --localization \"hdfs://file2:.\" \\\n" +
-        "  --localization \"hdfs://file3:.\" \\\n" +
-        "  --localization \"SUBMARINE_ALGORITHM_HDFS_PATH_VALUE:./submarine_algorithm\" \\\n" +
-        "  --localization \"SUBMARINE_HADOOP_CONF_DIR_VALUE:" +
-        "SUBMARINE_HADOOP_CONF_DIR_VALUE\" \\\n" +
+        "  --localization \"HADOOP_CONF_DIR_VALUE:" +
+        "HADOOP_CONF_DIR_VALUE\" \\\n" +
         "  --keytab SUBMARINE_HADOOP_KEYTAB_VALUE \\\n" +
         "  --principal SUBMARINE_HADOOP_PRINCIPAL_VALUE \\\n" +
         "  --distribute_keytab \\\n" +
@@ -302,13 +151,13 @@ public class JinjaTemplatesTest {
 
   @Test
   public void jobRunJinjaTemplateTest8() throws IOException {
-    String str = tensorboardJinjaTemplateTest(Boolean.TRUE, Boolean.TRUE);
+    String str = tensorboardJinjaTemplateTest(Boolean.TRUE);
     StringBuffer sbCheck = new StringBuffer();
     sbCheck.append("DOCKER_HADOOP_HDFS_HOME_VALUE/bin/yarn jar \\\n" +
         "  HADOOP_YARN_SUBMARINE_JAR_VALUE job run \\\n" +
         "  --name JOB_NAME_VALUE \\\n" +
         "  --env DOCKER_JAVA_HOME=DOCKER_JAVA_HOME_VALUE \\\n" +
-        "  --env DOCKER_HADOOP_HDFS_HOME=DOCKER_HADOOP_HDFS_HOME_VALUE \\\n" +
+        "  --env DOCKER_HADOOP_HOME=DOCKER_HADOOP_HDFS_HOME_VALUE \\\n" +
         "  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=bridge \\\n" +
         "  --env TZ=\"\" \\\n" +
         "  --checkpoint_path CHECKPOINT_PATH_VALUE \\\n" +
@@ -323,34 +172,11 @@ public class JinjaTemplatesTest {
     assertEquals(str, sbCheck.toString());
   }
 
-  @Test
-  public void jobRunJinjaTemplateTest9() throws IOException {
-    String str = tensorboardJinjaTemplateTest(Boolean.TRUE, Boolean.FALSE);
-    StringBuffer sbCheck = new StringBuffer();
-    sbCheck.append("SUBMARINE_HADOOP_HOME_VALUE/bin/yarn jar \\\n" +
-        "  HADOOP_YARN_SUBMARINE_JAR_VALUE job run \\\n" +
-        "  --name JOB_NAME_VALUE \\\n" +
-        "  --env DOCKER_JAVA_HOME=DOCKER_JAVA_HOME_VALUE \\\n" +
-        "  --env DOCKER_HADOOP_HDFS_HOME=DOCKER_HADOOP_HDFS_HOME_VALUE \\\n" +
-        "  --env YARN_CONTAINER_RUNTIME_DOCKER_CONTAINER_NETWORK=bridge \\\n" +
-        "  --env TZ=\"\" \\\n" +
-        "  --checkpoint_path CHECKPOINT_PATH_VALUE \\\n" +
-        "  --queue SUBMARINE_YARN_QUEUE \\\n" +
-        "  --num_workers 0 \\\n" +
-        "  --tensorboard \\\n" +
-        "  --tensorboard_docker_image TF_PARAMETER_SERVICES_DOCKER_IMAGE_VALUE \\\n" +
-        "  --keytab SUBMARINE_HADOOP_KEYTAB_VALUE \\\n" +
-        "  --principal SUBMARINE_HADOOP_PRINCIPAL_VALUE \\\n" +
-        "  --distribute_keytab \\\n" +
-        "  --verbose");
-    assertEquals(str, sbCheck.toString());
-  }
-
-  public String jobRunJinjaTemplateTest(Boolean dist, Boolean launchMode) throws IOException {
+  public String jobRunJinjaTemplateTest(Boolean dist) throws IOException {
     URL urlTemplate = Resources.getResource(SubmarineJob.SUBMARINE_JOBRUN_TF_JINJA);
     String template = Resources.toString(urlTemplate, Charsets.UTF_8);
     Jinjava jinjava = new Jinjava();
-    HashMap<String, Object> jinjaParams = initJinjaParams(dist, launchMode);
+    HashMap<String, Object> jinjaParams = initJinjaParams(dist);
 
     String submarineCmd = jinjava.render(template, jinjaParams);
     int pos = submarineCmd.indexOf("\n");
@@ -365,11 +191,11 @@ public class JinjaTemplatesTest {
     return submarineCmd;
   }
 
-  public String tensorboardJinjaTemplateTest(Boolean dist, Boolean launchMode) throws IOException {
+  public String tensorboardJinjaTemplateTest(Boolean dist) throws IOException {
     URL urlTemplate = Resources.getResource(SubmarineJob.SUBMARINE_TENSORBOARD_JINJA);
     String template = Resources.toString(urlTemplate, Charsets.UTF_8);
     Jinjava jinjava = new Jinjava();
-    HashMap<String, Object> jinjaParams = initJinjaParams(dist, launchMode);
+    HashMap<String, Object> jinjaParams = initJinjaParams(dist);
 
     String submarineCmd = jinjava.render(template, jinjaParams);
     int pos = submarineCmd.indexOf("\n");
@@ -383,14 +209,8 @@ public class JinjaTemplatesTest {
     return submarineCmd;
   }
 
-  private HashMap<String, Object> initJinjaParams(Boolean dist, Boolean launchMode) {
+  private HashMap<String, Object> initJinjaParams(Boolean dist) {
     HashMap<String, Object> jinjaParams = new HashMap();
-
-    if (launchMode == Boolean.TRUE) {
-      jinjaParams.put(SubmarineUtils.unifyKey(SubmarineConstants.INTERPRETER_LAUNCH_MODE), "yarn");
-    } else if (launchMode == Boolean.FALSE) {
-      jinjaParams.put(SubmarineUtils.unifyKey(SubmarineConstants.INTERPRETER_LAUNCH_MODE), "local");
-    }
 
     if (dist == Boolean.TRUE) {
       jinjaParams.put(SubmarineUtils.unifyKey(
@@ -412,7 +232,7 @@ public class JinjaTemplatesTest {
 
     // mock
     jinjaParams.put(SubmarineUtils.unifyKey(
-        SubmarineConstants.DOCKER_HADOOP_HDFS_HOME), "DOCKER_HADOOP_HDFS_HOME_VALUE");
+        SubmarineConstants.DOCKER_HADOOP_HOME), "DOCKER_HADOOP_HDFS_HOME_VALUE");
     jinjaParams.put(SubmarineUtils.unifyKey(
         SubmarineConstants.JOB_NAME), "JOB_NAME_VALUE");
     jinjaParams.put(SubmarineUtils.unifyKey(
@@ -420,7 +240,7 @@ public class JinjaTemplatesTest {
     jinjaParams.put(SubmarineUtils.unifyKey(
         SubmarineConstants.HADOOP_YARN_SUBMARINE_JAR), "HADOOP_YARN_SUBMARINE_JAR_VALUE");
     jinjaParams.put(SubmarineUtils.unifyKey(
-        SubmarineConstants.SUBMARINE_HADOOP_HOME), "SUBMARINE_HADOOP_HOME_VALUE");
+        SubmarineConstants.HADOOP_HOME), "HADOOP_HOME_VALUE");
     jinjaParams.put(SubmarineUtils.unifyKey(
         SubmarineConstants.DOCKER_JAVA_HOME), "DOCKER_JAVA_HOME_VALUE");
     jinjaParams.put(SubmarineUtils.unifyKey(
@@ -462,7 +282,7 @@ public class JinjaTemplatesTest {
         SubmarineConstants.SUBMARINE_ALGORITHM_HDFS_PATH),
         "SUBMARINE_ALGORITHM_HDFS_PATH_VALUE");
     jinjaParams.put(SubmarineUtils.unifyKey(
-        SubmarineConstants.SUBMARINE_HADOOP_CONF_DIR), "SUBMARINE_HADOOP_CONF_DIR_VALUE");
+        SubmarineConstants.HADOOP_CONF_DIR), "HADOOP_CONF_DIR_VALUE");
     jinjaParams.put(SubmarineUtils.unifyKey(
         SubmarineConstants.SUBMARINE_HADOOP_KEYTAB), "SUBMARINE_HADOOP_KEYTAB_VALUE");
     jinjaParams.put(SubmarineUtils.unifyKey(
