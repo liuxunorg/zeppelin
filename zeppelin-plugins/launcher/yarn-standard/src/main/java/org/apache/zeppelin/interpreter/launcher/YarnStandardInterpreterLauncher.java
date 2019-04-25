@@ -141,13 +141,19 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
 
   protected Map<String, String> buildEnvFromProperties(InterpreterLaunchContext context, Properties properties)
       throws IOException {
+    Map<String, String> env = new HashMap<>();
+
     // yarn application name match the pattern [a-z][a-z0-9-]*
     String intpYarnAppName = YarnClient.formatYarnAppName(context.getInterpreterGroupId());
-    properties.put("YARN_APP_NAME", intpYarnAppName);
-    properties.put("ZEPPELIN_RUN_MODE", "yarn");
+    env.put("YARN_APP_NAME", intpYarnAppName);
+    env.put("ZEPPELIN_RUN_MODE", "yarn");
+
     // upload configure file to submarine interpreter container
     // keytab file & zeppelin-site.xml & krb5.conf & hadoop-yarn-submarine-X.X.X-SNAPSHOT.jar
     // The submarine configures the mount file into the container through `localization`
+    // NOTE: The path to the file uploaded to the container,
+    // Can not be repeated, otherwise it will lead to failure.
+    HashMap<String, String> uploaded = new HashMap<>();
     StringBuffer sbLocalization = new StringBuffer();
 
     // 1) zeppelin-site.xml is uploaded to `${CONTAINER_ZEPPELIN_HOME}` directory in the container
@@ -189,19 +195,33 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
     sbLocalization.append(zeplLog4jPath + ":" + CONTAINER_ZEPPELIN_HOME + log4jPath + ":rw\"");
     sbLocalization.append(" ");
 
-    // 5) Keytab file upload container, Keep the same directory as local host
-    String keytab = properties.getProperty(SUBMARINE_HADOOP_KEYTAB, "");
-    String principal = properties.getProperty(SUBMARINE_HADOOP_PRINCIPAL, "");
-    if (StringUtils.isBlank(keytab) || StringUtils.isBlank(principal)) {
-      keytab = zConf.getString(ZEPPELIN_SERVER_KERBEROS_KEYTAB);
-      principal = zConf.getString(ZEPPELIN_SERVER_KERBEROS_PRINCIPAL);
+    // 5) Get the keytab file in each interpreter properties
+    // Upload Keytab file to container, Keep the same directory as local host
+    // 5.1) shell interpreter properties keytab file
+    String intpKeytab = properties.getProperty("zeppelin.shell.keytab.location", "");
+    if (StringUtils.isBlank(intpKeytab)) {
+      // 5.2) spark interpreter properties keytab file
+      intpKeytab = properties.getProperty("spark.yarn.keytab", "");
     }
-    // set interpreter.sh Evn
-    properties.put(SUBMARINE_HADOOP_KEYTAB, keytab);
-    properties.put(SUBMARINE_HADOOP_PRINCIPAL, principal);
-    if (!StringUtils.isBlank(keytab)) {
+    if (StringUtils.isBlank(intpKeytab)) {
+      // 5.3) submarine interpreter properties keytab file
+      intpKeytab = properties.getProperty("submarine.hadoop.keytab", "");
+    }
+    if (StringUtils.isBlank(intpKeytab)) {
+      // 5.4) jdbc interpreter properties keytab file
+      intpKeytab = properties.getProperty("zeppelin.jdbc.keytab.location", "");
+    }
+    if (!StringUtils.isBlank(intpKeytab) && !uploaded.containsKey(intpKeytab)) {
+      uploaded.put(intpKeytab, "");
       sbLocalization.append("--localization \"");
-      sbLocalization.append(keytab + ":" + keytab + ":rw\"").append(" ");
+      sbLocalization.append(intpKeytab + ":" + intpKeytab + ":rw\"").append(" ");
+    }
+    String zeppelinServerKeytab = zConf.getString(ZEPPELIN_SERVER_KERBEROS_KEYTAB.getVarName(), "");
+    String zeppelinServerPrincipal = zConf.getString(ZEPPELIN_SERVER_KERBEROS_PRINCIPAL.getVarName(), "");
+    if (!StringUtils.isBlank(zeppelinServerKeytab) && !uploaded.containsKey(zeppelinServerKeytab)) {
+      uploaded.put(zeppelinServerKeytab, "");
+      sbLocalization.append("--localization \"");
+      sbLocalization.append(zeppelinServerKeytab + ":" + zeppelinServerKeytab + ":rw\"").append(" ");
     }
 
     // 6) hadoop-yarn-submarine-X.X.X-SNAPSHOT.jar file upload container, Keep the same directory as local
@@ -224,6 +244,7 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
           "Failed to locate core-site.xml / hdfs-site.xml / yarn-site.xml from class path");
     }
 
+    // set interpreter.sh Evn
     if (!isTest) {
       String hadoopConfDir = coreSite.getParent();
       if (!StringUtils.isEmpty(hadoopConfDir)) {
@@ -231,25 +252,27 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
         sbLocalization.append(hadoopConfDir + ":" + hadoopConfDir + ":rw\"").append(" ");
       }
       // Set the HADOOP_CONF_DIR environment variable in `interpreter.sh`
-      properties.put("DOCKER_HADOOP_CONF_DIR", hadoopConfDir);
+      env.put("DOCKER_HADOOP_CONF_DIR", hadoopConfDir);
     }
 
-    properties.put("YARN_LOCALIZATION_ENV", sbLocalization.toString());
+    env.put("YARN_LOCALIZATION_ENV", sbLocalization.toString());
     LOGGER.info("YARN_LOCALIZATION_ENV = " + sbLocalization.toString());
 
+    env.put(SUBMARINE_HADOOP_KEYTAB, zeppelinServerKeytab);
+    env.put(SUBMARINE_HADOOP_PRINCIPAL, zeppelinServerPrincipal);
+
     // Set the zepplin configuration file path environment variable in `interpreter.sh`
-    properties.put("ZEPPELIN_CONF_DIR_ENV", "--env ZEPPELIN_CONF_DIR=" + CONTAINER_ZEPPELIN_HOME);
+    env.put("ZEPPELIN_CONF_DIR_ENV", "--env ZEPPELIN_CONF_DIR=" + CONTAINER_ZEPPELIN_HOME);
 
     String intpContainerRes = zConf.getYarnContainerResource(context.getInterpreterSettingName());
-    properties.put("ZEPPELIN_YARN_CONTAINER_RESOURCE", intpContainerRes);
+    env.put("ZEPPELIN_YARN_CONTAINER_RESOURCE", intpContainerRes);
 
     String yarnContainerImage = zConf.getYarnContainerImage();
-    properties.put("ZEPPELIN_YARN_CONTAINER_IMAGE", yarnContainerImage);
+    env.put("ZEPPELIN_YARN_CONTAINER_IMAGE", yarnContainerImage);
 
-    String yarnWebappAddress = zConf.getYarnWebappAddress();
-    properties.put(YARN_WEB_ADDRESS, yarnWebappAddress);
+    ///// String yarnWebappAddress = zConf.getYarnWebappAddress();
+    ///// properties.put(YARN_WEB_ADDRESS, yarnWebappAddress);
 
-    Map<String, String> env = new HashMap<>();
     for (Object key : properties.keySet()) {
       if (RemoteInterpreterUtils.isEnvString((String) key)) {
         env.put((String) key, properties.getProperty((String) key));
@@ -283,7 +306,7 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
     return "";
   }
 
-  // ${ZEPPELIN_HOME}/interpreter/submarine
+  // ${ZEPPELIN_HOME}/interpreter/${interpreter-name}
   // ${ZEPPELIN_HOME}/lib/interpreter
   private String getPathByHome(String homeDir, String path) throws IOException {
     File file = null;

@@ -111,7 +111,6 @@
 
 
 #### Standard Interpreter Launcher On Yarn
-# export HADOOP_HOME= # hadoop home
-# export HADOOP_YARN_SUBMARINE_JAR # (require) hadoop 3.2 submarine support docker container
+# export HADOOP_SUBMARINE_JAR # (require) hadoop 3.3 submarine support docker container
 # export DOCKER_HADOOP_HOME=/hadoop-current
-# export DOCKER_JAVA_HOME=/opt/java
+# export DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
