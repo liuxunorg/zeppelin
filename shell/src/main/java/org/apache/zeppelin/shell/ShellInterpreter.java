@@ -17,23 +17,15 @@
 
 package org.apache.zeppelin.shell;
 
-import org.apache.commons.exec.CommandLine;
-import org.apache.commons.exec.DefaultExecutor;
-import org.apache.commons.exec.ExecuteException;
-import org.apache.commons.exec.ExecuteWatchdog;
-import org.apache.commons.exec.PumpStreamHandler;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.zeppelin.interpreter.BaseZeppelinContext;
+import org.apache.zeppelin.interpreter.remote.RemoteInterpreterUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.zeppelin.interpreter.InterpreterContext;
 import org.apache.zeppelin.interpreter.InterpreterException;
@@ -50,38 +42,28 @@ import org.apache.zeppelin.scheduler.SchedulerFactory;
 public class ShellInterpreter extends KerberosInterpreter {
   private static final Logger LOGGER = LoggerFactory.getLogger(ShellInterpreter.class);
 
-  private static final String TIMEOUT_PROPERTY = "shell.command.timeout.millisecs";
-  private String defaultTimeoutProperty = "60000";
-
-  private static final String DIRECTORY_USER_HOME = "shell.working.directory.user.home";
-  private final boolean isWindows = System.getProperty("os.name").startsWith("Windows");
-  private final String shell = isWindows ? "cmd /c" : "bash -c";
-  ConcurrentHashMap<String, DefaultExecutor> executors;
-
   public ShellInterpreter(Properties property) {
     super(property);
   }
 
+  private TerminalThread terminalService = null;
+
   @Override
   public void open() {
     super.open();
-    LOGGER.info("Command timeout property: {}", getProperty(TIMEOUT_PROPERTY));
-    executors = new ConcurrentHashMap<>();
+  }
+
+  private void setParagraphConfig(InterpreterContext intpContext) {
+    intpContext.getConfig().put("editorHide", true);
+    intpContext.getConfig().put("title", false);
   }
 
   @Override
   public void close() {
-    super.close();
-    for (String executorKey : executors.keySet()) {
-      DefaultExecutor executor = executors.remove(executorKey);
-      if (executor != null) {
-        try {
-          executor.getWatchdog().destroyProcess();
-        } catch (Exception e){
-          LOGGER.error("error destroying executor for paragraphId: " + executorKey, e);
-        }
-      }
+    if (null != terminalService) {
+      terminalService.stopRunning();
     }
+    super.close();
   }
 
   @Override
@@ -95,67 +77,37 @@ public class ShellInterpreter extends KerberosInterpreter {
   }
 
   @Override
-  public InterpreterResult internalInterpret(String cmd,
-                                             InterpreterContext contextInterpreter) {
-    LOGGER.debug("Run shell command '" + cmd + "'");
-    OutputStream outStream = new ByteArrayOutputStream();
-
-    CommandLine cmdLine = CommandLine.parse(shell);
-    // the Windows CMD shell doesn't handle multiline statements,
-    // they need to be delimited by '&&' instead
-    if (isWindows) {
-      String[] lines = StringUtils.split(cmd, "\n");
-      cmd = StringUtils.join(lines, " && ");
-    }
-    cmdLine.addArgument(cmd, false);
-
-    try {
-      DefaultExecutor executor = new DefaultExecutor();
-      executor.setStreamHandler(new PumpStreamHandler(
-          contextInterpreter.out, contextInterpreter.out));
-
-      executor.setWatchdog(new ExecuteWatchdog(
-          Long.valueOf(getProperty(TIMEOUT_PROPERTY, defaultTimeoutProperty))));
-      executors.put(contextInterpreter.getParagraphId(), executor);
-      if (Boolean.valueOf(getProperty(DIRECTORY_USER_HOME))) {
-        executor.setWorkingDirectory(new File(System.getProperty("user.home")));
+  public InterpreterResult internalInterpret(String cmd, InterpreterContext intpContext) {
+    if (null == terminalService) {
+      String host = "";
+      int port = 0;
+      try {
+        host = RemoteInterpreterUtils.findAvailableHostAddress();
+        port = RemoteInterpreterUtils.findRandomAvailablePortOnAllLocalInterfaces();
+      } catch (IOException e) {
+        LOGGER.error(e.getMessage(), e);
+        return new InterpreterResult(Code.ERROR, e.getMessage());
       }
+      terminalService = new TerminalThread(port);
+      terminalService.start();
 
-      int exitVal = executor.execute(cmdLine);
-      LOGGER.info("Paragraph " + contextInterpreter.getParagraphId()
-          + " return with exit value: " + exitVal);
-      return new InterpreterResult(Code.SUCCESS, outStream.toString());
-    } catch (ExecuteException e) {
-      int exitValue = e.getExitValue();
-      LOGGER.error("Can not run " + cmd, e);
-      Code code = Code.ERROR;
-      String message = outStream.toString();
-      if (exitValue == 143) {
-        code = Code.INCOMPLETE;
-        message += "Paragraph received a SIGTERM\n";
-        LOGGER.info("The paragraph " + contextInterpreter.getParagraphId()
-            + " stopped executing: " + message);
+      for (int i = 0; i < 20 && !terminalService.isRunning(); i++) {
+        try {
+          LOGGER.info("loop = " + i);
+          Thread.sleep(500);
+        } catch (InterruptedException e) {
+          LOGGER.error(e.getMessage(), e);
+        }
       }
-      message += "ExitValue: " + exitValue;
-      return new InterpreterResult(code, message);
-    } catch (IOException e) {
-      LOGGER.error("Can not run " + cmd, e);
-      return new InterpreterResult(Code.ERROR, e.getMessage());
-    } finally {
-      executors.remove(contextInterpreter.getParagraphId());
+      setParagraphConfig(intpContext);
+      terminalService.createTerminalWindow(intpContext, host, port);
     }
+
+    return new InterpreterResult(Code.SUCCESS);
   }
 
   @Override
   public void cancel(InterpreterContext context) {
-    DefaultExecutor executor = executors.remove(context.getParagraphId());
-    if (executor != null) {
-      try {
-        executor.getWatchdog().destroyProcess();
-      } catch (Exception e){
-        LOGGER.error("error destroying executor for paragraphId: " + context.getParagraphId(), e);
-      }
-    }
   }
 
   @Override
@@ -192,20 +144,9 @@ public class ShellInterpreter extends KerberosInterpreter {
   }
 
   public void createSecureConfiguration() throws InterpreterException {
-    Properties properties = getProperties();
-    CommandLine cmdLine = CommandLine.parse(shell);
-    cmdLine.addArgument("-c", false);
     String kinitCommand = String.format("kinit -k -t %s %s",
         properties.getProperty("zeppelin.shell.keytab.location"),
         properties.getProperty("zeppelin.shell.principal"));
-    cmdLine.addArgument(kinitCommand, false);
-    DefaultExecutor executor = new DefaultExecutor();
-    try {
-      executor.execute(cmdLine);
-    } catch (Exception e) {
-      LOGGER.error("Unable to run kinit for zeppelin user " + kinitCommand, e);
-      throw new InterpreterException(e);
-    }
   }
 
   @Override
