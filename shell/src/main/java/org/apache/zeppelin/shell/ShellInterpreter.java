@@ -20,6 +20,7 @@ package org.apache.zeppelin.shell;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.zeppelin.interpreter.BaseZeppelinContext;
 import org.apache.zeppelin.interpreter.remote.RemoteInterpreterUtils;
+import org.apache.zeppelin.terminal.TerminalThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +47,7 @@ public class ShellInterpreter extends KerberosInterpreter {
     super(property);
   }
 
-  private TerminalThread terminalService = null;
+  private TerminalThread terminalThread = null;
 
   @Override
   public void open() {
@@ -60,8 +61,8 @@ public class ShellInterpreter extends KerberosInterpreter {
 
   @Override
   public void close() {
-    if (null != terminalService) {
-      terminalService.stopRunning();
+    if (null != terminalThread) {
+      terminalThread.stopRunning();
     }
     super.close();
   }
@@ -78,20 +79,20 @@ public class ShellInterpreter extends KerberosInterpreter {
 
   @Override
   public InterpreterResult internalInterpret(String cmd, InterpreterContext intpContext) {
-    if (null == terminalService) {
+    if (null == terminalThread) {
       String host = "";
       int port = 0;
       try {
         host = RemoteInterpreterUtils.findAvailableHostAddress();
         port = RemoteInterpreterUtils.findRandomAvailablePortOnAllLocalInterfaces();
+        terminalThread = new TerminalThread(port);
+        terminalThread.start();
       } catch (IOException e) {
         LOGGER.error(e.getMessage(), e);
         return new InterpreterResult(Code.ERROR, e.getMessage());
       }
-      terminalService = new TerminalThread(port);
-      terminalService.start();
 
-      for (int i = 0; i < 20 && !terminalService.isRunning(); i++) {
+      for (int i = 0; i < 20 && !terminalThread.isRunning(); i++) {
         try {
           LOGGER.info("loop = " + i);
           Thread.sleep(500);
@@ -100,7 +101,7 @@ public class ShellInterpreter extends KerberosInterpreter {
         }
       }
       setParagraphConfig(intpContext);
-      terminalService.createTerminalWindow(intpContext, host, port);
+      terminalThread.createTerminalWindow(intpContext, host, port);
     }
 
     return new InterpreterResult(Code.SUCCESS);
@@ -158,4 +159,8 @@ public class ShellInterpreter extends KerberosInterpreter {
     return false;
   }
 
+  public static void startThread(Runnable runnable) {
+    Thread thread = new Thread(runnable);
+    thread.start();
+  }
 }
