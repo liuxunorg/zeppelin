@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -153,10 +152,7 @@ public class YarnClient {
     return response;
   }
 
-  // yarn application name match the pattern [a-z][a-z0-9-]*
-  public static String formatYarnAppName(String interpreterGroupId) {
-    return interpreterGroupId.toLowerCase().replaceAll("_", "-");
-  }
+
 
   // http://yarn-web-http-address/app/v1/services/{service_name}
   public void deleteService(String serviceName) {
@@ -647,13 +643,15 @@ public class YarnClient {
       List<Map<String, Object>> mapAppAttempts = getAppAttemptsContainersExportPorts(appId);
       boolean findExistIntpContainer = false;
       for (Map<String, Object> exportPorts : mapAppAttempts) {
-        if (exportPorts.containsKey(YarnClient.HOST_IP) && exportPorts.containsKey(YarnClient.HOST_PORT)
+        if (exportPorts.containsKey(YarnClient.HOST_IP)
+            && exportPorts.containsKey(YarnClient.HOST_PORT)
             && exportPorts.containsKey(YarnClient.CONTAINER_PORT)) {
           String intpAppHostIp = (String) exportPorts.get(YarnClient.HOST_IP);
           String intpAppHostPort = (String) exportPorts.get(YarnClient.HOST_PORT);
           String intpAppContainerPort = (String) exportPorts.get(YarnClient.CONTAINER_PORT);
           if (StringUtils.equals(port, intpAppContainerPort)) {
-            LOGGER.info("Detection Submarine interpreter Container hostIp:{}, hostPort:{}, containerPort:{}.",
+            LOGGER.info("Detection Submarine interpreter Container " +
+                    "hostIp:{}, hostPort:{}, containerPort:{}.",
                 intpAppHostIp, intpAppHostPort, intpAppContainerPort);
 
             Map<String, String> exportPortsAttr = new HashMap<>();

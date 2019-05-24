@@ -49,7 +49,7 @@
         <module>launcher/standard</module>
         <module>launcher/k8s-standard</module>
         <module>launcher/spark</module>
-        <module>launcher/yarn-standard</module>
+        <module>launcher/yarn</module>
     </modules>
 
     <dependencies>

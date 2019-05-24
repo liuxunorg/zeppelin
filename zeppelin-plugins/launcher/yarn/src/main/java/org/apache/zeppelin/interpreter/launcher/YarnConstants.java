@@ -122,4 +122,9 @@ public class YarnConstants {
     key = key.replace(".", "_").toUpperCase();
     return key;
   }
+
+  // yarn application name match the pattern [a-z][a-z0-9-]*
+  public static String formatYarnAppName(String interpreterGroupId) {
+    return interpreterGroupId.toLowerCase().replaceAll("_", "-");
+  }
 }

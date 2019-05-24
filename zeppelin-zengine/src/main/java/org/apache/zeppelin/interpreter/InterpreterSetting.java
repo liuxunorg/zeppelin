@@ -658,7 +658,7 @@ public class InterpreterSetting {
     if (isRunningOnKubernetes()) {
       return "K8sStandardInterpreterLauncher";
     } if (isRunningOnYarn()) {
-      return "YarnStandardInterpreterLauncher";
+      return "YarnInterpreterLauncher";
     } else {
       if (group.equals("spark")) {
         return "SparkInterpreterLauncher";

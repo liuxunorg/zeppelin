@@ -1,41 +1,28 @@
-/*
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.apache.zeppelin.interpreter.launcher;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.io.Resources;
+import com.hubspot.jinjava.Jinjava;
+import org.apache.commons.io.Charsets;
 import org.apache.commons.lang.StringUtils;
+import org.apache.hadoop.yarn.submarine.client.cli.Cli;
 import org.apache.zeppelin.conf.ZeppelinConfiguration;
 import org.apache.zeppelin.interpreter.Constants;
-import org.apache.zeppelin.interpreter.InterpreterOption;
-import org.apache.zeppelin.interpreter.InterpreterRunner;
-import org.apache.zeppelin.interpreter.recovery.RecoveryStorage;
-import org.apache.zeppelin.interpreter.remote.RemoteInterpreterRunningProcess;
+import org.apache.zeppelin.interpreter.remote.RemoteInterpreterProcess;
 import org.apache.zeppelin.interpreter.remote.RemoteInterpreterUtils;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.StringTokenizer;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.zeppelin.conf.ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_KEYTAB;
 import static org.apache.zeppelin.conf.ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_PRINCIPAL;
@@ -46,13 +33,10 @@ import static org.apache.zeppelin.interpreter.launcher.YarnConstants.HADOOP_YARN
 import static org.apache.zeppelin.interpreter.launcher.YarnConstants.SUBMARINE_HADOOP_KEYTAB;
 import static org.apache.zeppelin.interpreter.launcher.YarnConstants.SUBMARINE_HADOOP_PRINCIPAL;
 
-/**
- * Yarn specific launcher.
- */
-public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher {
-  private static final Logger LOGGER = LoggerFactory.getLogger(YarnStandardInterpreterLauncher.class);
+public class YarnRemoteInterpreterProcess extends RemoteInterpreterProcess {
+  private static final Logger LOGGER = LoggerFactory.getLogger(YarnRemoteInterpreterProcess.class);
 
-  private YarnClient yarnClient = null;
+  private static final String YARN_SUBMIT_JINJA = "/jinja_templates/yarn-submit.jinja";
 
   // Zeppelin home path in Docker container
   // Environment variable `SUBMARINE_ZEPPELIN_CONF_DIR_ENV` in /bin/interpreter.sh
@@ -68,8 +52,24 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
 
   private static boolean isTest = false;
 
-  public YarnStandardInterpreterLauncher(ZeppelinConfiguration zConf, RecoveryStorage recoveryStorage) {
-    super(zConf, recoveryStorage);
+  private Cli submarineCli;
+
+  private static final int YARN_INTERPRETER_SERVICE_PORT
+      = Constants.ZEPPELIN_INTERPRETER_DEFAUlT_PORT;
+
+  private AtomicBoolean started = new AtomicBoolean(false);
+
+  private InterpreterLaunchContext intpLaunchContext;
+  private Properties properties;
+  private ZeppelinConfiguration zconf;
+
+  public YarnRemoteInterpreterProcess(InterpreterLaunchContext context, ZeppelinConfiguration zconf,
+                                      int connectTimeout) {
+    super(connectTimeout);
+
+    this.intpLaunchContext = context;
+    this.properties = context.getProperties();
+    this.zconf = zconf;
 
     String uploadLocalLib = System.getenv("UPLOAD_LOCAL_LIB_TO_CONTAINTER");
     if (null != uploadLocalLib && StringUtils.equals(uploadLocalLib, "false")) {
@@ -78,89 +78,129 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
   }
 
   @Override
-  public InterpreterClient launch(InterpreterLaunchContext context) throws IOException {
-    LOGGER.info("YarnStandardInterpreterLauncher: "
-        + context.getInterpreterSettingGroup());
+  public void start(String userName) throws IOException {
+    Map<String, Object> jinjaParams = propertiesToJinjaParams();
 
-    // Because need to modify the properties, make a clone
-    this.properties = (Properties) context.getProperties().clone();
-    yarnClient = new YarnClient();
-
-    InterpreterOption option = context.getOption();
-    InterpreterRunner runner = context.getRunner();
-    String groupName = context.getInterpreterSettingGroup();
-    String name = context.getInterpreterSettingName();
-    int connectTimeout = getConnectTimeout();
-    if (connectTimeout < 200000) {
-      // Because yarn need to download docker image,
-      // So need to increase the timeout setting.
-      connectTimeout = 200000;
+    URL urlTemplate = this.getClass().getResource(YARN_SUBMIT_JINJA);
+    String template = Resources.toString(urlTemplate, Charsets.UTF_8);
+    String yarnSubmit = jinjaRender(template, jinjaParams);
+    // If the first line is a newline, delete the newline
+    int firstLineIsNewline = yarnSubmit.indexOf("\n");
+    if (firstLineIsNewline == 0) {
+      yarnSubmit = yarnSubmit.replaceFirst("\n", "");
     }
+    yarnSubmit = yarnSubmit.replaceAll("\n", "");
+    String[] yarnSubmitArgs = yarnSubmit.split("\\\\");
 
-    if (option.isExistingProcess()) {
-      LOGGER.info("Connect an existing remote interpreter process.");
-      return new RemoteInterpreterRunningProcess(
-          context.getInterpreterSettingName(),
-          connectTimeout,
-          option.getHost(),
-          option.getPort());
-    } else {
-      // yarn application name match the pattern [a-z][a-z0-9-]*
-      String submarineIntpAppName = YarnClient.formatYarnAppName(
-          context.getInterpreterGroupId());
-
-      // setting port range of interpreter container
-      String intpPort = String.valueOf(Constants.ZEPPELIN_INTERPRETER_DEFAUlT_PORT);
-      String intpPortRange = intpPort + ":" + intpPort;
-
-      String intpAppHostIp = "";
-      String intpAppHostPort = "";
-      String intpAppContainerPort = "";
-      boolean findExistIntpContainer = false;
-
-      // The submarine interpreter already exists in the connection yarn
-      // Or create a submarine interpreter
-      // 1. Query the IP and port of the submarine interpreter process through the yarn client
-      Map<String, String> exportPorts = yarnClient.getAppExportPorts(submarineIntpAppName, intpPort);
-      if (exportPorts.containsKey(YarnClient.HOST_IP) && exportPorts.containsKey(YarnClient.HOST_PORT)
-          && exportPorts.containsKey(YarnClient.CONTAINER_PORT)) {
-        intpAppHostIp = (String) exportPorts.get(YarnClient.HOST_IP);
-        intpAppHostPort = (String) exportPorts.get(YarnClient.HOST_PORT);
-        intpAppContainerPort = (String) exportPorts.get(YarnClient.CONTAINER_PORT);
-        if (StringUtils.equals(intpPort, intpAppContainerPort)) {
-          findExistIntpContainer = true;
-          LOGGER.info("Detection Submarine interpreter Container hostIp:{}, hostPort:{}, containerPort:{}.",
-              intpAppHostIp, intpAppHostPort, intpAppContainerPort);
-        }
-      }
-
-      if (findExistIntpContainer) {
-        return new RemoteInterpreterRunningProcess(
-            context.getInterpreterSettingName(),
-            connectTimeout,
-            intpAppHostIp,
-            Integer.parseInt(intpAppHostPort));
-      } else {
-        String localRepoPath = zConf.getInterpreterLocalRepoPath() + "/"
-            + context.getInterpreterSettingId();
-        return new YarnRemoteInterpreterProcess(
-            runner != null ? runner.getPath() : zConf.getInterpreterRemoteRunnerPath(),
-            context.getZeppelinServerRPCPort(), context.getZeppelinServerHost(), intpPortRange,
-            zConf.getInterpreterDir() + "/" + groupName, localRepoPath,
-            buildEnvFromProperties(context, properties), connectTimeout, name,
-            context.getInterpreterGroupId(), option.isUserImpersonate(), properties);
-      }
+    for (int n = 0; n < yarnSubmitArgs.length; n++) {
+      LOGGER.info("arg[{}]={}", n, yarnSubmitArgs[n]);
+    }
+    try {
+      Cli.main(yarnSubmitArgs);
+    } catch (Exception e) {
+      LOGGER.error(e.getMessage(), e);
     }
   }
 
-  protected Map<String, String> buildEnvFromProperties(InterpreterLaunchContext context, Properties properties)
+  public String jinjaRender(String template, Map<String, Object> jinjaParams) {
+    ClassLoader oldCl = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
+      Jinjava jinja = new Jinjava();
+      return jinja.render(template, jinjaParams);
+    } finally {
+      Thread.currentThread().setContextClassLoader(oldCl);
+    }
+  }
+
+  @Override
+  public void stop() {
+
+  }
+
+  @Override
+  public String getInterpreterSettingName() {
+    return null;
+  }
+
+  @Override
+  public String getHost() {
+    return null;
+  }
+
+  @Override
+  public int getPort() {
+    return 0;
+  }
+
+  @Override
+  public boolean isRunning() {
+    return false;
+  }
+
+  @Override
+  public void processStarted(int port, String host) {
+    LOGGER.info("Interpreter container internal {}:{}", host, port);
+
+    String intpYarnAppName = "";
+    //YarnClient.formatYarnAppName(interpreterGroupId);
+
+    // setting port range of submarine interpreter container
+    String intpPort = String.valueOf(Constants.ZEPPELIN_INTERPRETER_DEFAUlT_PORT);
+    String intpAppHostIp = "";
+    String intpAppHostPort = "";
+    String intpAppContainerPort = "";
+    boolean findExistIntpContainer = false;
+
+    // The submarine interpreter already exists in the connection yarn
+    // Or create a submarine interpreter
+    // 1. Query the IP and port of the submarine interpreter process through the yarn client
+    Map<String, String> exportPorts = null;
+    //yarnClient.getAppExportPorts(intpYarnAppName, intpPort);
+    if (exportPorts.size() == 0) {
+      // It may take a few seconds to query the docker container export port.
+      try {
+        Thread.sleep(3000);
+        //exportPorts = yarnClient.getAppExportPorts(intpYarnAppName, intpPort);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    }
+
+    if (exportPorts.containsKey(YarnClient.HOST_IP) && exportPorts.containsKey(YarnClient.HOST_PORT)
+        && exportPorts.containsKey(YarnClient.CONTAINER_PORT)) {
+      intpAppHostIp = (String) exportPorts.get(YarnClient.HOST_IP);
+      intpAppHostPort = (String) exportPorts.get(YarnClient.HOST_PORT);
+      intpAppContainerPort = (String) exportPorts.get(YarnClient.CONTAINER_PORT);
+      if (StringUtils.equals(intpPort, intpAppContainerPort)) {
+        findExistIntpContainer = true;
+        LOGGER.info("Detection Submarine interpreter Container " +
+                "hostIp:{}, hostPort:{}, containerPort:{}.",
+            intpAppHostIp, intpAppHostPort, intpAppContainerPort);
+      }
+    }
+
+    if (findExistIntpContainer) {
+      LOGGER.info("Interpreter container external {}:{}", intpAppHostIp, intpAppHostPort);
+      // super.processStarted(Integer.parseInt(intpAppHostPort), intpAppHostIp);
+    } else {
+      LOGGER.error("Cann't detection Submarine interpreter Container! {}", exportPorts.toString());
+    }
+  }
+
+  @Override
+  public String getErrorMessage() {
+    return null;
+  }
+
+  protected Map<String, Object> propertiesToJinjaParams()
       throws IOException {
-    Map<String, String> env = new HashMap<>();
+    Map<String, Object> jinjaParams = new HashMap<>();
 
     // yarn application name match the pattern [a-z][a-z0-9-]*
-    String intpYarnAppName = YarnClient.formatYarnAppName(context.getInterpreterGroupId());
-    env.put("YARN_APP_NAME", intpYarnAppName);
-    env.put("ZEPPELIN_RUN_MODE", "yarn");
+    String intpYarnAppName = YarnConstants.formatYarnAppName(
+        intpLaunchContext.getInterpreterGroupId());
+    jinjaParams.put("JOB_NAME", intpYarnAppName);
 
     // upload configure file to submarine interpreter container
     // keytab file & zeppelin-site.xml & krb5.conf & hadoop-yarn-submarine-X.X.X-SNAPSHOT.jar
@@ -168,18 +208,16 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
     // NOTE: The path to the file uploaded to the container,
     // Can not be repeated, otherwise it will lead to failure.
     HashMap<String, String> uploaded = new HashMap<>();
-    StringBuffer sbLocalization = new StringBuffer();
+    List<String> arrLocalization = new ArrayList<>();
 
     // 1) zeppelin-site.xml is uploaded to `${CONTAINER_ZEPPELIN_HOME}` directory in the container
-    if (null != zConf.getDocument()) {
-      String zconfFile = zConf.getDocument().getDocumentURI();
+    if (null != zconf.getDocument()) {
+      String zconfFile = zconf.getDocument().getDocumentURI();
       if (zconfFile.startsWith("file:")) {
         zconfFile = zconfFile.replace("file:", "");
       }
       if (!StringUtils.isEmpty(zconfFile)) {
-        sbLocalization.append("--localization \"");
-        sbLocalization.append(zconfFile + ":" + CONTAINER_ZEPPELIN_HOME + "/zeppelin-site.xml:rw\"");
-        sbLocalization.append(" ");
+        arrLocalization.add(zconfFile + ":" + CONTAINER_ZEPPELIN_HOME + "/zeppelin-site.xml:rw\"");
       }
     }
 
@@ -187,27 +225,22 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
     if (uploadLocalLibToContainter){
       // 2) ${ZEPPELIN_HOME}/interpreter/submarine is uploaded to `${CONTAINER_ZEPPELIN_HOME}`
       //    directory in the container
-      String intpPath = "/interpreter/" + context.getInterpreterSettingName();
+      String intpPath = "/interpreter/" + intpLaunchContext.getInterpreterSettingName();
       String zeplIntpSubmarinePath = getPathByHome(zeppelinHome, intpPath);
-      sbLocalization.append("--localization \"");
-      sbLocalization.append(zeplIntpSubmarinePath + ":" + CONTAINER_ZEPPELIN_HOME + intpPath + ":rw\"");
-      sbLocalization.append(" ");
+      arrLocalization.add(zeplIntpSubmarinePath + ":" + CONTAINER_ZEPPELIN_HOME
+          + intpPath + ":rw\"");
 
       // 3) ${ZEPPELIN_HOME}/lib/interpreter is uploaded to `${CONTAINER_ZEPPELIN_HOME}`
       //    directory in the container
       String libIntpPath = "/lib/interpreter";
       String zeplLibIntpPath = getPathByHome(zeppelinHome, libIntpPath);
-      sbLocalization.append("--localization \"");
-      sbLocalization.append(zeplLibIntpPath + ":" + CONTAINER_ZEPPELIN_HOME + libIntpPath + ":rw\"");
-      sbLocalization.append(" ");
+      arrLocalization.add(zeplLibIntpPath + ":" + CONTAINER_ZEPPELIN_HOME + libIntpPath + ":rw\"");
     }
 
     // 4) ${ZEPPELIN_HOME}/conf/log4j.properties
     String log4jPath = "/conf/log4j.properties";
     String zeplLog4jPath = getPathByHome(zeppelinHome, log4jPath);
-    sbLocalization.append("--localization \"");
-    sbLocalization.append(zeplLog4jPath + ":" + CONTAINER_ZEPPELIN_HOME + log4jPath + ":rw\"");
-    sbLocalization.append(" ");
+    arrLocalization.add(zeplLog4jPath + ":" + CONTAINER_ZEPPELIN_HOME + log4jPath + ":rw\"");
 
     // 5) Get the keytab file in each interpreter properties
     // Upload Keytab file to container, Keep the same directory as local host
@@ -227,24 +260,22 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
     }
     if (!StringUtils.isBlank(intpKeytab) && !uploaded.containsKey(intpKeytab)) {
       uploaded.put(intpKeytab, "");
-      sbLocalization.append("--localization \"");
-      sbLocalization.append(intpKeytab + ":" + intpKeytab + ":rw\"").append(" ");
+      arrLocalization.add(intpKeytab + ":" + intpKeytab + ":rw\"");
     }
 
-    String zeppelinServerKeytab = zConf.getString(ZEPPELIN_SERVER_KERBEROS_KEYTAB);
-    String zeppelinServerPrincipal = zConf.getString(ZEPPELIN_SERVER_KERBEROS_PRINCIPAL);
+    String zeppelinServerKeytab = zconf.getString(ZEPPELIN_SERVER_KERBEROS_KEYTAB);
+    String zeppelinServerPrincipal = zconf.getString(ZEPPELIN_SERVER_KERBEROS_PRINCIPAL);
     if (!StringUtils.isBlank(zeppelinServerKeytab) && !uploaded.containsKey(zeppelinServerKeytab)) {
       uploaded.put(zeppelinServerKeytab, "");
-      sbLocalization.append("--localization \"");
-      sbLocalization.append(zeppelinServerKeytab + ":" + zeppelinServerKeytab + ":rw\"").append(" ");
+      arrLocalization.add(zeppelinServerKeytab + ":" + zeppelinServerKeytab + ":rw\"");
     }
 
-    // 6) hadoop-yarn-submarine-X.X.X-SNAPSHOT.jar file upload container, Keep the same directory as local
+    // 6) hadoop-yarn-submarine-X.X.X-SNAPSHOT.jar file upload container,
+    // Keep the same directory as local
     String submarineJar = System.getenv(HADOOP_YARN_SUBMARINE_JAR);
     if (submarineJar != null && !StringUtils.isEmpty(submarineJar)) {
       submarineJar = getPathByHome(null, submarineJar);
-      sbLocalization.append("--localization \"");
-      sbLocalization.append(submarineJar + ":" + submarineJar + ":rw\"").append(" ");
+      arrLocalization.add(submarineJar + ":" + submarineJar + ":rw\"");
     }
 
     if (!isTest) {
@@ -261,39 +292,39 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
       }
       String hadoopConfDir = coreSite.getParent();
       if (!StringUtils.isEmpty(hadoopConfDir)) {
-        sbLocalization.append("--localization \"");
-        sbLocalization.append(hadoopConfDir + ":" + hadoopConfDir + ":rw\"").append(" ");
+        arrLocalization.add(hadoopConfDir + ":" + hadoopConfDir + ":rw\"");
         // Set the HADOOP_CONF_DIR environment variable in `interpreter.sh`
-        env.put("DOCKER_HADOOP_CONF_DIR", hadoopConfDir);
+        jinjaParams.put("DOCKER_HADOOP_CONF_DIR", hadoopConfDir);
       }
     }
 
-    env.put("YARN_LOCALIZATION_ENV", sbLocalization.toString());
-    LOGGER.info("YARN_LOCALIZATION_ENV = " + sbLocalization.toString());
+    jinjaParams.put("LOCALIZATION_FILES", arrLocalization);
+    LOGGER.info("arrLocalization = " + arrLocalization.toString());
 
-    env.put(SUBMARINE_HADOOP_KEYTAB, zeppelinServerKeytab);
-    env.put(SUBMARINE_HADOOP_PRINCIPAL, zeppelinServerPrincipal);
+    jinjaParams.put(SUBMARINE_HADOOP_KEYTAB, zeppelinServerKeytab);
+    jinjaParams.put(SUBMARINE_HADOOP_PRINCIPAL, zeppelinServerPrincipal);
 
     // Set the zepplin configuration file path environment variable in `interpreter.sh`
-    env.put("ZEPPELIN_CONF_DIR_ENV", "--env ZEPPELIN_CONF_DIR=" + CONTAINER_ZEPPELIN_HOME);
+    jinjaParams.put("ZEPPELIN_CONF_DIR_ENV", "--env ZEPPELIN_CONF_DIR=" + CONTAINER_ZEPPELIN_HOME);
 
-    String intpContainerRes = zConf.getYarnContainerResource(context.getInterpreterSettingName());
-    env.put("ZEPPELIN_YARN_CONTAINER_RESOURCE", intpContainerRes);
+    String intpContainerRes = zconf.getYarnContainerResource(
+        intpLaunchContext.getInterpreterSettingName());
+    jinjaParams.put("ZEPPELIN_YARN_CONTAINER_RESOURCE", intpContainerRes);
 
-    String yarnContainerImage = zConf.getYarnContainerImage();
-    env.put("ZEPPELIN_YARN_CONTAINER_IMAGE", yarnContainerImage);
+    String yarnContainerImage = zconf.getYarnContainerImage();
+    jinjaParams.put("ZEPPELIN_YARN_CONTAINER_IMAGE", yarnContainerImage);
 
     for (Object key : properties.keySet()) {
       if (RemoteInterpreterUtils.isEnvString((String) key)) {
-        env.put((String) key, properties.getProperty((String) key));
+        jinjaParams.put((String) key, properties.getProperty((String) key));
       }
     }
-    env.put("INTERPRETER_GROUP_ID", context.getInterpreterSettingId());
+    jinjaParams.put("INTERPRETER_GROUP_ID", intpLaunchContext.getInterpreterSettingId());
 
     // Check environment variables
     String dockerJavaHome = System.getenv(DOCKER_JAVA_HOME);
     String dockerHadoopHome = System.getenv(DOCKER_HADOOP_HOME);
-    String dockerHadoopConf = env.get(DOCKER_HADOOP_CONF_DIR);
+    String dockerHadoopConf = (String) jinjaParams.get(DOCKER_HADOOP_CONF_DIR);
     if (StringUtils.isBlank(dockerJavaHome)) {
       LOGGER.warn("DOCKER_JAVA_HOME environment variables not set!");
     }
@@ -304,7 +335,7 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
       LOGGER.warn("DOCKER_HADOOP_CONF_DIR environment variables not set!");
     }
 
-    return env;
+    return jinjaParams;
   }
 
   private String getZeppelinHome() {
@@ -313,12 +344,12 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
       zeppelinHome = System.getenv("ZEPPELIN_HOME");
     }
     if (StringUtils.isEmpty(zeppelinHome)) {
-      zeppelinHome = zConf.getString(ZeppelinConfiguration.ConfVars.ZEPPELIN_HOME);
+      zeppelinHome = zconf.getString(ZeppelinConfiguration.ConfVars.ZEPPELIN_HOME);
     }
     if (StringUtils.isEmpty(zeppelinHome)) {
-      // ${ZEPPELIN_HOME}/plugins/Launcher/YarnStandardInterpreterLauncher
-      zeppelinHome = getClassPath(YarnStandardInterpreterLauncher.class);
-      zeppelinHome = zeppelinHome.replace("/plugins/Launcher/YarnStandardInterpreterLauncher", "");
+      // ${ZEPPELIN_HOME}/plugins/Launcher/YarnInterpreterLauncher
+      zeppelinHome = getClassPath(YarnInterpreterLauncher.class);
+      zeppelinHome = zeppelinHome.replace("/plugins/Launcher/YarnInterpreterLauncher", "");
     }
 
     // check zeppelinHome is exist
@@ -371,7 +402,7 @@ public class YarnStandardInterpreterLauncher extends StandardInterpreterLauncher
         if (target.exists()) {
           return target;
         }
-      } else{
+      } else {
         final File target = new File(directoryOrJar, fileName);
         if (target.exists()) {
           return target;
