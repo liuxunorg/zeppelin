@@ -43,8 +43,11 @@ import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.LogStream;
 import com.spotify.docker.client.ProgressHandler;
 import com.spotify.docker.client.exceptions.DockerException;
+import com.spotify.docker.client.exceptions.DockerRequestException;
+import com.spotify.docker.client.messages.Container;
 import com.spotify.docker.client.messages.ContainerConfig;
 import com.spotify.docker.client.messages.ContainerCreation;
+import com.spotify.docker.client.messages.ContainerInfo;
 import com.spotify.docker.client.messages.ExecCreation;
 import com.spotify.docker.client.messages.HostConfig;
 import com.spotify.docker.client.messages.PortBinding;
@@ -59,6 +62,7 @@ import org.apache.zeppelin.interpreter.thrift.RemoteInterpreterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.spotify.docker.client.DockerClient.ListContainersParam.allContainers;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.zeppelin.conf.ZeppelinConfiguration.ConfVars.ZEPPELIN_SERVER_KERBEROS_KEYTAB;
 
@@ -78,7 +82,7 @@ public class DockerInterpreterProcess extends RemoteInterpreterProcess {
 
   private AtomicBoolean dockerStarted = new AtomicBoolean(false);
 
-  private DockerClient docker = null;
+  private static DockerClient docker = null;
   private final String containerName;
   private String containerHost = "";
   private int containerPort = 0;
@@ -129,7 +133,7 @@ public class DockerInterpreterProcess extends RemoteInterpreterProcess {
     this.zeppelinServiceRpcPort = zeppelinServiceRpcPort;
 
     this.zconf = zconf;
-    this.containerName = interpreterGroupId.toLowerCase();
+    this.containerName = interpreterGroupId;
 
     String sparkHome = System.getenv("CONTAINER_SPARK_HOME");
     CONTAINER_SPARK_HOME = (sparkHome == null) ?  "/spark" : sparkHome;
@@ -147,6 +151,13 @@ public class DockerInterpreterProcess extends RemoteInterpreterProcess {
     String defDockerHost = "http://0.0.0.0:2375";
     String dockerHost = System.getenv("DOCKER_HOST");
     DOCKER_HOST = (dockerHost == null) ?  defDockerHost : dockerHost;
+    if (null == docker) {
+      try {
+        docker = DefaultDockerClient.builder().uri(URI.create(DOCKER_HOST)).build();
+      } catch (Exception e) {
+        LOGGER.error(e.getMessage(), e);
+      }
+    }
   }
 
   @Override
@@ -156,7 +167,8 @@ public class DockerInterpreterProcess extends RemoteInterpreterProcess {
 
   @Override
   public void start(String userName) throws IOException {
-    docker = DefaultDockerClient.builder().uri(URI.create(DOCKER_HOST)).build();
+    // First clean up the interpreter container that may remain
+    killAndRemoteContainer(containerName);
 
     final Map<String, List<PortBinding>> portBindings = new HashMap<>();
 
@@ -320,20 +332,45 @@ public class DockerInterpreterProcess extends RemoteInterpreterProcess {
         LOGGER.warn("ignore the exception when shutting down", e);
       }
     }
+
+    killAndRemoteContainer(containerName);
+  }
+
+  private void killAndRemoteContainer(String containerName) {
+    String findContainerId = "";
     try {
-      // Kill container
-      docker.killContainer(containerName);
-
-      // Remove container
-      docker.removeContainer(containerName);
+      final List<Container> containers = docker.listContainers(allContainers());
+      for (final Container container : containers) {
+        final ContainerInfo info = docker.inspectContainer(container.id());
+        if (info != null && info.name().equals("/" + containerName)) {
+          try {
+            findContainerId = info.id();
+            docker.killContainer(findContainerId);
+          } catch (DockerRequestException e) {
+            // Docker 1.6 sometimes fails to kill a container because it disappears.
+            // https://github.com/docker/docker/issues/12738
+            LOGGER.warn("Failed to kill container {}", findContainerId, e);
+          }
+        }
+      }
     } catch (DockerException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
     } catch (InterruptedException e) {
-      e.printStackTrace();
+      LOGGER.error(e.getMessage(), e);
+    } finally {
+      try {
+        // Remove container
+        if (!StringUtils.isBlank(findContainerId)) {
+          LOGGER.info("remove container: {}", findContainerId);
+          docker.removeContainer(findContainerId);
+          Thread.sleep(3000);
+        }
+      } catch (DockerException e) {
+        LOGGER.error(e.getMessage(), e);
+      } catch (InterruptedException e) {
+        LOGGER.error(e.getMessage(), e);
+      }
     }
-
-    // Close the docker client
-    docker.close();
   }
 
   @Override
@@ -493,7 +530,7 @@ public class DockerInterpreterProcess extends RemoteInterpreterProcess {
 
   private void rmInContainer(String containerId, String path)
       throws DockerException, InterruptedException {
-    String execCommand = "rm " + path + " -R";
+    String execCommand = "rm " + path + " -rf";
     execInContainer(containerId, execCommand, true);
   }
 

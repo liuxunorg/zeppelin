@@ -1,6 +1,5 @@
 package org.apache.zeppelin.interpreter.launcher;
 
-import java.io.IOException;
 import java.util.Map;
 
 import org.apache.zeppelin.interpreter.remote.RemoteInterpreterManagedProcess;
@@ -35,20 +34,10 @@ public class ClusterInterpreterProcess extends RemoteInterpreterManagedProcess {
   }
 
   @Override
-  public void start(String userName) throws IOException {
-    super.start(userName);
-  }
-
-  @Override
   public boolean isRunning() {
     if (RemoteInterpreterUtils.checkIfRemoteEndpointAccessible(getHost(), getPort())) {
       return true;
     }
     return false;
-  }
-
-  @Override
-  public String getErrorMessage() {
-    return null;
   }
 }
