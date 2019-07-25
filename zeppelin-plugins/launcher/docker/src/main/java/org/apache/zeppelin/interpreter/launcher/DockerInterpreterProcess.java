@@ -449,12 +449,13 @@ public class DockerInterpreterProcess extends RemoteInterpreterProcess {
       mkdirInContainer(containerId, zeplIntpPath);
       docker.copyToContainer(new File(zeplIntpPath).toPath(), containerId, zeplIntpPath);
 
+      // TEMP ADD
       // 8) ${ZEPPELIN_HOME}/lib/interpreter is uploaded to `${CONTAINER_ZEPPELIN_HOME}`
       //    directory in the container
-      String libIntpPath = "/lib/interpreter";
-      String zeplLibIntpPath = getPathByHome(zeppelinHome, libIntpPath);
-      mkdirInContainer(containerId, zeplLibIntpPath);
-      docker.copyToContainer(new File(zeplLibIntpPath).toPath(), containerId, zeplLibIntpPath);
+      String intpApiJarPath = "/interpreter/zeppelin-interpreter-api-0.9.0-SNAPSHOT.jar";
+      String zeplIntpApiJarPath = getPathByHome(zeppelinHome, intpApiJarPath);
+      copyFiles.put(zeplIntpApiJarPath, zeplIntpApiJarPath);
+      // TEMP ADD
     }
 
     deployToContainer(containerId, copyFiles);
