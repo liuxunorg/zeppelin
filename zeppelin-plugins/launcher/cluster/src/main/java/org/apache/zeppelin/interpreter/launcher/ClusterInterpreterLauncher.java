@@ -80,27 +80,36 @@ public class ClusterInterpreterLauncher extends StandardInterpreterLauncher
       // connect exist Interpreter Process
       String intpTserverHost = (String) intpProcMeta.get(INTP_TSERVER_HOST);
       int intpTserverPort = (int) intpProcMeta.get(INTP_TSERVER_PORT);
-      return new RemoteInterpreterRunningProcess(
-          context.getInterpreterSettingName(),
-          connectTimeout,
-          intpTserverHost,
-          intpTserverPort);
-    } else {
-      // No process was found for the InterpreterGroup ID
-      HashMap<String, Object> meta = clusterServer.getIdleNodeMeta();
-      if (null == meta) {
-        LOGGER.error("Don't get idle node meta, launch interpreter on local.");
-        return createInterpreterProcess(context);
-      }
 
-      String srvHost = (String) meta.get(SERVER_HOST);
+      boolean remoteIntpSrvAccessible = RemoteInterpreterUtils.checkIfRemoteEndpointAccessible(
+          intpTserverHost, intpTserverPort);
+      if (remoteIntpSrvAccessible) {
+        return new RemoteInterpreterRunningProcess(
+            context.getInterpreterSettingName(),
+            connectTimeout,
+            intpTserverHost,
+            intpTserverPort);
+      }
+    }
+    
+    String srvHost = "";
+    int srvPort = 0;
+    // No process was found for the InterpreterGroup ID
+    HashMap<String, Object> meta = clusterServer.getIdleNodeMeta();
+    if (null == meta) {
+      LOGGER.error("Don't get idle node meta, launch interpreter on local.");
+      InterpreterClient clusterIntpProcess = createInterpreterProcess(context);
+      clusterIntpProcess.start(context.getUserName());
+    } else {
+      srvHost = (String) meta.get(SERVER_HOST);
       String localhost = RemoteInterpreterUtils.findAvailableHostAddress();
 
       if (localhost.equalsIgnoreCase(srvHost)) {
         // launch interpreter on local
-        return createInterpreterProcess(context);
+        InterpreterClient clusterIntpProcess = createInterpreterProcess(context);
+        clusterIntpProcess.start(context.getUserName());
       } else {
-        int srvPort = (int) meta.get(SERVER_PORT);
+        srvPort = (int) meta.get(SERVER_PORT);
 
         Gson gson = new Gson();
         String sContext = gson.toJson(context);
@@ -112,44 +121,44 @@ public class ClusterInterpreterLauncher extends StandardInterpreterLauncher
         // Notify other server in the cluster that the resource is idle to create an interpreter
         clusterServer.unicastClusterEvent(
             srvHost, srvPort, ClusterManagerServer.CLUSTER_INTP_EVENT_TOPIC, strEvent);
-
-        // Find the ip and port of thrift registered by the remote interpreter process
-        // through the cluster metadata
-        HashMap<String, Object> intpMeta = clusterServer
-            .getClusterMeta(INTP_PROCESS_META, intpGroupId).get(intpGroupId);
-
-        int MAX_RETRY_GET_META = connectTimeout / ClusterInterpreterLauncher.CHECK_META_INTERVAL;
-        int retryGetMeta = 0;
-        while ((retryGetMeta++ < MAX_RETRY_GET_META)
-            && (null == intpMeta || !intpMeta.containsKey(INTP_TSERVER_HOST)
-            || !intpMeta.containsKey(INTP_TSERVER_PORT)) ) {
-          try {
-            Thread.sleep(CHECK_META_INTERVAL);
-            intpMeta = clusterServer
-                .getClusterMeta(INTP_PROCESS_META, intpGroupId).get(intpGroupId);
-            LOGGER.warn("retry {} times to get {} meta!", retryGetMeta, intpGroupId);
-          } catch (InterruptedException e) {
-            LOGGER.error(e.getMessage(), e);
-          }
-        }
-
-        // Check if the remote creation process is successful
-        if (null == intpMeta || !intpMeta.containsKey(INTP_TSERVER_HOST)
-            || !intpMeta.containsKey(INTP_TSERVER_PORT)) {
-          String errorInfo = String.format("Creating process %s failed on remote server %s:%d",
-              intpGroupId, srvHost, srvPort);
-          throw new IOException(errorInfo);
-        } else {
-          // connnect remote interpreter process
-          String intpTSrvHost = (String) intpMeta.get(INTP_TSERVER_HOST);
-          int intpTSrvPort = (int) intpMeta.get(INTP_TSERVER_PORT);
-          return new RemoteInterpreterRunningProcess(
-              context.getInterpreterSettingName(),
-              connectTimeout,
-              intpTSrvHost,
-              intpTSrvPort);
-        }
       }
+    }
+
+    // Find the ip and port of thrift registered by the remote interpreter process
+    // through the cluster metadata
+    HashMap<String, Object> intpMeta = clusterServer
+        .getClusterMeta(INTP_PROCESS_META, intpGroupId).get(intpGroupId);
+
+    int MAX_RETRY_GET_META = connectTimeout / ClusterInterpreterLauncher.CHECK_META_INTERVAL;
+    int retryGetMeta = 0;
+    while ((retryGetMeta++ < MAX_RETRY_GET_META)
+        && (null == intpMeta || !intpMeta.containsKey(INTP_TSERVER_HOST)
+        || !intpMeta.containsKey(INTP_TSERVER_PORT)) ) {
+      try {
+        Thread.sleep(CHECK_META_INTERVAL);
+        intpMeta = clusterServer
+            .getClusterMeta(INTP_PROCESS_META, intpGroupId).get(intpGroupId);
+        LOGGER.warn("retry {} times to get {} meta!", retryGetMeta, intpGroupId);
+      } catch (InterruptedException e) {
+        LOGGER.error(e.getMessage(), e);
+      }
+    }
+
+    // Check if the remote creation process is successful
+    if (null == intpMeta || !intpMeta.containsKey(INTP_TSERVER_HOST)
+        || !intpMeta.containsKey(INTP_TSERVER_PORT)) {
+      String errorInfo = String.format("Creating process %s failed on remote server %s:%d",
+          intpGroupId, srvHost, srvPort);
+      throw new IOException(errorInfo);
+    } else {
+      // connnect remote interpreter process
+      String intpTSrvHost = (String) intpMeta.get(INTP_TSERVER_HOST);
+      int intpTSrvPort = (int) intpMeta.get(INTP_TSERVER_PORT);
+      return new RemoteInterpreterRunningProcess(
+          context.getInterpreterSettingName(),
+          connectTimeout,
+          intpTSrvHost,
+          intpTSrvPort);
     }
   }
 
