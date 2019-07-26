@@ -91,7 +91,7 @@ public class ClusterInterpreterLauncher extends StandardInterpreterLauncher
             intpTserverPort);
       }
     }
-    
+
     String srvHost = "";
     int srvPort = 0;
     // No process was found for the InterpreterGroup ID
